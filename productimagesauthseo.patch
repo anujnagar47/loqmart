@@ -1,0 +1,2318 @@
+From d385b4695fdff65e98459658ccd87c6309823b67 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 16 Jul 2026 14:35:24 +0000
+Subject: [PATCH] fix(auth): repair OAuth callback and email confirmation
+ redirect bugs
+
+Google sign-in had no callback route to exchange the OAuth code for a
+session, so it silently failed. Email registration also redirected to a
+protected page even when Supabase requires email confirmation first,
+bouncing users straight back to /auth. Both now resolve correctly, and
+the auth page honors ?next= so users return to where they started.
+
+fix(seo): render real content and unique metadata instead of blank shells
+
+/category, /blog and /india-map were shipping near-empty HTML on first
+paint because their content only appeared after a client-side fetch -
+invisible to crawlers and JS-disabled clients. They now fetch initial
+data server-side (category and blog) or render their header/H1 outside
+the loading gate (india-map), while keeping client-side interactivity.
+
+Also:
+- Add the 7 pages linked from the footer/homepage that 404'd: /careers,
+  /press, /mission, /how-to-buy, /sellers, /seller/commission,
+  /seller/swadeshi-rank, /seller/terms
+- Give ~15 pages that shared the root layout's title/description their
+  own unique metadata via per-route layout.tsx files
+- noindex the /auth and personalized cart/checkout/seller-dashboard routes
+- Fix blog post field mapping (image_url/read_time/state_code -> UI shape)
+  shared between the API route and the new server-rendered initial fetch
+---
+ src/app/api/blog/route.ts             |   3 +-
+ src/app/auth/callback/route.ts        |  40 ++++
+ src/app/auth/layout.tsx               |  11 +
+ src/app/auth/page.tsx                 |  48 +++-
+ src/app/best-sellers/layout.tsx       |  10 +
+ src/app/blog/BlogClient.tsx           | 169 +++++++++++++
+ src/app/blog/page.tsx                 | 220 +++--------------
+ src/app/careers/page.tsx              |  55 +++++
+ src/app/cart/layout.tsx               |  11 +
+ src/app/category/CategoryClient.tsx   | 282 ++++++++++++++++++++++
+ src/app/category/page.tsx             | 327 ++++----------------------
+ src/app/checkout/layout.tsx           |  11 +
+ src/app/contact/layout.tsx            |  10 +
+ src/app/grievance/layout.tsx          |  10 +
+ src/app/how-to-buy/page.tsx           |  74 ++++++
+ src/app/loqcoins/layout.tsx           |  10 +
+ src/app/mission/page.tsx              |  95 ++++++++
+ src/app/new/layout.tsx                |  10 +
+ src/app/press/page.tsx                |  62 +++++
+ src/app/seller/commission/page.tsx    | 116 +++++++++
+ src/app/seller/dashboard/layout.tsx   |  11 +
+ src/app/seller/register/layout.tsx    |  10 +
+ src/app/seller/swadeshi-rank/page.tsx |  72 ++++++
+ src/app/seller/terms/page.tsx         |  86 +++++++
+ src/app/sellers/page.tsx              | 106 +++++++++
+ src/app/survey/layout.tsx             |  10 +
+ src/components/map/IndiaMap.tsx       |  54 ++---
+ src/lib/blog.ts                       |  35 +++
+ 28 files changed, 1445 insertions(+), 513 deletions(-)
+ create mode 100644 src/app/auth/callback/route.ts
+ create mode 100644 src/app/auth/layout.tsx
+ create mode 100644 src/app/best-sellers/layout.tsx
+ create mode 100644 src/app/blog/BlogClient.tsx
+ create mode 100644 src/app/careers/page.tsx
+ create mode 100644 src/app/cart/layout.tsx
+ create mode 100644 src/app/category/CategoryClient.tsx
+ create mode 100644 src/app/checkout/layout.tsx
+ create mode 100644 src/app/contact/layout.tsx
+ create mode 100644 src/app/grievance/layout.tsx
+ create mode 100644 src/app/how-to-buy/page.tsx
+ create mode 100644 src/app/loqcoins/layout.tsx
+ create mode 100644 src/app/mission/page.tsx
+ create mode 100644 src/app/new/layout.tsx
+ create mode 100644 src/app/press/page.tsx
+ create mode 100644 src/app/seller/commission/page.tsx
+ create mode 100644 src/app/seller/dashboard/layout.tsx
+ create mode 100644 src/app/seller/register/layout.tsx
+ create mode 100644 src/app/seller/swadeshi-rank/page.tsx
+ create mode 100644 src/app/seller/terms/page.tsx
+ create mode 100644 src/app/sellers/page.tsx
+ create mode 100644 src/app/survey/layout.tsx
+ create mode 100644 src/lib/blog.ts
+
+diff --git a/src/app/api/blog/route.ts b/src/app/api/blog/route.ts
+index 868e209..3a31652 100644
+--- a/src/app/api/blog/route.ts
++++ b/src/app/api/blog/route.ts
+@@ -1,5 +1,6 @@
+ import { NextResponse } from "next/server"
+ import { createServiceClient } from "@/lib/supabase/admin"
++import { mapBlogPostRow } from "@/lib/blog"
+ 
+ export async function GET(request: Request) {
+   try {
+@@ -28,7 +29,7 @@ export async function GET(request: Request) {
+     }
+ 
+     return NextResponse.json({
+-      posts: posts || [],
++      posts: (posts || []).map(mapBlogPostRow),
+       total: posts?.length || 0,
+     })
+   } catch (error) {
+diff --git a/src/app/auth/callback/route.ts b/src/app/auth/callback/route.ts
+new file mode 100644
+index 0000000..7b54dc2
+--- /dev/null
++++ b/src/app/auth/callback/route.ts
+@@ -0,0 +1,40 @@
++import { NextResponse } from "next/server"
++import { createClient } from "@/lib/supabase/server"
++
++// Handles the redirect back from Supabase OAuth (Google, etc). Without this route
++// the "code" in the URL is never exchanged for a session, so OAuth login silently fails.
++export async function GET(request: Request) {
++  const { searchParams, origin } = new URL(request.url)
++  const code = searchParams.get("code")
++  const next = searchParams.get("next") || "/account"
++
++  if (!code) {
++    return NextResponse.redirect(`${origin}/auth?error=oauth_missing_code`)
++  }
++
++  const supabase = await createClient()
++  const { data, error } = await supabase.auth.exchangeCodeForSession(code)
++
++  if (error || !data.session?.user) {
++    return NextResponse.redirect(`${origin}/auth?error=oauth_failed`)
++  }
++
++  const user = data.session.user
++
++  const { data: existing } = await supabase.from("users").select("id, role").eq("id", user.id).single()
++  if (!existing) {
++    const meta = user.user_metadata || {}
++    await supabase.from("users").insert({
++      id: user.id,
++      email: user.email || "",
++      full_name: meta.full_name || meta.name || user.email?.split("@")[0] || "LoqMart User",
++      role: meta.role === "seller" ? "seller" : "buyer",
++    })
++    await supabase.from("loqcoin_balances").insert({ user_id: user.id, balance: 0, lifetime_earned: 0, lifetime_redeemed: 0 })
++  }
++
++  const role = existing?.role
++  const destination = role === "admin" || role === "sub_admin" ? "/admin" : next
++
++  return NextResponse.redirect(`${origin}${destination}`)
++}
+diff --git a/src/app/auth/layout.tsx b/src/app/auth/layout.tsx
+new file mode 100644
+index 0000000..f46b3b1
+--- /dev/null
++++ b/src/app/auth/layout.tsx
+@@ -0,0 +1,11 @@
++import type { Metadata } from "next"
++
++export const metadata: Metadata = {
++  title: "Sign In | LoqMart",
++  description: "Sign in or create an account to shop, sell, and track orders on LoqMart.",
++  robots: { index: false, follow: false },
++}
++
++export default function AuthLayout({ children }: { children: React.ReactNode }) {
++  return children
++}
+diff --git a/src/app/auth/page.tsx b/src/app/auth/page.tsx
+index 6ef694f..125ece5 100644
+--- a/src/app/auth/page.tsx
++++ b/src/app/auth/page.tsx
+@@ -1,8 +1,8 @@
+ "use client"
+ 
+-import { useState } from "react"
++import { Suspense, useState } from "react"
+ import Link from "next/link"
+-import { useRouter } from "next/navigation"
++import { useRouter, useSearchParams } from "next/navigation"
+ import { motion, AnimatePresence } from "framer-motion"
+ import { Phone, RefreshCw, Mail, Lock, User as UserIcon, Loader2, ShieldCheck } from "lucide-react"
+ import { createClient } from "@/lib/supabase/client"
+@@ -67,9 +67,11 @@ const slide = {
+   transition: { duration: 0.2, ease: "easeOut" as const },
+ }
+ 
+-export default function AuthPage() {
++function AuthPageContent() {
+   const router = useRouter()
++  const searchParams = useSearchParams()
+   const supabase = createClient()
++  const next = searchParams.get("next") || searchParams.get("redirect")
+ 
+   const [tab, setTab]       = useState<Tab>("buyer")
+   const [method, setMethod] = useState<AuthMethod>("phone")
+@@ -80,6 +82,13 @@ export default function AuthPage() {
+   const [otp, setOtp]           = useState(["", "", "", "", "", ""])
+   const [isLoading, setIsLoading] = useState(false)
+   const [error, setError]         = useState("")
++  const [notice, setNotice]       = useState("")
++
++  const destinationFor = (role?: string) => {
++    if (role === "admin" || role === "sub_admin") return "/admin"
++    if (next) return next
++    return tab === "seller" ? "/seller/dashboard" : "/account"
++  }
+ 
+   async function ensurePublicUser(userId: string, userEmail: string, name: string, role: "buyer" | "seller") {
+     const { data: existing } = await supabase.from("users").select("id").eq("id", userId).single()
+@@ -115,7 +124,8 @@ export default function AuthPage() {
+         body: JSON.stringify({ phone: `+91${phone.replace(/\D/g, "")}`, otp: code }),
+       })
+       if (!res.ok) throw new Error()
+-      router.push(tab === "seller" ? "/seller/dashboard" : "/account")
++      router.push(destinationFor())
++      router.refresh()
+     } catch { setError("Invalid OTP. Please try again.") }
+     finally { setIsLoading(false) }
+   }
+@@ -130,8 +140,8 @@ export default function AuthPage() {
+       if (data.session && data.user) {
+         await ensurePublicUser(data.user.id, data.user.email!, fullName || email.split("@")[0], tab === "seller" ? "seller" : "buyer")
+         const { data: profile } = await supabase.from("users").select("role").eq("id", data.user.id).single()
+-        if (profile?.role === "admin" || profile?.role === "sub_admin") router.push("/admin")
+-        else router.push(tab === "seller" ? "/seller/dashboard" : "/account")
++        router.push(destinationFor(profile?.role))
++        router.refresh()
+       }
+     } catch (err: any) {
+       setError(err.message?.includes("Invalid") ? "Incorrect email or password." : (err.message || "Sign in failed."))
+@@ -154,8 +164,16 @@ export default function AuthPage() {
+         setMethod("email_login"); return
+       }
+       if (data.user) {
+-        if (data.session) await ensurePublicUser(data.user.id, email, fullName, tab === "seller" ? "seller" : "buyer")
+-        router.push(tab === "seller" ? "/seller/dashboard" : "/account")
++        if (data.session) {
++          await ensurePublicUser(data.user.id, email, fullName, tab === "seller" ? "seller" : "buyer")
++          router.push(destinationFor())
++          router.refresh()
++        } else {
++          // Supabase project requires email confirmation before a session is issued —
++          // redirecting now would just bounce the user straight back to /auth.
++          setNotice("Account created. Check your email to confirm before signing in.")
++          setMethod("email_login")
++        }
+       }
+     } catch (err: any) { setError(err.message || "Registration failed. Please try again.") }
+     finally { setIsLoading(false) }
+@@ -164,9 +182,11 @@ export default function AuthPage() {
+   const handleGoogleLogin = async () => {
+     setError(""); setIsLoading(true)
+     try {
++      const callbackUrl = new URL("/auth/callback", window.location.origin)
++      callbackUrl.searchParams.set("next", destinationFor())
+       const { error: oauthError } = await supabase.auth.signInWithOAuth({
+         provider: "google",
+-        options: { redirectTo: `${window.location.origin}/account`, queryParams: { access_type: "offline", prompt: "consent" } },
++        options: { redirectTo: callbackUrl.toString(), queryParams: { access_type: "offline", prompt: "consent" } },
+       })
+       if (oauthError) throw oauthError
+     } catch { setError("Google sign-in failed. Please try email login."); setIsLoading(false) }
+@@ -313,6 +333,8 @@ export default function AuthPage() {
+                       onKeyDown={e => e.key === "Enter" && handleEmailLogin()} />
+                   </div>
+                   <AnimatePresence>
++                    {notice && <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
++                      className="text-[12px] text-green-700 font-medium">{notice}</motion.p>}
+                     {error && <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                       className="text-[12px] text-red-600 font-medium">{error}</motion.p>}
+                   </AnimatePresence>
+@@ -418,3 +440,11 @@ export default function AuthPage() {
+     </div>
+   )
+ }
++
++export default function AuthPage() {
++  return (
++    <Suspense fallback={<div className="min-h-screen" style={{ background: "#f8f5f0" }} />}>
++      <AuthPageContent />
++    </Suspense>
++  )
++}
+diff --git a/src/app/best-sellers/layout.tsx b/src/app/best-sellers/layout.tsx
+new file mode 100644
+index 0000000..9c13474
+--- /dev/null
++++ b/src/app/best-sellers/layout.tsx
+@@ -0,0 +1,10 @@
++import type { Metadata } from "next"
++
++export const metadata: Metadata = {
++  title: "Best Sellers | LoqMart",
++  description: "The most popular handmade and machine-made products on LoqMart, ranked by sales and ratings.",
++}
++
++export default function BestSellersLayout({ children }: { children: React.ReactNode }) {
++  return children
++}
+diff --git a/src/app/blog/BlogClient.tsx b/src/app/blog/BlogClient.tsx
+new file mode 100644
+index 0000000..c454cc0
+--- /dev/null
++++ b/src/app/blog/BlogClient.tsx
+@@ -0,0 +1,169 @@
++"use client"
++
++import { useState } from "react"
++import Link from "next/link"
++import { motion } from "framer-motion"
++import { ArrowRight, MapPin, Clock } from "lucide-react"
++
++export interface BlogPost {
++  id: string
++  slug: string
++  title: string
++  excerpt: string
++  image: string
++  state: string
++  stateCode: string
++  category: string
++  readTime: string
++  date: string
++  author: string
++}
++
++const categories = ["All", "Crafts", "Textiles", "Heritage", "Art", "Food", "Wellness"]
++
++export function BlogClient({ initialPosts }: { initialPosts: BlogPost[] }) {
++  const [blogPosts]      = useState<BlogPost[]>(initialPosts)
++  const [activeCategory, setActiveCategory] = useState("All")
++
++  const filtered = activeCategory === "All" ? blogPosts : blogPosts.filter(p => p.category === activeCategory)
++  const featured = filtered[0]
++  const rest     = filtered.slice(1)
++
++  return (
++    <div className="min-h-screen" style={{ background: "#f8f5f0" }}>
++      {/* Header */}
++      <div className="py-16 px-6 bg-white" style={{ borderBottom: "1px solid rgba(26,28,28,0.07)" }}>
++        <div className="max-w-7xl mx-auto">
++          <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
++            <span className="text-[10px] font-black uppercase tracking-[0.3em] block mb-4" style={{ color: "#725c00" }}>
++              LoqMart Stories
++            </span>
++            <h1 className="text-[48px] font-extrabold text-[#1a1c1c] tracking-tight mb-4">
++              The Craft Chronicles
++            </h1>
++            <p className="text-[#1a1c1c]/55 text-[16px] max-w-2xl leading-relaxed">
++              Deep stories on Indian artisanship, manufacturing heritage, and the hands that make India. State by state. Craft by craft.
++            </p>
++          </motion.div>
++        </div>
++      </div>
++
++      <div className="max-w-7xl mx-auto px-6 py-12">
++        {/* Category pills */}
++        <div className="flex gap-2 overflow-x-auto pb-4 mb-10">
++          {categories.map((cat) => (
++            <motion.button key={cat} onClick={() => setActiveCategory(cat)}
++              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
++              className="px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider whitespace-nowrap transition-all"
++              style={{
++                background: activeCategory === cat ? "#fcd020" : "white",
++                color:      activeCategory === cat ? "#1a1c1c" : "rgba(26,28,28,0.5)",
++                border:     activeCategory === cat ? "1px solid #fcd020" : "1px solid rgba(26,28,28,0.12)",
++              }}>
++              {cat}
++            </motion.button>
++          ))}
++        </div>
++
++        {/* Featured post */}
++        {featured && (
++          <motion.div className="mb-14"
++            initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
++            <Link href={`/blog/${featured.slug}`}>
++              <motion.div whileHover={{ boxShadow: "0 12px 40px rgba(26,28,28,0.12)" }}
++                className="group grid grid-cols-1 lg:grid-cols-2 gap-0 rounded-2xl overflow-hidden bg-white"
++                style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
++                <div className="relative h-64 lg:h-auto overflow-hidden">
++                  <img src={featured.image} alt={featured.title}
++                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
++                  <div className="absolute top-4 left-4">
++                    <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-black text-[#231b00]"
++                      style={{ background: "#fcd020" }}>Featured</span>
++                  </div>
++                </div>
++                <div className="p-10 flex flex-col justify-center">
++                  <div className="flex items-center gap-3 mb-4">
++                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold text-[#1a1c1c]"
++                      style={{ border: "1px solid rgba(26,28,28,0.2)" }}>
++                      <MapPin className="w-3 h-3" />{featured.state}
++                    </span>
++                    <span className="text-[11px] text-[#1a1c1c]/40">{featured.category}</span>
++                  </div>
++                  <h2 className="text-[22px] font-extrabold text-[#1a1c1c] tracking-tight leading-tight mb-4 group-hover:text-[#725c00] transition-colors">
++                    {featured.title}
++                  </h2>
++                  <p className="text-[#1a1c1c]/55 text-[13px] leading-relaxed mb-6">{featured.excerpt}</p>
++                  <div className="flex items-center justify-between">
++                    <div>
++                      <p className="text-[12px] font-bold text-[#1a1c1c]">{featured.author}</p>
++                      <div className="flex items-center gap-2 text-[11px] text-[#1a1c1c]/40 mt-1">
++                        <Clock className="w-3 h-3" />
++                        <span>{featured.readTime}</span>
++                        <span>·</span>
++                        <span>{featured.date}</span>
++                      </div>
++                    </div>
++                    <div className="w-10 h-10 rounded-full flex items-center justify-center group-hover:translate-x-1 transition-transform"
++                      style={{ background: "#fcd020" }}>
++                      <ArrowRight className="w-5 h-5 text-[#1a1c1c]" />
++                    </div>
++                  </div>
++                </div>
++              </motion.div>
++            </Link>
++          </motion.div>
++        )}
++
++        {/* Empty */}
++        {filtered.length === 0 && (
++          <div className="text-center py-24">
++            <p className="text-[18px] font-bold text-[#1a1c1c]/40">No stories yet</p>
++            <p className="text-[13px] text-[#1a1c1c]/30 mt-2">Check back soon.</p>
++          </div>
++        )}
++
++        {/* Grid */}
++        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
++          {rest.map((post, i) => (
++            <motion.div key={post.slug}
++              initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
++              transition={{ delay: i * 0.07 }}>
++              <Link href={`/blog/${post.slug}`}>
++                <motion.article whileHover={{ y: -3, boxShadow: "0 8px 24px rgba(26,28,28,0.08)" }}
++                  className="group bg-white rounded-2xl overflow-hidden"
++                  style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
++                  <div className="relative h-48 overflow-hidden">
++                    <img src={post.image} alt={post.title}
++                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
++                    <div className="absolute top-3 left-3">
++                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/90 text-[#1a1c1c]"
++                        style={{ border: "1px solid rgba(26,28,28,0.12)" }}>
++                        <MapPin className="w-3 h-3" />{post.state}
++                      </span>
++                    </div>
++                  </div>
++                  <div className="p-6">
++                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#725c00" }}>
++                      {post.category}
++                    </span>
++                    <h2 className="font-extrabold text-[#1a1c1c] tracking-tight leading-tight mb-3 mt-2 group-hover:text-[#725c00] transition-colors">
++                      {post.title}
++                    </h2>
++                    <p className="text-[13px] text-[#1a1c1c]/55 leading-relaxed line-clamp-2 mb-4">{post.excerpt}</p>
++                    <div className="flex items-center justify-between text-[11px] text-[#1a1c1c]/40">
++                      <span className="font-medium">{post.author}</span>
++                      <div className="flex items-center gap-1">
++                        <Clock className="w-3 h-3" />
++                        {post.readTime}
++                      </div>
++                    </div>
++                  </div>
++                </motion.article>
++              </Link>
++            </motion.div>
++          ))}
++        </div>
++      </div>
++    </div>
++  )
++}
+diff --git a/src/app/blog/page.tsx b/src/app/blog/page.tsx
+index 41e7885..4c23514 100644
+--- a/src/app/blog/page.tsx
++++ b/src/app/blog/page.tsx
+@@ -1,193 +1,35 @@
+-"use client"
+-
+-import { useState, useEffect } from "react"
+-import Link from "next/link"
+-import { motion } from "framer-motion"
+-import { ArrowRight, MapPin, Clock, Loader2 } from "lucide-react"
+-
+-interface BlogPost {
+-  id: string
+-  slug: string
+-  title: string
+-  excerpt: string
+-  image: string
+-  state: string
+-  stateCode: string
+-  category: string
+-  readTime: string
+-  date: string
+-  author: string
++import type { Metadata } from "next"
++import { createServiceClient } from "@/lib/supabase/admin"
++import { mapBlogPostRow } from "@/lib/blog"
++import { BlogClient, type BlogPost } from "./BlogClient"
++
++export const metadata: Metadata = {
++  title: "The Craft Chronicles – LoqMart Blog",
++  description: "Stories on Indian artisanship, manufacturing heritage, and the makers behind LoqMart's handmade and machine-made products, state by state.",
+ }
+ 
+-const categories = ["All", "Crafts", "Textiles", "Heritage", "Art", "Food", "Wellness"]
+-
+-export default function BlogPage() {
+-  const [blogPosts,       setBlogPosts]       = useState<BlogPost[]>([])
+-  const [loading,         setLoading]         = useState(true)
+-  const [activeCategory,  setActiveCategory]  = useState("All")
+-
+-  useEffect(() => {
+-    async function fetchPosts() {
+-      try {
+-        const res = await fetch("/api/blog")
+-        if (res.ok) {
+-          const data = await res.json()
+-          setBlogPosts(data.posts || [])
+-        }
+-      } catch (e) {
+-        console.error("Failed to fetch blog posts", e)
+-      } finally {
+-        setLoading(false)
+-      }
+-    }
+-    fetchPosts()
+-  }, [])
+-
+-  if (loading) return (
+-    <div className="min-h-screen flex items-center justify-center" style={{ background: "#f8f5f0" }}>
+-      <Loader2 className="w-8 h-8 animate-spin text-[#1a1c1c]/30" />
+-    </div>
+-  )
+-
+-  const filtered = activeCategory === "All" ? blogPosts : blogPosts.filter(p => p.category === activeCategory)
+-  const featured = filtered[0]
+-  const rest     = filtered.slice(1)
+-
+-  return (
+-    <div className="min-h-screen" style={{ background: "#f8f5f0" }}>
+-      {/* Header */}
+-      <div className="py-16 px-6 bg-white" style={{ borderBottom: "1px solid rgba(26,28,28,0.07)" }}>
+-        <div className="max-w-7xl mx-auto">
+-          <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+-            <span className="text-[10px] font-black uppercase tracking-[0.3em] block mb-4" style={{ color: "#725c00" }}>
+-              LoqMart Stories
+-            </span>
+-            <h1 className="text-[48px] font-extrabold text-[#1a1c1c] tracking-tight mb-4">
+-              The Craft Chronicles
+-            </h1>
+-            <p className="text-[#1a1c1c]/55 text-[16px] max-w-2xl leading-relaxed">
+-              Deep stories on Indian artisanship, manufacturing heritage, and the hands that make India. State by state. Craft by craft.
+-            </p>
+-          </motion.div>
+-        </div>
+-      </div>
+-
+-      <div className="max-w-7xl mx-auto px-6 py-12">
+-        {/* Category pills */}
+-        <div className="flex gap-2 overflow-x-auto pb-4 mb-10">
+-          {categories.map((cat) => (
+-            <motion.button key={cat} onClick={() => setActiveCategory(cat)}
+-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+-              className="px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider whitespace-nowrap transition-all"
+-              style={{
+-                background: activeCategory === cat ? "#fcd020" : "white",
+-                color:      activeCategory === cat ? "#1a1c1c" : "rgba(26,28,28,0.5)",
+-                border:     activeCategory === cat ? "1px solid #fcd020" : "1px solid rgba(26,28,28,0.12)",
+-              }}>
+-              {cat}
+-            </motion.button>
+-          ))}
+-        </div>
+-
+-        {/* Featured post */}
+-        {featured && (
+-          <motion.div className="mb-14"
+-            initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+-            <Link href={`/blog/${featured.slug}`}>
+-              <motion.div whileHover={{ boxShadow: "0 12px 40px rgba(26,28,28,0.12)" }}
+-                className="group grid grid-cols-1 lg:grid-cols-2 gap-0 rounded-2xl overflow-hidden bg-white"
+-                style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
+-                <div className="relative h-64 lg:h-auto overflow-hidden">
+-                  <img src={featured.image} alt={featured.title}
+-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+-                  <div className="absolute top-4 left-4">
+-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-black text-[#231b00]"
+-                      style={{ background: "#fcd020" }}>Featured</span>
+-                  </div>
+-                </div>
+-                <div className="p-10 flex flex-col justify-center">
+-                  <div className="flex items-center gap-3 mb-4">
+-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold text-[#1a1c1c]"
+-                      style={{ border: "1px solid rgba(26,28,28,0.2)" }}>
+-                      <MapPin className="w-3 h-3" />{featured.state}
+-                    </span>
+-                    <span className="text-[11px] text-[#1a1c1c]/40">{featured.category}</span>
+-                  </div>
+-                  <h2 className="text-[22px] font-extrabold text-[#1a1c1c] tracking-tight leading-tight mb-4 group-hover:text-[#725c00] transition-colors">
+-                    {featured.title}
+-                  </h2>
+-                  <p className="text-[#1a1c1c]/55 text-[13px] leading-relaxed mb-6">{featured.excerpt}</p>
+-                  <div className="flex items-center justify-between">
+-                    <div>
+-                      <p className="text-[12px] font-bold text-[#1a1c1c]">{featured.author}</p>
+-                      <div className="flex items-center gap-2 text-[11px] text-[#1a1c1c]/40 mt-1">
+-                        <Clock className="w-3 h-3" />
+-                        <span>{featured.readTime}</span>
+-                        <span>·</span>
+-                        <span>{featured.date}</span>
+-                      </div>
+-                    </div>
+-                    <div className="w-10 h-10 rounded-full flex items-center justify-center group-hover:translate-x-1 transition-transform"
+-                      style={{ background: "#fcd020" }}>
+-                      <ArrowRight className="w-5 h-5 text-[#1a1c1c]" />
+-                    </div>
+-                  </div>
+-                </div>
+-              </motion.div>
+-            </Link>
+-          </motion.div>
+-        )}
+-
+-        {/* Empty */}
+-        {filtered.length === 0 && (
+-          <div className="text-center py-24">
+-            <p className="text-[18px] font-bold text-[#1a1c1c]/40">No stories yet</p>
+-            <p className="text-[13px] text-[#1a1c1c]/30 mt-2">Check back soon.</p>
+-          </div>
+-        )}
++// Re-fetch periodically so newly published posts show up without a full redeploy.
++export const revalidate = 300
++
++async function fetchInitialPosts(): Promise<BlogPost[]> {
++  try {
++    const supabase = createServiceClient()
++    const { data, error } = await supabase
++      .from("blog_posts")
++      .select("*")
++      .eq("is_published", true)
++      .order("created_at", { ascending: false })
++      .limit(20)
++
++    if (error) { console.error("Blog initial fetch error:", error); return [] }
++    return (data || []).map(mapBlogPostRow)
++  } catch (err) {
++    console.error("Blog initial fetch failed:", err)
++    return []
++  }
++}
+ 
+-        {/* Grid */}
+-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+-          {rest.map((post, i) => (
+-            <motion.div key={post.slug}
+-              initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
+-              transition={{ delay: i * 0.07 }}>
+-              <Link href={`/blog/${post.slug}`}>
+-                <motion.article whileHover={{ y: -3, boxShadow: "0 8px 24px rgba(26,28,28,0.08)" }}
+-                  className="group bg-white rounded-2xl overflow-hidden"
+-                  style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
+-                  <div className="relative h-48 overflow-hidden">
+-                    <img src={post.image} alt={post.title}
+-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+-                    <div className="absolute top-3 left-3">
+-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/90 text-[#1a1c1c]"
+-                        style={{ border: "1px solid rgba(26,28,28,0.12)" }}>
+-                        <MapPin className="w-3 h-3" />{post.state}
+-                      </span>
+-                    </div>
+-                  </div>
+-                  <div className="p-6">
+-                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#725c00" }}>
+-                      {post.category}
+-                    </span>
+-                    <h2 className="font-extrabold text-[#1a1c1c] tracking-tight leading-tight mb-3 mt-2 group-hover:text-[#725c00] transition-colors">
+-                      {post.title}
+-                    </h2>
+-                    <p className="text-[13px] text-[#1a1c1c]/55 leading-relaxed line-clamp-2 mb-4">{post.excerpt}</p>
+-                    <div className="flex items-center justify-between text-[11px] text-[#1a1c1c]/40">
+-                      <span className="font-medium">{post.author}</span>
+-                      <div className="flex items-center gap-1">
+-                        <Clock className="w-3 h-3" />
+-                        {post.readTime}
+-                      </div>
+-                    </div>
+-                  </div>
+-                </motion.article>
+-              </Link>
+-            </motion.div>
+-          ))}
+-        </div>
+-      </div>
+-    </div>
+-  )
++export default async function BlogPage() {
++  const initialPosts = await fetchInitialPosts()
++  return <BlogClient initialPosts={initialPosts} />
+ }
+diff --git a/src/app/careers/page.tsx b/src/app/careers/page.tsx
+new file mode 100644
+index 0000000..5bea692
+--- /dev/null
++++ b/src/app/careers/page.tsx
+@@ -0,0 +1,55 @@
++import { Code2, Palette, Headset, TrendingUp, Mail } from "lucide-react"
++
++export const metadata = {
++  title: "Careers | LoqMart",
++  description: "LoqMart is a small team building India's Swadeshi marketplace. See the areas we're hiring for and how to reach us.",
++}
++
++const areas = [
++  { icon: Code2, title: "Engineering", desc: "Platform, checkout, logistics integrations and seller tooling." },
++  { icon: Palette, title: "Design", desc: "Product and brand design for buyers and sellers across India." },
++  { icon: Headset, title: "Seller Success", desc: "Onboarding and supporting artisans, MSMEs and manufacturers." },
++  { icon: TrendingUp, title: "Growth & Operations", desc: "Category expansion, state partnerships, and logistics operations." },
++]
++
++export default function CareersPage() {
++  return (
++    <div className="min-h-screen bg-surface">
++      <div className="bg-surface-container py-16 px-6 text-center">
++        <span className="text-xs font-bold text-primary uppercase tracking-[0.3em] block mb-3">Join Us</span>
++        <h1 className="text-4xl font-extrabold tracking-tight text-on-surface mb-3">Careers at LoqMart</h1>
++        <p className="text-on-surface-variant max-w-xl mx-auto">
++          We&rsquo;re a small team building India&rsquo;s Swadeshi marketplace from the ground up. We&rsquo;re not currently running open postings, but we&rsquo;re always glad to hear from people who want to work on this problem.
++        </p>
++      </div>
++
++      <div className="max-w-4xl mx-auto px-6 py-16 space-y-10">
++        <section>
++          <h2 className="text-xl font-extrabold text-on-surface mb-5">Areas We Grow Into</h2>
++          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
++            {areas.map((a) => (
++              <div key={a.title} className="flex gap-4 bg-surface-container-lowest rounded-xl p-5">
++                <div className="w-11 h-11 bg-primary-container rounded-xl flex items-center justify-center shrink-0">
++                  <a.icon className="w-5 h-5 text-on-primary-fixed" />
++                </div>
++                <div>
++                  <h3 className="font-bold text-on-surface mb-1">{a.title}</h3>
++                  <p className="text-sm text-on-surface-variant leading-relaxed">{a.desc}</p>
++                </div>
++              </div>
++            ))}
++          </div>
++        </section>
++
++        <section className="bg-surface-container-lowest rounded-xl p-8 text-center">
++          <Mail className="w-8 h-8 text-primary mx-auto mb-3" />
++          <h2 className="text-lg font-extrabold text-on-surface mb-2">Get in Touch</h2>
++          <p className="text-sm text-on-surface-variant mb-1">
++            Send your resume and a note about what you&rsquo;d want to work on to
++          </p>
++          <p className="font-bold text-on-surface">careers@loqmart.in</p>
++        </section>
++      </div>
++    </div>
++  )
++}
+diff --git a/src/app/cart/layout.tsx b/src/app/cart/layout.tsx
+new file mode 100644
+index 0000000..3f046e5
+--- /dev/null
++++ b/src/app/cart/layout.tsx
+@@ -0,0 +1,11 @@
++import type { Metadata } from "next"
++
++export const metadata: Metadata = {
++  title: "Your Cart | LoqMart",
++  description: "Review the items in your LoqMart cart before checkout.",
++  robots: { index: false, follow: true },
++}
++
++export default function CartLayout({ children }: { children: React.ReactNode }) {
++  return children
++}
+diff --git a/src/app/category/CategoryClient.tsx b/src/app/category/CategoryClient.tsx
+new file mode 100644
+index 0000000..d265c66
+--- /dev/null
++++ b/src/app/category/CategoryClient.tsx
+@@ -0,0 +1,282 @@
++"use client"
++
++import { useState, useEffect, useMemo, useRef } from "react"
++import { motion, AnimatePresence } from "framer-motion"
++import { Filter, Grid, List, X, Loader2 } from "lucide-react"
++import { ProductCard } from "@/components/product-card"
++import type { Product } from "@/types/database"
++
++const priceRanges = [
++  { label: "Under ₹500",       min: 0,    max: 500   },
++  { label: "₹500 – ₹1,000",   min: 500,  max: 1000  },
++  { label: "₹1,000 – ₹2,500", min: 1000, max: 2500  },
++  { label: "₹2,500 – ₹5,000", min: 2500, max: 5000  },
++  { label: "Above ₹5,000",    min: 5000, max: Infinity },
++]
++
++const states = [
++  { code: "RJ", name: "Rajasthan"       },
++  { code: "UP", name: "Uttar Pradesh"   },
++  { code: "MH", name: "Maharashtra"     },
++  { code: "WB", name: "West Bengal"     },
++  { code: "KA", name: "Karnataka"       },
++  { code: "TN", name: "Tamil Nadu"      },
++  { code: "OR", name: "Odisha"          },
++  { code: "AP", name: "Andhra Pradesh"  },
++  { code: "GJ", name: "Gujarat"         },
++  { code: "JK", name: "Jammu & Kashmir" },
++  { code: "KL", name: "Kerala"          },
++  { code: "BR", name: "Bihar"           },
++]
++
++const sortOptions = [
++  { value: "featured",   label: "Featured"             },
++  { value: "newest",     label: "Newest First"         },
++  { value: "price_low",  label: "Price: Low to High"   },
++  { value: "price_high", label: "Price: High to Low"   },
++  { value: "rating",     label: "Highest Rated"        },
++  { value: "popular",    label: "Most Popular"         },
++]
++
++export function CategoryClient({
++  initialProducts, initialMode, initialSearch,
++}: {
++  initialProducts: Product[]
++  initialMode: "handmade" | "machine_made"
++  initialSearch: string
++}) {
++  const [products,   setProducts]   = useState<Product[]>(initialProducts)
++  const [loading,    setLoading]    = useState(false)
++
++  const [selectedMode,       setSelectedMode]       = useState<"handmade" | "machine_made">(initialMode)
++  const [selectedPriceRange, setSelectedPriceRange] = useState<number | null>(null)
++  const [selectedStates,     setSelectedStates]     = useState<string[]>([])
++  const [inStockOnly,        setInStockOnly]        = useState(false)
++  const [sortBy,             setSortBy]             = useState("featured")
++  const [viewMode,           setViewMode]           = useState<"grid" | "list">("grid")
++  const [showFilters,        setShowFilters]        = useState(false)
++
++  const isFirstRun = useRef(true)
++  useEffect(() => {
++    if (isFirstRun.current) { isFirstRun.current = false; return }
++    setLoading(true)
++    const params = new URLSearchParams()
++    params.set("mode", selectedMode)
++    params.set("limit", "100")
++    if (initialSearch) params.set("q", initialSearch)
++    const sortMap: Record<string, string> = {
++      newest: "created_at_desc", price_low: "price_asc", price_high: "price_desc",
++      rating: "rating_desc", popular: "sold_desc",
++    }
++    params.set("sort", sortMap[sortBy] || "rating_desc")
++
++    fetch(`/api/products?${params}`)
++      .then(r => r.json())
++      .then(d => { setProducts(d.products || []); setLoading(false) })
++      .catch(() => setLoading(false))
++  }, [selectedMode, sortBy, initialSearch])
++
++  const filteredProducts = useMemo(() => {
++    let result = [...products]
++    if (inStockOnly) result = result.filter(p => p.stock > 0)
++    if (selectedPriceRange !== null) {
++      const r = priceRanges[selectedPriceRange]
++      result = result.filter(p => p.price >= r.min && p.price < r.max)
++    }
++    if (selectedStates.length > 0) {
++      result = result.filter(p => p.state_code && selectedStates.includes(p.state_code))
++    }
++    return result
++  }, [products, inStockOnly, selectedPriceRange, selectedStates])
++
++  const toggleState = (code: string) =>
++    setSelectedStates(prev => prev.includes(code) ? prev.filter(s => s !== code) : [...prev, code])
++
++  const resetFilters = () => {
++    setSelectedPriceRange(null)
++    setSelectedStates([])
++    setInStockOnly(false)
++  }
++
++  const hasActiveFilters = selectedPriceRange !== null || selectedStates.length > 0 || inStockOnly
++
++  return (
++    <div className="min-h-screen bg-[#f8f5f0]">
++      <div className="bg-white border-b border-[#1a1c1c]/8 py-8">
++        <div className="max-w-7xl mx-auto px-4 md:px-6">
++          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 md:gap-6">
++            <div>
++              <span className="text-xs font-black uppercase tracking-[0.3em] text-[#1a1c1c]/40 block mb-2">
++                {selectedMode === "handmade" ? "Artisan Crafts" : "Industrial Quality"}
++              </span>
++              <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight text-[#1a1c1c]">
++                {initialSearch
++                  ? `Search: "${initialSearch}"`
++                  : selectedMode === "handmade"
++                    ? "Handmade Collection"
++                    : "Machine-Made Collection"
++                }
++              </h1>
++              <p className="text-[#1a1c1c]/50 mt-1.5 text-sm">{loading ? "…" : `${filteredProducts.length} products`}</p>
++            </div>
++
++            <div className="flex bg-[#f8f5f0] border border-[#1a1c1c]/10 p-1 rounded-xl">
++              {(["handmade", "machine_made"] as const).map((m) => (
++                <button key={m} onClick={() => setSelectedMode(m)}
++                  className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
++                    selectedMode === m
++                      ? "bg-[#fcd020] text-[#1a1c1c] shadow-sm"
++                      : "text-[#1a1c1c]/50 hover:text-[#1a1c1c]"
++                  }`}>
++                  {m === "handmade" ? "Handmade" : "Machine-Made"}
++                </button>
++              ))}
++            </div>
++          </div>
++        </div>
++      </div>
++
++      <div className="max-w-7xl mx-auto px-4 md:px-6 py-5 md:py-8">
++        <div className="flex gap-8">
++          {/* Sidebar */}
++          <AnimatePresence>
++          {(showFilters || true) && (
++          <aside className={`${showFilters ? "block" : "hidden"} md:block w-56 shrink-0`}>
++            <motion.div
++              className="sticky top-24 space-y-4"
++              initial={{ opacity: 0, x: -16 }}
++              animate={{ opacity: 1, x: 0 }}
++              transition={{ duration: 0.3 }}
++            >
++              <div className="bg-white rounded-xl border border-[#1a1c1c]/8 p-5">
++                <h3 className="text-xs font-black uppercase tracking-widest text-[#1a1c1c]/50 mb-3">State</h3>
++                <div className="space-y-2 max-h-64 overflow-y-auto">
++                  {states.map((state) => (
++                    <label key={state.code} className="flex items-center gap-2.5 cursor-pointer group">
++                      <input type="checkbox"
++                        checked={selectedStates.includes(state.code)}
++                        onChange={() => toggleState(state.code)}
++                        className="w-4 h-4 rounded border-[#1a1c1c]/25 accent-[#fcd020]"
++                      />
++                      <span className="text-sm font-medium text-[#1a1c1c]/70 group-hover:text-[#1a1c1c]">{state.name}</span>
++                    </label>
++                  ))}
++                </div>
++              </div>
++
++              <div className="bg-white rounded-xl border border-[#1a1c1c]/8 p-5">
++                <h3 className="text-xs font-black uppercase tracking-widest text-[#1a1c1c]/50 mb-3">Price Range</h3>
++                <div className="space-y-2">
++                  {priceRanges.map((range, index) => (
++                    <label key={range.label} className="flex items-center gap-2.5 cursor-pointer group">
++                      <input type="radio" name="price"
++                        checked={selectedPriceRange === index}
++                        onChange={() => setSelectedPriceRange(index)}
++                        className="w-4 h-4 accent-[#fcd020]"
++                      />
++                      <span className="text-sm font-medium text-[#1a1c1c]/70 group-hover:text-[#1a1c1c]">{range.label}</span>
++                    </label>
++                  ))}
++                </div>
++              </div>
++
++              <div className="bg-white rounded-xl border border-[#1a1c1c]/8 p-5">
++                <label className="flex items-center gap-2.5 cursor-pointer">
++                  <input type="checkbox"
++                    checked={inStockOnly}
++                    onChange={() => setInStockOnly(!inStockOnly)}
++                    className="w-4 h-4 rounded accent-[#fcd020]"
++                  />
++                  <span className="text-sm font-medium text-[#1a1c1c]/70">In Stock Only</span>
++                </label>
++              </div>
++
++              {hasActiveFilters && (
++                <button onClick={resetFilters}
++                  className="w-full bg-[#1a1c1c] text-white py-2.5 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-[#1a1c1c]/90 transition-colors">
++                  Reset Filters
++                </button>
++              )}
++            </motion.div>
++          </aside>
++          )}
++          </AnimatePresence>
++
++          {/* Main */}
++          <div className="flex-1 min-w-0">
++            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
++              <button onClick={() => setShowFilters(!showFilters)}
++                className="md:hidden flex items-center gap-2 px-4 py-2 bg-white border border-[#1a1c1c]/10 rounded-lg text-sm font-semibold">
++                <Filter className="w-4 h-4" /> Filters
++              </button>
++
++              <div className="hidden md:flex items-center gap-2 text-sm text-[#1a1c1c]/50">
++                <span className="font-medium">Sort:</span>
++                <select value={sortBy} onChange={e => setSortBy(e.target.value)}
++                  className="bg-transparent font-semibold text-[#1a1c1c] focus:outline-none cursor-pointer">
++                  {sortOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
++                </select>
++              </div>
++
++              <div className="flex items-center gap-1 bg-white border border-[#1a1c1c]/10 rounded-lg p-1">
++                {[["grid", Grid], ["list", List]].map(([v, Icon]: any) => (
++                  <button key={v} onClick={() => setViewMode(v)}
++                    className={`p-1.5 rounded-md transition-colors ${viewMode === v ? "bg-[#fcd020]" : "hover:bg-[#f8f5f0]"}`}>
++                    <Icon className="w-4 h-4 text-[#1a1c1c]" />
++                  </button>
++                ))}
++              </div>
++            </div>
++
++            {/* Active filter chips */}
++            {hasActiveFilters && (
++              <div className="flex flex-wrap gap-2 mb-5">
++                {selectedStates.map(code => (
++                  <span key={code} className="inline-flex items-center gap-1 px-3 py-1 bg-[#fcd020]/30 text-[#1a1c1c] text-xs font-bold rounded-full">
++                    {states.find(s => s.code === code)?.name}
++                    <button onClick={() => toggleState(code)}><X className="w-3 h-3" /></button>
++                  </span>
++                ))}
++                {selectedPriceRange !== null && (
++                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#fcd020]/30 text-[#1a1c1c] text-xs font-bold rounded-full">
++                    {priceRanges[selectedPriceRange].label}
++                    <button onClick={() => setSelectedPriceRange(null)}><X className="w-3 h-3" /></button>
++                  </span>
++                )}
++                {inStockOnly && (
++                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#fcd020]/30 text-[#1a1c1c] text-xs font-bold rounded-full">
++                    In Stock
++                    <button onClick={() => setInStockOnly(false)}><X className="w-3 h-3" /></button>
++                  </span>
++                )}
++              </div>
++            )}
++
++            {loading ? (
++              <div className="flex justify-center py-24">
++                <Loader2 className="w-8 h-8 animate-spin text-[#1a1c1c]/30" />
++              </div>
++            ) : filteredProducts.length === 0 ? (
++              <div className="text-center py-24">
++                <p className="text-xl font-bold text-[#1a1c1c]/40 mb-2">No products found</p>
++                <p className="text-sm text-[#1a1c1c]/30 mb-6">Try adjusting your filters or browse a different category.</p>
++                <button onClick={resetFilters} className="px-5 py-2.5 rounded-xl text-[13px] font-black text-[#1a1c1c]" style={{ background: "#fcd020" }}>Reset Filters</button>
++              </div>
++            ) : (
++              <div className={`grid ${viewMode === "grid" ? "grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-6" : "grid-cols-1 gap-4"}`}>
++                {filteredProducts.map((product, i) => (
++                  <motion.div key={product.id}
++                    initial={{ opacity: 0, y: 16 }}
++                    animate={{ opacity: 1, y: 0 }}
++                    transition={{ duration: 0.4, delay: Math.min(i * 0.04, 0.4) }}>
++                    <ProductCard product={product} />
++                  </motion.div>
++                ))}
++              </div>
++            )}
++          </div>
++        </div>
++      </div>
++    </div>
++  )
++}
+diff --git a/src/app/category/page.tsx b/src/app/category/page.tsx
+index 3074ea2..a00a9cc 100644
+--- a/src/app/category/page.tsx
++++ b/src/app/category/page.tsx
+@@ -1,297 +1,52 @@
+-"use client"
+-
+-import { useState, useEffect, useMemo, Suspense } from "react"
+-import { useSearchParams } from "next/navigation"
+-import { motion, AnimatePresence } from "framer-motion"
+-import { Filter, Grid, List, X, Loader2 } from "lucide-react"
+-import { ProductCard } from "@/components/product-card"
++import type { Metadata } from "next"
++import { createServiceClient } from "@/lib/supabase/admin"
++import { CategoryClient } from "./CategoryClient"
+ import type { Product } from "@/types/database"
+ 
+-const priceRanges = [
+-  { label: "Under ₹500",       min: 0,    max: 500   },
+-  { label: "₹500 – ₹1,000",   min: 500,  max: 1000  },
+-  { label: "₹1,000 – ₹2,500", min: 1000, max: 2500  },
+-  { label: "₹2,500 – ₹5,000", min: 2500, max: 5000  },
+-  { label: "Above ₹5,000",    min: 5000, max: Infinity },
+-]
+-
+-const states = [
+-  { code: "RJ", name: "Rajasthan"       },
+-  { code: "UP", name: "Uttar Pradesh"   },
+-  { code: "MH", name: "Maharashtra"     },
+-  { code: "WB", name: "West Bengal"     },
+-  { code: "KA", name: "Karnataka"       },
+-  { code: "TN", name: "Tamil Nadu"      },
+-  { code: "OR", name: "Odisha"          },
+-  { code: "AP", name: "Andhra Pradesh"  },
+-  { code: "GJ", name: "Gujarat"         },
+-  { code: "JK", name: "Jammu & Kashmir" },
+-  { code: "KL", name: "Kerala"          },
+-  { code: "BR", name: "Bihar"           },
+-]
+-
+-const sortOptions = [
+-  { value: "featured",   label: "Featured"             },
+-  { value: "newest",     label: "Newest First"         },
+-  { value: "price_low",  label: "Price: Low to High"   },
+-  { value: "price_high", label: "Price: High to Low"   },
+-  { value: "rating",     label: "Highest Rated"        },
+-  { value: "popular",    label: "Most Popular"         },
+-]
+-
+-export default function CategoryPage() {
+-  return (
+-    <Suspense fallback={<CategoryLoading />}>
+-      <CategoryContent />
+-    </Suspense>
+-  )
++export const metadata: Metadata = {
++  title: "Shop Handmade & Machine-Made Products | LoqMart",
++  description: "Browse verified handmade crafts and machine-made products from Indian sellers, filterable by state, price and category.",
+ }
+ 
+-function CategoryLoading() {
+-  return (
+-    <div className="min-h-screen bg-[#f8f5f0] flex items-center justify-center">
+-      <Loader2 className="w-8 h-8 animate-spin text-[#1a1c1c]/40" />
+-    </div>
+-  )
++async function fetchInitialProducts(mode: "handmade" | "machine_made", search: string): Promise<Product[]> {
++  try {
++    const supabase = createServiceClient()
++    let query = supabase
++      .from("products")
++      .select("*, sellers(id, business_name, swadeshi_rank, state_code), categories(id, name, slug)")
++      .eq("approval_status", "approved")
++      .eq("mode", mode)
++      .order("rating", { ascending: false })
++      .range(0, 99)
++
++    if (search) query = query.ilike("name", `%${search.slice(0, 100)}%`)
++
++    const { data, error } = await query
++    if (error) { console.error("Category initial fetch error:", error); return [] }
++    return data || []
++  } catch (err) {
++    console.error("Category initial fetch failed:", err)
++    return []
++  }
+ }
+ 
+-function CategoryContent() {
+-  const searchParams = useSearchParams()
+-  const modeParam   = searchParams.get("mode")
+-  const searchParam = searchParams.get("search") || ""
+-
+-  const [products,   setProducts]   = useState<Product[]>([])
+-  const [loading,    setLoading]    = useState(true)
+-
+-  const [selectedMode,       setSelectedMode]       = useState<"handmade" | "machine_made">(
+-    modeParam === "machine_made" ? "machine_made" : "handmade"
+-  )
+-  const [selectedPriceRange, setSelectedPriceRange] = useState<number | null>(null)
+-  const [selectedStates,     setSelectedStates]     = useState<string[]>([])
+-  const [inStockOnly,        setInStockOnly]        = useState(false)
+-  const [sortBy,             setSortBy]             = useState("featured")
+-  const [viewMode,           setViewMode]           = useState<"grid" | "list">("grid")
+-  const [showFilters,        setShowFilters]        = useState(false)
+-
+-  useEffect(() => {
+-    setLoading(true)
+-    const params = new URLSearchParams()
+-    params.set("mode", selectedMode)
+-    params.set("limit", "100")
+-    if (searchParam) params.set("q", searchParam)
+-    const sortMap: Record<string, string> = {
+-      newest: "created_at_desc", price_low: "price_asc", price_high: "price_desc",
+-      rating: "rating_desc", popular: "sold_desc",
+-    }
+-    params.set("sort", sortMap[sortBy] || "rating_desc")
+-
+-    fetch(`/api/products?${params}`)
+-      .then(r => r.json())
+-      .then(d => { setProducts(d.products || []); setLoading(false) })
+-      .catch(() => setLoading(false))
+-  }, [selectedMode, sortBy, searchParam])
++export default async function CategoryPage({
++  searchParams,
++}: {
++  searchParams: Promise<{ mode?: string; search?: string }>
++}) {
++  const params = await searchParams
++  const mode = params.mode === "machine_made" ? "machine_made" : "handmade"
++  const search = params.search || ""
+ 
+-  const filteredProducts = useMemo(() => {
+-    let result = [...products]
+-    if (inStockOnly) result = result.filter(p => p.stock > 0)
+-    if (selectedPriceRange !== null) {
+-      const r = priceRanges[selectedPriceRange]
+-      result = result.filter(p => p.price >= r.min && p.price < r.max)
+-    }
+-    if (selectedStates.length > 0) {
+-      result = result.filter(p => p.state_code && selectedStates.includes(p.state_code))
+-    }
+-    return result
+-  }, [products, inStockOnly, selectedPriceRange, selectedStates])
+-
+-  const toggleState = (code: string) =>
+-    setSelectedStates(prev => prev.includes(code) ? prev.filter(s => s !== code) : [...prev, code])
+-
+-  const resetFilters = () => {
+-    setSelectedPriceRange(null)
+-    setSelectedStates([])
+-    setInStockOnly(false)
+-  }
+-
+-  const hasActiveFilters = selectedPriceRange !== null || selectedStates.length > 0 || inStockOnly
++  const initialProducts = await fetchInitialProducts(mode, search)
+ 
+   return (
+-    <div className="min-h-screen bg-[#f8f5f0]">
+-      <div className="bg-white border-b border-[#1a1c1c]/8 py-8">
+-        <div className="max-w-7xl mx-auto px-4 md:px-6">
+-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 md:gap-6">
+-            <div>
+-              <span className="text-xs font-black uppercase tracking-[0.3em] text-[#1a1c1c]/40 block mb-2">
+-                {selectedMode === "handmade" ? "Artisan Crafts" : "Industrial Quality"}
+-              </span>
+-              <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight text-[#1a1c1c]">
+-                {searchParam
+-                  ? `Search: "${searchParam}"`
+-                  : selectedMode === "handmade"
+-                    ? "Handmade Collection"
+-                    : "Machine-Made Collection"
+-                }
+-              </h1>
+-              <p className="text-[#1a1c1c]/50 mt-1.5 text-sm">{loading ? "…" : `${filteredProducts.length} products`}</p>
+-            </div>
+-
+-            <div className="flex bg-[#f8f5f0] border border-[#1a1c1c]/10 p-1 rounded-xl">
+-              {(["handmade", "machine_made"] as const).map((m) => (
+-                <button key={m} onClick={() => setSelectedMode(m)}
+-                  className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+-                    selectedMode === m
+-                      ? "bg-[#fcd020] text-[#1a1c1c] shadow-sm"
+-                      : "text-[#1a1c1c]/50 hover:text-[#1a1c1c]"
+-                  }`}>
+-                  {m === "handmade" ? "Handmade" : "Machine-Made"}
+-                </button>
+-              ))}
+-            </div>
+-          </div>
+-        </div>
+-      </div>
+-
+-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-5 md:py-8">
+-        <div className="flex gap-8">
+-          {/* Sidebar */}
+-          <AnimatePresence>
+-          {(showFilters || true) && (
+-          <aside className={`${showFilters ? "block" : "hidden"} md:block w-56 shrink-0`}>
+-            <motion.div
+-              className="sticky top-24 space-y-4"
+-              initial={{ opacity: 0, x: -16 }}
+-              animate={{ opacity: 1, x: 0 }}
+-              transition={{ duration: 0.3 }}
+-            >
+-              <div className="bg-white rounded-xl border border-[#1a1c1c]/8 p-5">
+-                <h3 className="text-xs font-black uppercase tracking-widest text-[#1a1c1c]/50 mb-3">State</h3>
+-                <div className="space-y-2 max-h-64 overflow-y-auto">
+-                  {states.map((state) => (
+-                    <label key={state.code} className="flex items-center gap-2.5 cursor-pointer group">
+-                      <input type="checkbox"
+-                        checked={selectedStates.includes(state.code)}
+-                        onChange={() => toggleState(state.code)}
+-                        className="w-4 h-4 rounded border-[#1a1c1c]/25 accent-[#fcd020]"
+-                      />
+-                      <span className="text-sm font-medium text-[#1a1c1c]/70 group-hover:text-[#1a1c1c]">{state.name}</span>
+-                    </label>
+-                  ))}
+-                </div>
+-              </div>
+-
+-              <div className="bg-white rounded-xl border border-[#1a1c1c]/8 p-5">
+-                <h3 className="text-xs font-black uppercase tracking-widest text-[#1a1c1c]/50 mb-3">Price Range</h3>
+-                <div className="space-y-2">
+-                  {priceRanges.map((range, index) => (
+-                    <label key={range.label} className="flex items-center gap-2.5 cursor-pointer group">
+-                      <input type="radio" name="price"
+-                        checked={selectedPriceRange === index}
+-                        onChange={() => setSelectedPriceRange(index)}
+-                        className="w-4 h-4 accent-[#fcd020]"
+-                      />
+-                      <span className="text-sm font-medium text-[#1a1c1c]/70 group-hover:text-[#1a1c1c]">{range.label}</span>
+-                    </label>
+-                  ))}
+-                </div>
+-              </div>
+-
+-              <div className="bg-white rounded-xl border border-[#1a1c1c]/8 p-5">
+-                <label className="flex items-center gap-2.5 cursor-pointer">
+-                  <input type="checkbox"
+-                    checked={inStockOnly}
+-                    onChange={() => setInStockOnly(!inStockOnly)}
+-                    className="w-4 h-4 rounded accent-[#fcd020]"
+-                  />
+-                  <span className="text-sm font-medium text-[#1a1c1c]/70">In Stock Only</span>
+-                </label>
+-              </div>
+-
+-              {hasActiveFilters && (
+-                <button onClick={resetFilters}
+-                  className="w-full bg-[#1a1c1c] text-white py-2.5 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-[#1a1c1c]/90 transition-colors">
+-                  Reset Filters
+-                </button>
+-              )}
+-            </motion.div>
+-          </aside>
+-          )}
+-          </AnimatePresence>
+-
+-          {/* Main */}
+-          <div className="flex-1 min-w-0">
+-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+-              <button onClick={() => setShowFilters(!showFilters)}
+-                className="md:hidden flex items-center gap-2 px-4 py-2 bg-white border border-[#1a1c1c]/10 rounded-lg text-sm font-semibold">
+-                <Filter className="w-4 h-4" /> Filters
+-              </button>
+-
+-              <div className="hidden md:flex items-center gap-2 text-sm text-[#1a1c1c]/50">
+-                <span className="font-medium">Sort:</span>
+-                <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+-                  className="bg-transparent font-semibold text-[#1a1c1c] focus:outline-none cursor-pointer">
+-                  {sortOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+-                </select>
+-              </div>
+-
+-              <div className="flex items-center gap-1 bg-white border border-[#1a1c1c]/10 rounded-lg p-1">
+-                {[["grid", Grid], ["list", List]].map(([v, Icon]: any) => (
+-                  <button key={v} onClick={() => setViewMode(v)}
+-                    className={`p-1.5 rounded-md transition-colors ${viewMode === v ? "bg-[#fcd020]" : "hover:bg-[#f8f5f0]"}`}>
+-                    <Icon className="w-4 h-4 text-[#1a1c1c]" />
+-                  </button>
+-                ))}
+-              </div>
+-            </div>
+-
+-            {/* Active filter chips */}
+-            {hasActiveFilters && (
+-              <div className="flex flex-wrap gap-2 mb-5">
+-                {selectedStates.map(code => (
+-                  <span key={code} className="inline-flex items-center gap-1 px-3 py-1 bg-[#fcd020]/30 text-[#1a1c1c] text-xs font-bold rounded-full">
+-                    {states.find(s => s.code === code)?.name}
+-                    <button onClick={() => toggleState(code)}><X className="w-3 h-3" /></button>
+-                  </span>
+-                ))}
+-                {selectedPriceRange !== null && (
+-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#fcd020]/30 text-[#1a1c1c] text-xs font-bold rounded-full">
+-                    {priceRanges[selectedPriceRange].label}
+-                    <button onClick={() => setSelectedPriceRange(null)}><X className="w-3 h-3" /></button>
+-                  </span>
+-                )}
+-                {inStockOnly && (
+-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#fcd020]/30 text-[#1a1c1c] text-xs font-bold rounded-full">
+-                    In Stock
+-                    <button onClick={() => setInStockOnly(false)}><X className="w-3 h-3" /></button>
+-                  </span>
+-                )}
+-              </div>
+-            )}
+-
+-            {loading ? (
+-              <div className="flex justify-center py-24">
+-                <Loader2 className="w-8 h-8 animate-spin text-[#1a1c1c]/30" />
+-              </div>
+-            ) : filteredProducts.length === 0 ? (
+-              <div className="text-center py-24">
+-                <p className="text-xl font-bold text-[#1a1c1c]/40 mb-2">No products found</p>
+-                <p className="text-sm text-[#1a1c1c]/30 mb-6">Try adjusting your filters or browse a different category.</p>
+-                <button onClick={resetFilters} className="px-5 py-2.5 rounded-xl text-[13px] font-black text-[#1a1c1c]" style={{ background: "#fcd020" }}>Reset Filters</button>
+-              </div>
+-            ) : (
+-              <div className={`grid ${viewMode === "grid" ? "grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-6" : "grid-cols-1 gap-4"}`}>
+-                {filteredProducts.map((product, i) => (
+-                  <motion.div key={product.id}
+-                    initial={{ opacity: 0, y: 16 }}
+-                    animate={{ opacity: 1, y: 0 }}
+-                    transition={{ duration: 0.4, delay: Math.min(i * 0.04, 0.4) }}>
+-                    <ProductCard product={product} />
+-                  </motion.div>
+-                ))}
+-              </div>
+-            )}
+-          </div>
+-        </div>
+-      </div>
+-    </div>
++    <CategoryClient
++      key={`${mode}:${search}`}
++      initialProducts={initialProducts}
++      initialMode={mode}
++      initialSearch={search}
++    />
+   )
+ }
+diff --git a/src/app/checkout/layout.tsx b/src/app/checkout/layout.tsx
+new file mode 100644
+index 0000000..fa42f60
+--- /dev/null
++++ b/src/app/checkout/layout.tsx
+@@ -0,0 +1,11 @@
++import type { Metadata } from "next"
++
++export const metadata: Metadata = {
++  title: "Checkout | LoqMart",
++  description: "Complete your purchase on LoqMart.",
++  robots: { index: false, follow: false },
++}
++
++export default function CheckoutLayout({ children }: { children: React.ReactNode }) {
++  return children
++}
+diff --git a/src/app/contact/layout.tsx b/src/app/contact/layout.tsx
+new file mode 100644
+index 0000000..cc2db74
+--- /dev/null
++++ b/src/app/contact/layout.tsx
+@@ -0,0 +1,10 @@
++import type { Metadata } from "next"
++
++export const metadata: Metadata = {
++  title: "Contact Us | LoqMart",
++  description: "Reach LoqMart support by email, phone, or WhatsApp for buyer and seller queries.",
++}
++
++export default function ContactLayout({ children }: { children: React.ReactNode }) {
++  return children
++}
+diff --git a/src/app/grievance/layout.tsx b/src/app/grievance/layout.tsx
+new file mode 100644
+index 0000000..2e1e63a
+--- /dev/null
++++ b/src/app/grievance/layout.tsx
+@@ -0,0 +1,10 @@
++import type { Metadata } from "next"
++
++export const metadata: Metadata = {
++  title: "Grievance Redressal | LoqMart",
++  description: "File a buyer or seller grievance with LoqMart, handled per the Consumer Protection Act 2019 and e-commerce rules.",
++}
++
++export default function GrievanceLayout({ children }: { children: React.ReactNode }) {
++  return children
++}
+diff --git a/src/app/how-to-buy/page.tsx b/src/app/how-to-buy/page.tsx
+new file mode 100644
+index 0000000..10c849d
+--- /dev/null
++++ b/src/app/how-to-buy/page.tsx
+@@ -0,0 +1,74 @@
++import Link from "next/link"
++import { Search, ShoppingCart, MapPin, CreditCard, PackageCheck, Coins } from "lucide-react"
++
++export const metadata = {
++  title: "How to Buy | LoqMart",
++  description: "A step-by-step guide to finding, buying and tracking products on LoqMart, India's Swadeshi marketplace.",
++}
++
++const steps = [
++  {
++    icon: Search,
++    title: "1. Find a Product",
++    desc: "Browse Handmade or Machine-Made collections, filter by state or price, or search directly. Every listing shows the seller's state of origin and Swadeshi Rank.",
++  },
++  {
++    icon: ShoppingCart,
++    title: "2. Add to Cart",
++    desc: "Add items from one or more sellers to your cart. You can adjust quantities and review pricing before checkout.",
++  },
++  {
++    icon: MapPin,
++    title: "3. Add a Delivery Address",
++    desc: "Save a delivery address from your Account page, or add one during checkout. You can store multiple addresses and set a default.",
++  },
++  {
++    icon: CreditCard,
++    title: "4. Pay Securely",
++    desc: "Checkout is powered by Razorpay, supporting UPI, cards, netbanking, IMPS and NEFT. You can also redeem LoqCoins or a promo code at checkout.",
++  },
++  {
++    icon: PackageCheck,
++    title: "5. Track Your Order",
++    desc: "Track order status - confirmed, processing, shipped, delivered - from the Orders tab in your Account page.",
++  },
++  {
++    icon: Coins,
++    title: "6. Earn LoqCoins",
++    desc: "Earn LoqCoins on eligible purchases and redeem them against future orders. See the LoqCoins Program page for details.",
++  },
++]
++
++export default function HowToBuyPage() {
++  return (
++    <div className="min-h-screen bg-surface">
++      <div className="bg-surface-container py-16 px-6 text-center">
++        <span className="text-xs font-bold text-primary uppercase tracking-[0.3em] block mb-3">Buyer Guide</span>
++        <h1 className="text-4xl font-extrabold tracking-tight text-on-surface mb-3">How to Buy on LoqMart</h1>
++        <p className="text-on-surface-variant max-w-xl mx-auto">
++          Six steps from discovery to delivery.
++        </p>
++      </div>
++
++      <div className="max-w-4xl mx-auto px-6 py-16 space-y-6">
++        {steps.map((s) => (
++          <div key={s.title} className="flex gap-5 bg-surface-container-lowest rounded-xl p-6">
++            <div className="w-12 h-12 bg-primary-container rounded-xl flex items-center justify-center shrink-0">
++              <s.icon className="w-6 h-6 text-on-primary-fixed" />
++            </div>
++            <div>
++              <h2 className="font-extrabold text-on-surface mb-1">{s.title}</h2>
++              <p className="text-sm text-on-surface-variant leading-relaxed">{s.desc}</p>
++            </div>
++          </div>
++        ))}
++
++        <div className="text-center pt-6">
++          <Link href="/category" className="inline-flex items-center justify-center bg-primary-container text-on-primary-fixed font-bold px-8 py-3 rounded-lg hover:brightness-95 transition-all">
++            Start Browsing
++          </Link>
++        </div>
++      </div>
++    </div>
++  )
++}
+diff --git a/src/app/loqcoins/layout.tsx b/src/app/loqcoins/layout.tsx
+new file mode 100644
+index 0000000..a87e953
+--- /dev/null
++++ b/src/app/loqcoins/layout.tsx
+@@ -0,0 +1,10 @@
++import type { Metadata } from "next"
++
++export const metadata: Metadata = {
++  title: "LoqCoins Rewards Program | LoqMart",
++  description: "Earn LoqCoins on every purchase, review and referral, and redeem them for discounts and perks on LoqMart.",
++}
++
++export default function LoqCoinsLayout({ children }: { children: React.ReactNode }) {
++  return children
++}
+diff --git a/src/app/mission/page.tsx b/src/app/mission/page.tsx
+new file mode 100644
+index 0000000..8a1b6b8
+--- /dev/null
++++ b/src/app/mission/page.tsx
+@@ -0,0 +1,95 @@
++import Link from "next/link"
++import { Target, MapPin, Users, Landmark, Sprout, HeartHandshake } from "lucide-react"
++
++export const metadata = {
++  title: "Our Mission | LoqMart",
++  description: "LoqMart's mission is to make it effortless to discover and buy authentic Indian-made products, and to put more of every rupee spent into the hands of the people who make them.",
++}
++
++const pillars = [
++  {
++    icon: MapPin,
++    title: "Origin You Can Trust",
++    desc: "Every listing is tagged to the state it was made in. No guessing whether a product is genuinely Indian-made or an unmarked import.",
++  },
++  {
++    icon: Users,
++    title: "Makers Come First",
++    desc: "We keep commission rates low, especially for handmade categories, so artisans and small manufacturers keep more of what they earn.",
++  },
++  {
++    icon: Landmark,
++    title: "Formal, Verifiable Trade",
++    desc: "GST, PAN and bank verification for every seller means transactions are traceable, legitimate, and accountable - good for buyers and for India's formal economy.",
++  },
++  {
++    icon: Sprout,
++    title: "Grassroots Reach",
++    desc: "From single-artisan workshops to registered MSMEs, LoqMart is built to onboard sellers who have never had an online storefront before.",
++  },
++]
++
++export default function MissionPage() {
++  return (
++    <div className="min-h-screen bg-surface">
++      <div className="relative py-24 px-6 overflow-hidden" style={{ background: "linear-gradient(135deg, #231b00 0%, #3d2f00 100%)" }}>
++        <div className="max-w-4xl mx-auto text-center">
++          <Target className="w-10 h-10 text-[#fcd020] mx-auto mb-5" />
++          <span className="text-[#fcd020]/70 text-xs font-bold uppercase tracking-[0.3em] block mb-4">Our Mission</span>
++          <h1 className="text-4xl md:text-6xl font-black text-white tracking-tight mb-6">
++            Every Rupee Spent Should Build India.
++          </h1>
++          <p className="text-white/60 text-lg max-w-2xl mx-auto leading-relaxed">
++            LoqMart exists to make it simple to find genuinely Indian-made products, and to route more of what buyers pay straight back to the artisans, MSMEs and manufacturers who make them.
++          </p>
++        </div>
++      </div>
++
++      <div className="max-w-5xl mx-auto px-6 py-20 space-y-20">
++        <section className="text-center">
++          <h2 className="text-3xl font-extrabold text-on-surface mb-4">Why LoqMart Exists</h2>
++          <p className="text-on-surface-variant max-w-3xl mx-auto text-lg leading-relaxed">
++            Most marketplaces optimise for the lowest price, regardless of where a product comes from. LoqMart optimises for provenance: it&rsquo;s a Swadeshi-first marketplace where a buyer can filter by state, verify a seller&rsquo;s GST and MSME status, and know that their purchase supports an Indian workshop or factory - not an anonymous reseller.
++          </p>
++        </section>
++
++        <section>
++          <h2 className="text-3xl font-extrabold text-on-surface text-center mb-10">What We Stand For</h2>
++          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
++            {pillars.map((p) => (
++              <div key={p.title} className="flex gap-5 bg-surface-container-lowest rounded-xl p-6">
++                <div className="w-12 h-12 bg-primary-container rounded-xl flex items-center justify-center shrink-0">
++                  <p.icon className="w-6 h-6 text-on-primary-fixed" />
++                </div>
++                <div>
++                  <h3 className="font-extrabold text-on-surface mb-1">{p.title}</h3>
++                  <p className="text-sm text-on-surface-variant leading-relaxed">{p.desc}</p>
++                </div>
++              </div>
++            ))}
++          </div>
++        </section>
++
++        <section className="bg-surface-container-lowest rounded-2xl p-10 text-center">
++          <HeartHandshake className="w-10 h-10 text-primary mx-auto mb-4" />
++          <h2 className="text-3xl font-extrabold text-on-surface mb-4">The Long-Term Goal</h2>
++          <p className="text-on-surface-variant max-w-2xl mx-auto leading-relaxed">
++            To be the default place Indians go to buy Indian-made - so that choosing a domestically made product is never the harder, slower, or more expensive option.
++          </p>
++        </section>
++
++        <section className="text-center">
++          <p className="text-on-surface-variant mb-4">Want to be part of it?</p>
++          <div className="flex flex-col sm:flex-row gap-4 justify-center">
++            <Link href="/seller/register" className="inline-flex items-center justify-center bg-primary-container text-on-primary-fixed font-bold px-8 py-3 rounded-lg hover:brightness-95 transition-all">
++              Sell on LoqMart
++            </Link>
++            <Link href="/about" className="inline-flex items-center justify-center border border-outline-variant text-on-surface font-bold px-8 py-3 rounded-lg hover:bg-surface-container transition-all">
++              Read Our Story
++            </Link>
++          </div>
++        </section>
++      </div>
++    </div>
++  )
++}
+diff --git a/src/app/new/layout.tsx b/src/app/new/layout.tsx
+new file mode 100644
+index 0000000..072f37e
+--- /dev/null
++++ b/src/app/new/layout.tsx
+@@ -0,0 +1,10 @@
++import type { Metadata } from "next"
++
++export const metadata: Metadata = {
++  title: "New Arrivals | LoqMart",
++  description: "The latest handmade and machine-made products added by verified sellers on LoqMart.",
++}
++
++export default function NewLayout({ children }: { children: React.ReactNode }) {
++  return children
++}
+diff --git a/src/app/press/page.tsx b/src/app/press/page.tsx
+new file mode 100644
+index 0000000..09c6390
+--- /dev/null
++++ b/src/app/press/page.tsx
+@@ -0,0 +1,62 @@
++import { Mail, FileText, Building2 } from "lucide-react"
++
++export const metadata = {
++  title: "Press & Media | LoqMart",
++  description: "Press contact and company information for journalists and media covering LoqMart, India's Swadeshi marketplace.",
++}
++
++const facts = [
++  { label: "Company", value: "LoqMart India Pvt. Ltd." },
++  { label: "Founded", value: "2024" },
++  { label: "Headquarters", value: "New Delhi, India" },
++  { label: "CIN", value: "U74999DL2024PTC123456" },
++  { label: "Sector", value: "Multi-vendor e-commerce marketplace" },
++  { label: "Focus", value: "Handmade and machine-made Indian-manufactured goods" },
++]
++
++export default function PressPage() {
++  return (
++    <div className="min-h-screen bg-surface">
++      <div className="bg-surface-container py-16 px-6 text-center">
++        <span className="text-xs font-bold text-primary uppercase tracking-[0.3em] block mb-3">Media</span>
++        <h1 className="text-4xl font-extrabold tracking-tight text-on-surface mb-3">Press & Media</h1>
++        <p className="text-on-surface-variant max-w-xl mx-auto">
++          Resources and contact details for journalists and media covering LoqMart.
++        </p>
++      </div>
++
++      <div className="max-w-4xl mx-auto px-6 py-16 space-y-10">
++        <section className="bg-surface-container-lowest rounded-xl p-8">
++          <div className="flex items-center gap-3 mb-5">
++            <Building2 className="w-6 h-6 text-primary" />
++            <h2 className="text-lg font-extrabold text-on-surface">Company Facts</h2>
++          </div>
++          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
++            {facts.map((f) => (
++              <div key={f.label}>
++                <dt className="text-xs font-black uppercase tracking-wider text-on-surface-variant mb-1">{f.label}</dt>
++                <dd className="text-sm font-semibold text-on-surface">{f.value}</dd>
++              </div>
++            ))}
++          </dl>
++        </section>
++
++        <section className="bg-surface-container-lowest rounded-xl p-8">
++          <div className="flex items-center gap-3 mb-3">
++            <FileText className="w-6 h-6 text-primary" />
++            <h2 className="text-lg font-extrabold text-on-surface">Boilerplate</h2>
++          </div>
++          <p className="text-sm text-on-surface-variant leading-relaxed">
++            LoqMart is an Indian multi-vendor marketplace connecting GST-verified artisans, MSMEs and manufacturers directly to buyers across India. Every product is tagged to its state of origin, and sellers are ranked using a Swadeshi Rank that reflects verification, service quality and years in business.
++          </p>
++        </section>
++
++        <section className="text-center">
++          <Mail className="w-8 h-8 text-primary mx-auto mb-3" />
++          <h2 className="text-lg font-extrabold text-on-surface mb-2">Press Inquiries</h2>
++          <p className="font-bold text-on-surface">press@loqmart.in</p>
++        </section>
++      </div>
++    </div>
++  )
++}
+diff --git a/src/app/seller/commission/page.tsx b/src/app/seller/commission/page.tsx
+new file mode 100644
+index 0000000..42202d9
+--- /dev/null
++++ b/src/app/seller/commission/page.tsx
+@@ -0,0 +1,116 @@
++import type { Metadata } from "next"
++import Link from "next/link"
++import { Percent, CreditCard, Calendar, Info } from "lucide-react"
++import { createServiceClient } from "@/lib/supabase/admin"
++
++export const metadata: Metadata = {
++  title: "Commission Structure | LoqMart Sellers",
++  description: "How LoqMart's seller commission and payment gateway fees are calculated, including current global and category rates.",
++}
++
++// Re-fetch periodically in case admin updates commission rates.
++export const revalidate = 3600
++
++interface CommissionSetting {
++  id: string
++  scope: string
++  rate: number
++  gateway_rate: number
++  categories?: { name: string } | null
++}
++
++async function fetchCommissionSettings(): Promise<CommissionSetting[]> {
++  try {
++    const supabase = createServiceClient()
++    const { data, error } = await supabase
++      .from("commission_settings")
++      .select("id, scope, rate, gateway_rate, categories(name)")
++      .is("seller_id", null)
++      .order("scope")
++    if (error) { console.error("Commission fetch error:", error); return [] }
++    return (data as unknown as CommissionSetting[]) || []
++  } catch (err) {
++    console.error("Commission fetch failed:", err)
++    return []
++  }
++}
++
++export default async function SellerCommissionPage() {
++  const settings = await fetchCommissionSettings()
++  const global = settings.find(s => s.scope === "global") || { rate: 5, gateway_rate: 2 }
++  const categoryOverrides = settings.filter(s => s.scope === "category" && s.categories?.name)
++
++  return (
++    <div className="min-h-screen bg-surface">
++      <div className="bg-surface-container py-16 px-6 text-center">
++        <span className="text-xs font-bold text-primary uppercase tracking-[0.3em] block mb-3">For Sellers</span>
++        <h1 className="text-4xl font-extrabold tracking-tight text-on-surface mb-3">Commission Structure</h1>
++        <p className="text-on-surface-variant max-w-xl mx-auto">
++          A transparent breakdown of what LoqMart deducts from each sale, and when you get paid.
++        </p>
++      </div>
++
++      <div className="max-w-4xl mx-auto px-6 py-16 space-y-10">
++        <section className="grid grid-cols-1 sm:grid-cols-2 gap-5">
++          <div className="bg-surface-container-lowest rounded-xl p-6">
++            <Percent className="w-8 h-8 text-primary mb-3" />
++            <p className="text-3xl font-black text-on-surface mb-1">{Number(global.rate).toFixed(2)}%</p>
++            <p className="text-sm text-on-surface-variant">Platform commission (default rate, per order)</p>
++          </div>
++          <div className="bg-surface-container-lowest rounded-xl p-6">
++            <CreditCard className="w-8 h-8 text-primary mb-3" />
++            <p className="text-3xl font-black text-on-surface mb-1">{Number(global.gateway_rate).toFixed(2)}%</p>
++            <p className="text-sm text-on-surface-variant">Payment gateway processing fee (Razorpay)</p>
++          </div>
++        </section>
++
++        {categoryOverrides.length > 0 && (
++          <section>
++            <h2 className="text-xl font-extrabold text-on-surface mb-4">Category-Specific Rates</h2>
++            <div className="bg-surface-container-lowest rounded-xl overflow-hidden">
++              {categoryOverrides.map((c) => (
++                <div key={c.id} className="flex justify-between items-center px-6 py-3 border-b border-surface-container last:border-0">
++                  <span className="text-sm font-semibold text-on-surface">{c.categories?.name}</span>
++                  <span className="text-sm font-black text-primary">{Number(c.rate).toFixed(2)}%</span>
++                </div>
++              ))}
++            </div>
++          </section>
++        )}
++
++        <section>
++          <h2 className="text-xl font-extrabold text-on-surface mb-4">How It Works</h2>
++          <div className="space-y-4">
++            {[
++              "The commission is calculated on the item price at the time of order, not including shipping.",
++              "Handmade categories are generally kept at the lowest rate to protect artisan margins; sellers can request a category-specific rate review from the Seller Dashboard.",
++              "Individual sellers may occasionally be assigned a custom rate that overrides the global or category rate, shown directly in their Seller Dashboard.",
++              "LoqCoins and promo code discounts are absorbed by LoqMart, not deducted from the seller payout.",
++            ].map((line, i) => (
++              <div key={i} className="flex gap-3 items-start">
++                <Info className="w-4 h-4 text-primary mt-0.5 shrink-0" />
++                <p className="text-sm text-on-surface-variant leading-relaxed">{line}</p>
++              </div>
++            ))}
++          </div>
++        </section>
++
++        <section className="bg-surface-container-lowest rounded-xl p-6 flex gap-4 items-start">
++          <Calendar className="w-6 h-6 text-primary shrink-0 mt-1" />
++          <div>
++            <h2 className="font-extrabold text-on-surface mb-1">Settlement Cycle</h2>
++            <p className="text-sm text-on-surface-variant leading-relaxed">
++              Payouts are processed via NEFT/IMPS on a T+7 settlement cycle after order delivery confirmation, net of commission and gateway fees. See your Seller Dashboard for settlement history.
++            </p>
++          </div>
++        </section>
++
++        <div className="text-center pt-4">
++          <Link href="/seller/dashboard" className="inline-flex items-center justify-center bg-primary-container text-on-primary-fixed font-bold px-8 py-3 rounded-lg hover:brightness-95 transition-all">
++            Go to Seller Dashboard
++          </Link>
++        </div>
++      </div>
++    </div>
++  )
++}
+diff --git a/src/app/seller/dashboard/layout.tsx b/src/app/seller/dashboard/layout.tsx
+new file mode 100644
+index 0000000..88d5f1a
+--- /dev/null
++++ b/src/app/seller/dashboard/layout.tsx
+@@ -0,0 +1,11 @@
++import type { Metadata } from "next"
++
++export const metadata: Metadata = {
++  title: "Seller Dashboard | LoqMart",
++  description: "Manage your products, orders and payouts on LoqMart.",
++  robots: { index: false, follow: false },
++}
++
++export default function SellerDashboardLayout({ children }: { children: React.ReactNode }) {
++  return children
++}
+diff --git a/src/app/seller/register/layout.tsx b/src/app/seller/register/layout.tsx
+new file mode 100644
+index 0000000..26a8b9f
+--- /dev/null
++++ b/src/app/seller/register/layout.tsx
+@@ -0,0 +1,10 @@
++import type { Metadata } from "next"
++
++export const metadata: Metadata = {
++  title: "Become a Seller | LoqMart",
++  description: "Register your business or artisan workshop to start selling handmade or machine-made products on LoqMart.",
++}
++
++export default function SellerRegisterLayout({ children }: { children: React.ReactNode }) {
++  return children
++}
+diff --git a/src/app/seller/swadeshi-rank/page.tsx b/src/app/seller/swadeshi-rank/page.tsx
+new file mode 100644
+index 0000000..6c61d17
+--- /dev/null
++++ b/src/app/seller/swadeshi-rank/page.tsx
+@@ -0,0 +1,72 @@
++import type { Metadata } from "next"
++import Link from "next/link"
++import { Award, Star, Truck, RotateCcw, Calendar, ShieldCheck } from "lucide-react"
++
++export const metadata: Metadata = {
++  title: "Swadeshi Rank | LoqMart Sellers",
++  description: "How LoqMart's Swadeshi Rank score is calculated - the factors that determine seller ranking and buyer visibility.",
++}
++
++const factors = [
++  { icon: ShieldCheck, title: "Base Score", points: "50 pts", desc: "Every approved seller starts with a base score of 50 out of 100." },
++  { icon: Star, title: "Customer Rating", points: "Up to 20 pts", desc: "Your average product rating across all delivered orders, weighted most heavily in the score." },
++  { icon: Truck, title: "On-Time Delivery", points: "Up to 10 pts", desc: "The percentage of orders shipped and delivered within 3 days of the shipped date." },
++  { icon: RotateCcw, title: "Low Return/Cancellation Rate", points: "Up to 10 pts", desc: "Fewer cancelled orders relative to total orders improves this component." },
++  { icon: Calendar, title: "Years in Business", points: "Up to 10 pts", desc: "1 point for every year registered on LoqMart, capped at 10." },
++  { icon: Award, title: "Verification & Compliance", points: "Up to 10 pts", desc: "GSTIN, PAN, bank account verification and approval status each contribute points." },
++]
++
++export default function SwadeshiRankPage() {
++  return (
++    <div className="min-h-screen bg-surface">
++      <div className="bg-surface-container py-16 px-6 text-center">
++        <span className="text-xs font-bold text-primary uppercase tracking-[0.3em] block mb-3">For Sellers</span>
++        <h1 className="text-4xl font-extrabold tracking-tight text-on-surface mb-3">Swadeshi Rank</h1>
++        <p className="text-on-surface-variant max-w-xl mx-auto">
++          A 0-100 score shown on every seller profile, used to surface trustworthy sellers to buyers.
++        </p>
++      </div>
++
++      <div className="max-w-4xl mx-auto px-6 py-16 space-y-10">
++        <section className="bg-surface-container-lowest rounded-xl p-6 text-center">
++          <p className="text-sm text-on-surface-variant leading-relaxed">
++            Your Swadeshi Rank is recalculated automatically as your ratings, delivery performance and verification status change. It&rsquo;s visible to buyers on your storefront and product listings, and higher-ranked sellers are favoured in seller spotlights and search ranking.
++          </p>
++        </section>
++
++        <section>
++          <h2 className="text-xl font-extrabold text-on-surface mb-5">How the Score Is Built</h2>
++          <div className="space-y-4">
++            {factors.map((f) => (
++              <div key={f.title} className="flex gap-4 bg-surface-container-lowest rounded-xl p-5">
++                <div className="w-11 h-11 bg-primary-container rounded-xl flex items-center justify-center shrink-0">
++                  <f.icon className="w-5 h-5 text-on-primary-fixed" />
++                </div>
++                <div className="flex-1">
++                  <div className="flex justify-between items-center mb-1">
++                    <h3 className="font-bold text-on-surface">{f.title}</h3>
++                    <span className="text-xs font-black text-primary">{f.points}</span>
++                  </div>
++                  <p className="text-sm text-on-surface-variant leading-relaxed">{f.desc}</p>
++                </div>
++              </div>
++            ))}
++          </div>
++        </section>
++
++        <section className="bg-surface-container-lowest rounded-xl p-6">
++          <h2 className="font-extrabold text-on-surface mb-2">Improving Your Rank</h2>
++          <p className="text-sm text-on-surface-variant leading-relaxed">
++            Ship orders promptly, keep return rates low, respond to buyer messages, and complete your GSTIN, PAN and bank verification in the Seller Dashboard. Your current score and its breakdown are shown on your Seller Dashboard overview.
++          </p>
++        </section>
++
++        <div className="text-center pt-2">
++          <Link href="/seller/dashboard" className="inline-flex items-center justify-center bg-primary-container text-on-primary-fixed font-bold px-8 py-3 rounded-lg hover:brightness-95 transition-all">
++            View My Score
++          </Link>
++        </div>
++      </div>
++    </div>
++  )
++}
+diff --git a/src/app/seller/terms/page.tsx b/src/app/seller/terms/page.tsx
+new file mode 100644
+index 0000000..e7f01bb
+--- /dev/null
++++ b/src/app/seller/terms/page.tsx
+@@ -0,0 +1,86 @@
++import type { Metadata } from "next"
++
++export const metadata: Metadata = {
++  title: "Seller Agreement | LoqMart",
++  description: "LoqMart Seller Agreement - the terms governing sellers listing and fulfilling orders on the LoqMart marketplace.",
++}
++
++const sections = [
++  {
++    id: "1",
++    title: "1. Eligibility & Registration",
++    content: `To sell on LoqMart you must register a business or individual/artisan account, provide a valid PAN, and where applicable a valid GSTIN. Accounts are subject to review and approval before listing privileges are granted.`,
++  },
++  {
++    id: "2",
++    title: "2. Swadeshi Origin Requirement",
++    content: `Every product you list must be manufactured or substantially transformed within India. LoqMart may request supporting documentation and will remove listings or suspend accounts that misrepresent origin.`,
++  },
++  {
++    id: "3",
++    title: "3. Listings & Inventory",
++    content: `You are responsible for accurate product titles, descriptions, images, pricing and stock levels. Inventory must be kept current; repeated out-of-stock cancellations may affect your Swadeshi Rank and account standing.`,
++  },
++  {
++    id: "4",
++    title: "4. Order Fulfilment",
++    content: `Orders must be dispatched within the timeframe shown in your Seller Dashboard. Delayed or cancelled shipments impact your on-time delivery score, which is a component of your Swadeshi Rank.`,
++  },
++  {
++    id: "5",
++    title: "5. Commission & Payouts",
++    content: `LoqMart deducts a platform commission and payment gateway fee from each order as set out on the Commission Structure page. Net proceeds are paid out via NEFT/IMPS on a T+7 settlement cycle after delivery confirmation.`,
++  },
++  {
++    id: "6",
++    title: "6. Returns, Refunds & Cancellations",
++    content: `You must honour LoqMart's published Return & Refund Policy for buyers. Excessive cancellations or return rates may result in reduced visibility or account review.`,
++  },
++  {
++    id: "7",
++    title: "7. Prohibited Items",
++    content: `You may not list counterfeit goods, items infringing third-party intellectual property, prohibited or restricted goods under Indian law, or products that are not genuinely manufactured in India.`,
++  },
++  {
++    id: "8",
++    title: "8. Account Suspension",
++    content: `LoqMart may suspend or terminate a seller account for policy violations, sustained poor performance, fraudulent activity, or failure to maintain required verification documents.`,
++  },
++  {
++    id: "9",
++    title: "9. Relationship to General Terms",
++    content: `This Seller Agreement supplements LoqMart's general Terms of Service. In case of conflict specific to seller obligations, this Agreement governs.`,
++  },
++]
++
++export default function SellerTermsPage() {
++  return (
++    <div className="min-h-screen bg-surface">
++      <div className="bg-surface-container py-16 px-6 text-center">
++        <span className="text-xs font-bold text-primary uppercase tracking-[0.3em] block mb-3">Legal · For Sellers</span>
++        <h1 className="text-4xl font-extrabold tracking-tight text-on-surface mb-3">Seller Agreement</h1>
++        <p className="text-on-surface-variant">Last updated: June 2024 · Governed by Indian law</p>
++      </div>
++
++      <div className="max-w-4xl mx-auto px-6 py-16 space-y-10">
++        <p className="text-sm text-on-surface-variant bg-surface-container-lowest rounded-xl p-6 leading-relaxed">
++          This Seller Agreement governs your participation as a seller on LoqMart. By submitting a seller registration, you agree to these terms in addition to LoqMart&rsquo;s general Terms of Service.
++        </p>
++
++        {sections.map((section) => (
++          <section key={section.id} id={`section-${section.id}`}>
++            <h2 className="text-xl font-extrabold text-on-surface mb-3">{section.title}</h2>
++            <p className="text-sm text-on-surface-variant leading-relaxed bg-surface-container-lowest rounded-xl p-5">
++              {section.content}
++            </p>
++          </section>
++        ))}
++
++        <div className="border-t border-surface-container pt-8 text-center text-sm text-on-surface-variant">
++          <p>LoqMart India Pvt. Ltd. · CIN: U74999DL2024PTC123456 · New Delhi, India</p>
++          <p className="mt-2">For seller queries: <strong className="text-on-surface">sellers@loqmart.in</strong></p>
++        </div>
++      </div>
++    </div>
++  )
++}
+diff --git a/src/app/sellers/page.tsx b/src/app/sellers/page.tsx
+new file mode 100644
+index 0000000..bcb054b
+--- /dev/null
++++ b/src/app/sellers/page.tsx
+@@ -0,0 +1,106 @@
++import Link from "next/link"
++import type { Metadata } from "next"
++import { MapPin, Award, Store } from "lucide-react"
++import { createServiceClient } from "@/lib/supabase/admin"
++
++export const metadata: Metadata = {
++  title: "All Sellers | LoqMart",
++  description: "Browse verified artisans, MSMEs and manufacturers selling handmade and machine-made products on LoqMart.",
++}
++
++// Re-fetch periodically so newly approved sellers show up without a full redeploy.
++export const revalidate = 300
++
++const STATE_NAMES: Record<string, string> = {
++  RJ: "Rajasthan", UP: "Uttar Pradesh", MH: "Maharashtra", WB: "West Bengal",
++  KA: "Karnataka", TN: "Tamil Nadu", OR: "Odisha", AP: "Andhra Pradesh",
++  GJ: "Gujarat", JK: "Jammu & Kashmir", KL: "Kerala", BR: "Bihar",
++}
++
++interface SellerRow {
++  id: string
++  business_name: string
++  owner_name: string | null
++  state_code: string | null
++  swadeshi_rank: number
++  total_products: number
++}
++
++async function fetchSellers(): Promise<SellerRow[]> {
++  try {
++    const supabase = createServiceClient()
++    const { data, error } = await supabase
++      .from("sellers")
++      .select("id, business_name, owner_name, state_code, swadeshi_rank, total_products")
++      .eq("approval_status", "approved")
++      .order("swadeshi_rank", { ascending: false })
++      .limit(60)
++    if (error) { console.error("Sellers fetch error:", error); return [] }
++    return data || []
++  } catch (err) {
++    console.error("Sellers fetch failed:", err)
++    return []
++  }
++}
++
++export default async function SellersPage() {
++  const sellers = await fetchSellers()
++
++  return (
++    <div className="min-h-screen bg-[#f8f5f0]">
++      <div className="bg-white border-b border-[#1a1c1c]/8 py-12 px-6 text-center">
++        <span className="text-xs font-black uppercase tracking-[0.3em] text-[#1a1c1c]/40 block mb-3">Verified Partners</span>
++        <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-[#1a1c1c] mb-3">All Sellers</h1>
++        <p className="text-[#1a1c1c]/50 max-w-xl mx-auto">
++          GST-verified artisans, MSMEs and manufacturers, ranked by Swadeshi Rank.
++        </p>
++      </div>
++
++      <div className="max-w-7xl mx-auto px-4 md:px-6 py-12">
++        {sellers.length === 0 ? (
++          <div className="text-center py-24">
++            <Store className="w-10 h-10 text-[#1a1c1c]/15 mx-auto mb-3" />
++            <p className="text-[#1a1c1c]/40 font-medium">Seller profiles loading soon.</p>
++          </div>
++        ) : (
++          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
++            {sellers.map((seller) => {
++              const initials = (seller.business_name || "?").split(" ").map((w) => w[0]).join("").substring(0, 2).toUpperCase()
++              const stateName = STATE_NAMES[seller.state_code || ""] || seller.state_code || "India"
++              return (
++                <Link key={seller.id} href={`/seller/${seller.id}`}
++                  className="group block bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-shadow duration-300"
++                  style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
++                  <div className="relative h-24 bg-gradient-to-br from-[#fcd020] to-[#e6b800]">
++                    <div className="absolute -bottom-7 left-5">
++                      <div className="w-14 h-14 rounded-full border-4 border-white bg-[#1a1c1c] flex items-center justify-center shadow-lg">
++                        <span className="text-[#fcd020] font-black text-base">{initials}</span>
++                      </div>
++                    </div>
++                  </div>
++                  <div className="pt-10 pb-5 px-5">
++                    <div className="flex items-start justify-between gap-2 mb-1">
++                      <h2 className="font-extrabold text-[#1a1c1c] text-sm group-hover:text-[#725c00] transition-colors leading-tight">
++                        {seller.business_name}
++                      </h2>
++                      {seller.swadeshi_rank > 0 && (
++                        <div className="flex items-center gap-1 bg-[#fcd020]/30 px-2 py-1 rounded-full shrink-0">
++                          <Award className="w-3 h-3 text-[#725c00]" />
++                          <span className="text-[10px] font-black text-[#725c00]">{seller.swadeshi_rank}</span>
++                        </div>
++                      )}
++                    </div>
++                    <div className="flex items-center gap-3 text-xs text-[#1a1c1c]/40 mt-2">
++                      <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{stateName}</span>
++                      <span>{seller.total_products || 0} products</span>
++                    </div>
++                  </div>
++                </Link>
++              )
++            })}
++          </div>
++        )}
++      </div>
++    </div>
++  )
++}
+diff --git a/src/app/survey/layout.tsx b/src/app/survey/layout.tsx
+new file mode 100644
+index 0000000..384efb9
+--- /dev/null
++++ b/src/app/survey/layout.tsx
+@@ -0,0 +1,10 @@
++import type { Metadata } from "next"
++
++export const metadata: Metadata = {
++  title: "Join LoqMart | India's Marketplace for Local Makers",
++  description: "LoqMart connects India's artisans, MSMEs and manufacturers directly to buyers. Join early and help build India's Swadeshi marketplace.",
++}
++
++export default function SurveyLayout({ children }: { children: React.ReactNode }) {
++  return children
++}
+diff --git a/src/components/map/IndiaMap.tsx b/src/components/map/IndiaMap.tsx
+index 9780216..4575679 100644
+--- a/src/components/map/IndiaMap.tsx
++++ b/src/components/map/IndiaMap.tsx
+@@ -182,33 +182,6 @@ export function IndiaMap() {
+         };
+     };
+ 
+-    if (!geoData) {
+-        return (
+-            <div className={styles.loadingContainer}>
+-                <motion.div 
+-                    className={styles.loadingSpinner}
+-                    animate={{ rotate: 360 }}
+-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" as const }}
+-                >
+-                    <Globe size={40} />
+-                </motion.div>
+-                <motion.p
+-                    initial={{ opacity: 0, y: 10 }}
+-                    animate={{ opacity: 1, y: 0 }}
+-                    transition={{ delay: 0.2 }}
+-                >
+-                    Loading Interactive Map...
+-                </motion.p>
+-                <motion.div 
+-                    className={styles.loadingProgress}
+-                    initial={{ scaleX: 0 }}
+-                    animate={{ scaleX: 1 }}
+-                    transition={{ duration: 2, ease: "easeInOut" as const }}
+-                />
+-            </div>
+-        );
+-    }
+-
+     const currentStateData = hoveredState ? getStateData(hoveredState) : null;
+ 
+     return (
+@@ -264,6 +237,30 @@ export function IndiaMap() {
+                 </p>
+             </motion.div>
+ 
++            {!geoData ? (
++                <div className={styles.loadingContainer}>
++                    <motion.div
++                        className={styles.loadingSpinner}
++                        animate={{ rotate: 360 }}
++                        transition={{ duration: 1, repeat: Infinity, ease: "linear" as const }}
++                    >
++                        <Globe size={40} />
++                    </motion.div>
++                    <motion.p
++                        initial={{ opacity: 0, y: 10 }}
++                        animate={{ opacity: 1, y: 0 }}
++                        transition={{ delay: 0.2 }}
++                    >
++                        Loading Interactive Map...
++                    </motion.p>
++                    <motion.div
++                        className={styles.loadingProgress}
++                        initial={{ scaleX: 0 }}
++                        animate={{ scaleX: 1 }}
++                        transition={{ duration: 2, ease: "easeInOut" as const }}
++                    />
++                </div>
++            ) : (
+             <motion.div
+                 className={styles.mapLayout}
+                 initial={{ opacity: 0, y: 30 }}
+@@ -612,8 +609,9 @@ export function IndiaMap() {
+                     </motion.div>
+                 </div>
+             </motion.div>
++            )}
+ 
+-            <motion.div 
++            <motion.div
+                 className={styles.statsBar}
+                 initial={{ opacity: 0, y: 50 }}
+                 animate={{ opacity: 1, y: 0 }}
+diff --git a/src/lib/blog.ts b/src/lib/blog.ts
+new file mode 100644
+index 0000000..0d4362d
+--- /dev/null
++++ b/src/lib/blog.ts
+@@ -0,0 +1,35 @@
++import type { BlogPost } from "@/app/blog/BlogClient"
++
++interface BlogPostRow {
++  id: string
++  slug: string
++  title: string
++  excerpt: string
++  image_url: string | null
++  state: string | null
++  state_code: string | null
++  category: string
++  read_time: string | null
++  author: string
++  published_at: string | null
++  created_at: string
++}
++
++// Maps a raw blog_posts DB row (snake_case) to the shape the blog UI expects.
++export function mapBlogPostRow(p: BlogPostRow): BlogPost {
++  return {
++    id: p.id,
++    slug: p.slug,
++    title: p.title,
++    excerpt: p.excerpt,
++    image: p.image_url || "",
++    state: p.state || "",
++    stateCode: p.state_code || "",
++    category: p.category,
++    readTime: p.read_time || "",
++    date: new Date(p.published_at || p.created_at).toLocaleDateString("en-IN", {
++      day: "numeric", month: "short", year: "numeric",
++    }),
++    author: p.author,
++  }
++}
+-- 
+2.43.0
+
