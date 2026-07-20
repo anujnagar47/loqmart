@@ -65,13 +65,15 @@ export default function ProductsPage() {
   }
 
   const setStatus = async (id: string, status: string) => {
-    await fetch(`/api/admin/products/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ approval_status: status }) })
+    const r = await fetch(`/api/admin/products/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ approval_status: status }) })
+    if (!r.ok) { showToast("Failed to update product status"); return }
     setProducts(p => p.map(x => x.id === id ? { ...x, approval_status: status } : x))
     showToast(`Product ${status}`)
   }
 
   const toggleFeatured = async (id: string, current: boolean) => {
-    await fetch(`/api/admin/products/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ is_featured: !current }) })
+    const r = await fetch(`/api/admin/products/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ is_featured: !current }) })
+    if (!r.ok) { showToast("Failed to update product"); return }
     setProducts(p => p.map(x => x.id === id ? { ...x, is_featured: !current } : x))
     showToast(!current ? "Featured" : "Unfeatured")
   }
@@ -79,9 +81,10 @@ export default function ProductsPage() {
   const deleteProduct = async (id: string) => {
     if (!confirm("Delete this product permanently?")) return
     setDeleting(id)
-    await fetch(`/api/admin/products/${id}`, { method: "DELETE" })
-    setProducts(p => p.filter(x => x.id !== id))
+    const r = await fetch(`/api/admin/products/${id}`, { method: "DELETE" })
     setDeleting(null)
+    if (!r.ok) { showToast("Failed to delete product"); return }
+    setProducts(p => p.filter(x => x.id !== id))
     showToast("Deleted")
   }
 

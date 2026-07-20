@@ -72,7 +72,8 @@ export default function PenaltiesPage() {
   }
 
   const updatePenalty = async (id: string, status: string) => {
-    await fetch(`/api/admin/penalties/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) })
+    const r = await fetch(`/api/admin/penalties/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) })
+    if (!r.ok) { showToast("Failed to update"); return }
     setPenalties(p => p.map(x => x.id === id ? { ...x, status } : x))
     showToast("Updated")
   }

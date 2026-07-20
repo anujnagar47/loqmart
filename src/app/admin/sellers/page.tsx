@@ -193,13 +193,15 @@ export default function SellersPage() {
       return
     }
     const endpoint = "reject"
-    await fetch(`/api/admin/sellers/${id}/${endpoint}`, { method: "POST" })
+    const r = await fetch(`/api/admin/sellers/${id}/${endpoint}`, { method: "POST" })
+    if (!r.ok) { showToast("Failed to update seller"); return }
     setSellers(p => p.map(s => s.id === id ? { ...s, approval_status: status } : s))
     showToast(`Seller ${status}`)
   }
 
   const updateRank = async (id: string, rank: number | null) => {
-    await fetch(`/api/admin/sellers/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ swadeshi_rank: rank }) })
+    const r = await fetch(`/api/admin/sellers/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ swadeshi_rank: rank }) })
+    if (!r.ok) { showToast("Failed to update rank"); return }
     setSellers(p => p.map(s => s.id === id ? { ...s, swadeshi_rank: rank } : s))
     showToast("Swadeshi rank updated")
   }

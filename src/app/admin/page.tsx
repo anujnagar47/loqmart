@@ -121,13 +121,15 @@ export default function AdminOverview() {
   useEffect(() => { load() }, [])
 
   const approve = async (type: "sellers" | "products", id: string) => {
-    await fetch(`/api/admin/${type}/${id}/approve`, { method: "POST" })
+    const r = await fetch(`/api/admin/${type}/${id}/approve`, { method: "POST" })
+    if (!r.ok) { setToast(`Failed to approve ${type === "sellers" ? "seller" : "product"}`); return }
     if (type === "sellers") setPendingSellers(p => p.filter(x => x.id !== id))
     else setPendingProducts(p => p.filter(x => x.id !== id))
     setToast(type === "sellers" ? "Seller approved" : "Product approved")
   }
   const reject = async (type: "sellers" | "products", id: string) => {
-    await fetch(`/api/admin/${type}/${id}/reject`, { method: "POST" })
+    const r = await fetch(`/api/admin/${type}/${id}/reject`, { method: "POST" })
+    if (!r.ok) { setToast(`Failed to reject ${type === "sellers" ? "seller" : "product"}`); return }
     if (type === "sellers") setPendingSellers(p => p.filter(x => x.id !== id))
     else setPendingProducts(p => p.filter(x => x.id !== id))
     setToast("Rejected")
@@ -136,10 +138,12 @@ export default function AdminOverview() {
     const items = type === "sellers" ? pendingSellers : pendingProducts
     if (items.length === 0) return
     if (!confirm(`Approve all ${items.length} pending ${type}? This cannot be undone.`)) return
-    await Promise.all(items.map(x => fetch(`/api/admin/${type}/${x.id}/approve`, { method: "POST" })))
-    if (type === "sellers") setPendingSellers([])
-    else setPendingProducts([])
-    setToast(`All ${items.length} ${type} approved`)
+    const results = await Promise.all(items.map(x => fetch(`/api/admin/${type}/${x.id}/approve`, { method: "POST" })))
+    const failedCount = results.filter(r => !r.ok).length
+    const succeededIds = items.filter((_, i) => results[i].ok).map(x => x.id)
+    if (type === "sellers") setPendingSellers(p => p.filter(x => !succeededIds.includes(x.id)))
+    else setPendingProducts(p => p.filter(x => !succeededIds.includes(x.id)))
+    setToast(failedCount > 0 ? `${succeededIds.length} approved, ${failedCount} failed` : `All ${items.length} ${type} approved`)
   }
 
   const totalPending = (stats?.pendingSellersCount ?? 0) + (stats?.pendingProductsCount ?? 0)

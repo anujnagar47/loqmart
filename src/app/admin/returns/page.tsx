@@ -49,11 +49,12 @@ export default function ReturnsPage() {
   const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(""), 2400) }
 
   const update = async (id: string, status: string, notes?: string) => {
-    await fetch(`/api/admin/returns/${id}`, {
+    const r = await fetch(`/api/admin/returns/${id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status, resolution_notes: notes }),
     })
-    setReturns(p => p.map(r => r.id === id ? { ...r, status } : r))
+    if (!r.ok) { showToast("Failed to update"); return }
+    setReturns(p => p.map(x => x.id === id ? { ...x, status } : x))
     showToast("Updated")
   }
 

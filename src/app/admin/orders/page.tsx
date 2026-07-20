@@ -81,10 +81,11 @@ export default function OrdersPage() {
   }
 
   const updateOrder = async (id: string, field: "order_status" | "payment_status", value: string) => {
-    await fetch(`/api/admin/orders/${id}`, {
+    const r = await fetch(`/api/admin/orders/${id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ [field]: value }),
     })
+    if (!r.ok) { showToast("Failed to update order"); return }
     setOrders(p => p.map(o => o.id === id ? { ...o, [field]: value } : o))
     showToast("Order updated")
   }

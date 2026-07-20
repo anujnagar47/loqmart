@@ -48,10 +48,11 @@ export default function FinancePage() {
   const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(""), 2400) }
 
   const updateSettlement = async (id: string, status: string) => {
-    await fetch(`/api/admin/finance/settlements/${id}`, {
+    const r = await fetch(`/api/admin/finance/settlements/${id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     })
+    if (!r.ok) { showToast("Failed to update settlement"); return }
     setSettlements(p => p.map(s => s.id === id ? { ...s, status } : s))
     showToast("Settlement updated")
   }

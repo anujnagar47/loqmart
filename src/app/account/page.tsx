@@ -67,7 +67,7 @@ function AccountPageContent() {
   async function loadAccountData() {
     const supabase = createClient()
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.user) { router.push("/auth"); return }
+    if (!session?.user) { router.push("/auth?next=/account"); return }
     setUser(session.user)
 
     const [profileRes, ordersRes, addressRes, coinsRes, ledgerRes, wishlistRes] = await Promise.all([
@@ -144,7 +144,8 @@ function AccountPageContent() {
   }
 
   async function handleDeleteAddress(id: string) {
-    await fetch(`/api/user/addresses?id=${id}`, { method: "DELETE" })
+    const r = await fetch(`/api/user/addresses?id=${id}`, { method: "DELETE" })
+    if (!r.ok) { alert("Failed to delete address. Please try again."); return }
     setAddresses(addresses.filter(a => a.id !== id))
   }
 

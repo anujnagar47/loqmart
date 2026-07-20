@@ -30,15 +30,17 @@ export default function ReviewsPage() {
   const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(""), 2400) }
 
   const update = async (id: string, patch: Record<string, unknown>) => {
-    await fetch(`/api/admin/reviews/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) })
-    setReviews(p => p.map(r => r.id === id ? { ...r, ...patch } : r))
+    const r = await fetch(`/api/admin/reviews/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) })
+    if (!r.ok) { showToast("Failed to update"); return }
+    setReviews(p => p.map(x => x.id === id ? { ...x, ...patch } : x))
     showToast("Updated")
   }
 
   const remove = async (id: string) => {
     if (!confirm("Permanently delete this review?")) return
-    await fetch(`/api/admin/reviews/${id}`, { method: "DELETE" })
-    setReviews(p => p.filter(r => r.id !== id))
+    const r = await fetch(`/api/admin/reviews/${id}`, { method: "DELETE" })
+    if (!r.ok) { showToast("Failed to delete"); return }
+    setReviews(p => p.filter(x => x.id !== id))
     showToast("Deleted")
   }
 

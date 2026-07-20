@@ -58,7 +58,8 @@ export default function UsersPage() {
   }
 
   const updateUser = async (id: string, field: string, value: string) => {
-    await fetch(`/api/admin/users/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [field]: value || null }) })
+    const r = await fetch(`/api/admin/users/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [field]: value || null }) })
+    if (!r.ok) { showToast("Failed to update user"); return }
     setUsers(p => p.map(u => u.id === id ? { ...u, [field]: value || null } : u))
     showToast("Updated")
   }

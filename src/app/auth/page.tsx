@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { Phone, RefreshCw, Mail, Lock, User as UserIcon, Loader2, ShieldCheck } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
@@ -68,7 +68,6 @@ const slide = {
 }
 
 function AuthPageContent() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
   const next = searchParams.get("next") || searchParams.get("redirect")
@@ -124,8 +123,9 @@ function AuthPageContent() {
         body: JSON.stringify({ phone: `+91${phone.replace(/\D/g, "")}`, otp: code }),
       })
       if (!res.ok) throw new Error()
-      router.push(destinationFor())
-      router.refresh()
+      // Hard navigation: guarantees the middleware sees the freshly-set session
+      // cookie immediately, instead of racing a client-side RSC transition.
+      window.location.href = destinationFor()
     } catch { setError("Invalid OTP. Please try again.") }
     finally { setIsLoading(false) }
   }
@@ -140,8 +140,7 @@ function AuthPageContent() {
       if (data.session && data.user) {
         await ensurePublicUser(data.user.id, data.user.email!, fullName || email.split("@")[0], tab === "seller" ? "seller" : "buyer")
         const { data: profile } = await supabase.from("users").select("role").eq("id", data.user.id).single()
-        router.push(destinationFor(profile?.role))
-        router.refresh()
+        window.location.href = destinationFor(profile?.role)
       }
     } catch (err: any) {
       setError(err.message?.includes("Invalid") ? "Incorrect email or password." : (err.message || "Sign in failed."))
@@ -166,8 +165,7 @@ function AuthPageContent() {
       if (data.user) {
         if (data.session) {
           await ensurePublicUser(data.user.id, email, fullName, tab === "seller" ? "seller" : "buyer")
-          router.push(destinationFor())
-          router.refresh()
+          window.location.href = destinationFor()
         } else {
           // Supabase project requires email confirmation before a session is issued —
           // redirecting now would just bounce the user straight back to /auth.

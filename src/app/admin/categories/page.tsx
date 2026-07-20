@@ -40,9 +40,9 @@ export default function CategoriesPage() {
     if (!form.name.trim() || !form.slug.trim()) { showToast("Name and slug are required"); return }
     setSaving(true)
     if (editId) {
-      await fetch(`/api/admin/categories/${editId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) })
-      setCats(p => p.map(c => c.id === editId ? { ...c, ...form } : c))
-      showToast("Category updated")
+      const r = await fetch(`/api/admin/categories/${editId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) })
+      if (r.ok) { setCats(p => p.map(c => c.id === editId ? { ...c, ...form } : c)); showToast("Category updated") }
+      else showToast("Failed to update category")
     } else {
       const r = await fetch("/api/admin/categories", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) })
       const d = await r.json()
@@ -56,9 +56,10 @@ export default function CategoriesPage() {
   const deleteCategory = async (id: string, name: string) => {
     if (!confirm(`Delete "${name}"? Products in this category may be affected.`)) return
     setDeleting(id)
-    await fetch(`/api/admin/categories/${id}`, { method: "DELETE" })
-    setCats(p => p.filter(c => c.id !== id))
+    const r = await fetch(`/api/admin/categories/${id}`, { method: "DELETE" })
     setDeleting(null)
+    if (!r.ok) { showToast("Failed to delete category"); return }
+    setCats(p => p.filter(c => c.id !== id))
     showToast("Category deleted")
   }
 

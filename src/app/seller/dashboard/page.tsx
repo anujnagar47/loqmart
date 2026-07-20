@@ -131,7 +131,7 @@ export default function SellerDashboard() {
     setError("")
     try {
       const res = await fetch("/api/seller/dashboard")
-      if (res.status === 401) { router.push("/auth"); return }
+      if (res.status === 401) { router.push("/auth?next=/seller/dashboard"); return }
       if (res.status === 403) {
         const b = await res.json()
         if (b.status === "pending") {

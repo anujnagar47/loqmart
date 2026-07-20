@@ -111,7 +111,7 @@ export default function ProductPage() {
     setWishlistLoading(true)
     const supabase = createClient()
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.user) { router.push("/auth"); setWishlistLoading(false); return }
+    if (!session?.user) { router.push(`/auth?next=${encodeURIComponent(`/product/${params.slug}`)}`); setWishlistLoading(false); return }
 
     if (isWishlisted) {
       await supabase.from("wishlists").delete()

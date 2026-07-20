@@ -47,7 +47,7 @@ export default function CheckoutPage() {
     async function fetchCheckoutData() {
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) { router.push("/auth"); return }
+      if (!session?.user) { router.push("/auth?next=/checkout"); return }
       setUser(session.user)
       // Use API route (service client) to bypass RLS
       const res = await fetch("/api/user/addresses")
