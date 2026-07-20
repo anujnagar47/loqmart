@@ -27,10 +27,10 @@ function MobileBottomNav() {
           const active = href === "/" ? pathname === "/" : pathname?.startsWith(href)
           return (
             <Link key={href} href={href}
-              className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 relative"
+              className="flex-1 flex flex-col items-center justify-center gap-1 py-3 relative"
               style={{ color: active ? "#1a1c1c" : "rgba(26,28,28,0.4)" }}>
               <div className="relative">
-                <Icon className="w-5 h-5" strokeWidth={active ? 2.5 : 1.8} />
+                <Icon className="w-6 h-6" strokeWidth={active ? 2.5 : 1.8} />
                 {href === "/cart" && cartCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black text-white"
                     style={{ background: "#ba1a1a" }}>
@@ -38,7 +38,7 @@ function MobileBottomNav() {
                   </span>
                 )}
               </div>
-              <span className="text-[9.5px] font-semibold">{label}</span>
+              <span className="text-[10.5px] font-semibold">{label}</span>
               {active && (
                 <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full"
                   style={{ background: "#fcd020" }} />
