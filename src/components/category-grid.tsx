@@ -1,9 +1,12 @@
-﻿"use client"
+"use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { motion } from "framer-motion"
 import { useState, useEffect } from "react"
 import { ArrowRight } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { useLanguage } from "@/lib/i18n/LanguageContext"
 
 interface Category {
   id: string
@@ -13,6 +16,11 @@ interface Category {
   count: number
   mode: "handmade" | "machine_made"
   icon: string
+}
+
+interface Thumb {
+  id: string
+  images: string[]
 }
 
 const containerVariants = {
@@ -25,8 +33,21 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: "easeOut" as const } }
 }
 
+/** One quadrant of a category's 2x2 product-thumbnail collage — falls back
+ *  to a blank cell (not a fake image) when that slot has no real product. */
+function CollageCell({ src, alt }: { src?: string; alt: string }) {
+  if (!src) return <div className="bg-[#ede8e0]" />
+  return (
+    <div className="relative bg-[#ede8e0]">
+      <Image src={src} alt={alt} fill sizes="12vw" className="object-cover" />
+    </div>
+  )
+}
+
 export function CategoryGrid() {
+  const { t } = useLanguage()
   const [categories, setCategories] = useState<Category[]>([])
+  const [thumbs, setThumbs] = useState<Record<string, Thumb[]>>({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -35,7 +56,26 @@ export function CategoryGrid() {
         const res = await fetch('/api/categories')
         if (res.ok) {
           const data = await res.json()
-          setCategories(data.categories || [])
+          const cats: Category[] = data.categories || []
+          setCategories(cats)
+
+          // Real per-category thumbnails for the collage tiles — up to 4
+          // actual products per category, not stock art. Best-effort: a
+          // category with a failed/empty fetch just falls back to its
+          // single image_url in the render below.
+          const entries = await Promise.all(
+            cats.map(async (c) => {
+              try {
+                const r = await fetch(`/api/products?category=${c.id}&limit=4`)
+                if (!r.ok) return [c.id, []] as const
+                const d = await r.json()
+                return [c.id, (d.products || []) as Thumb[]] as const
+              } catch {
+                return [c.id, []] as const
+              }
+            })
+          )
+          setThumbs(Object.fromEntries(entries))
         }
       } catch (e) {
         console.error("Failed to fetch categories", e)
@@ -52,7 +92,7 @@ export function CategoryGrid() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {[...Array(12)].map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl overflow-hidden animate-pulse">
+              <div key={i} className="bg-white rounded-[4px] border border-[#1a1c1c]/10 overflow-hidden animate-pulse">
                 <div className="aspect-square bg-[#e8e8e8]" />
                 <div className="p-3">
                   <div className="h-3 bg-[#e8e8e8] rounded w-2/3 mb-1.5" />
@@ -72,20 +112,20 @@ export function CategoryGrid() {
         <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-12">
           <div>
             <span className="text-[10px] font-black text-[#725c00] uppercase tracking-[0.3em] block mb-3">
-              Discover by Category
+              {t("categoryGrid.eyebrow")}
             </span>
             <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-[#1a1c1c] leading-tight">
-              What are you<br className="hidden md:block" /> looking for?
+              {t("categoryGrid.titleLine1")}<br className="hidden md:block" /> {t("categoryGrid.titleLine2")}
             </h2>
             <p className="text-[#4d4632] mt-2 text-sm leading-relaxed">
-              {categories.length} curated categories - from handwoven garments to ayurvedic wellness.
+              {categories.length} {t("categoryGrid.subtitle")}
             </p>
           </div>
           <Link
             href="/category"
             className="group flex items-center gap-2 text-[#725c00] font-bold text-xs uppercase tracking-widest hover:gap-3 transition-all whitespace-nowrap"
           >
-            View All <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            {t("common.viewAll")} <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
 
@@ -96,46 +136,57 @@ export function CategoryGrid() {
           whileInView="visible"
           viewport={{ once: true, margin: "-60px" }}
         >
-          {categories.map((category) => (
-            <motion.div key={category.slug} variants={itemVariants}>
-              <Link
-                href={`/category/${category.slug}`}
-                className="group block bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5"
-              >
-                <div className="relative aspect-square overflow-hidden bg-[#ede8e0]">
-                  {category.image_url ? (
-                    <img
-                      src={category.image_url}
-                      alt={category.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-on-surface-variant/40"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          {categories.map((category) => {
+            const products = thumbs[category.id] || []
+
+            return (
+              <motion.div key={category.slug} variants={itemVariants}>
+                <Link
+                  href={`/category/${category.slug}`}
+                  className="group block bg-white rounded-[4px] border border-[#1a1c1c]/10 overflow-hidden hover:shadow-[0_2px_10px_rgba(26,28,28,0.12)] transition-shadow duration-200"
+                >
+                  <div className="relative aspect-square overflow-hidden bg-[#ede8e0]">
+                    {products.length > 0 ? (
+                      <div className="grid grid-cols-2 grid-rows-2 gap-px w-full h-full">
+                        {[0, 1, 2, 3].map((i) => (
+                          <CollageCell key={i} src={products[i]?.images?.[0]} alt={category.name} />
+                        ))}
+                      </div>
+                    ) : category.image_url ? (
+                      <Image
+                        src={category.image_url}
+                        alt={category.name}
+                        fill
+                        sizes="(max-width: 768px) 50vw, 25vw"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-on-surface-variant/40"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                      </div>
+                    )}
+                    <div className="absolute top-2 left-2">
+                      <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-[3px] tracking-wider ${
+                        category.mode === "handmade"
+                          ? "bg-[#fcd020] text-[#1a1c1c]"
+                          : "bg-[#1a1c1c] text-white"
+                      }`}>
+                        {category.mode === "handmade" ? t("categoryGrid.handmade") : t("categoryGrid.machine")}
+                      </span>
                     </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="absolute top-2 left-2">
-                    <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-sm tracking-wider ${
-                      category.mode === "handmade"
-                        ? "bg-[#fcd020] text-[#1a1c1c]"
-                        : "bg-[#1a1c1c] text-white"
-                    }`}>
-                      {category.mode === "handmade" ? "Handmade" : "Machine"}
-                    </span>
                   </div>
-                </div>
-                <div className="p-3">
-                  <h3 className="font-bold text-[#1a1c1c] text-sm leading-tight group-hover:text-[#725c00] transition-colors">
-                    {category.name}
-                  </h3>
-                  <p className="text-[10px] text-[#4d4632] mt-0.5 font-medium">
-                    {(category.count ?? 0).toLocaleString()} products
-                  </p>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
+                  <div className="p-3">
+                    <h3 className="font-bold text-[#1a1c1c] text-sm leading-tight group-hover:text-[#725c00] transition-colors">
+                      {category.name}
+                    </h3>
+                    <p className="text-[10px] text-[#4d4632] mt-0.5 font-medium">
+                      {(category.count ?? 0).toLocaleString()} {t("categoryGrid.products")}
+                    </p>
+                  </div>
+                </Link>
+              </motion.div>
+            )
+          })}
         </motion.div>
 
         <motion.div
@@ -146,10 +197,10 @@ export function CategoryGrid() {
           transition={{ delay: 0.3 }}
         >
           <Link href="/india-map">
-            <button className="group inline-flex items-center gap-3 bg-[#1a1c1c] text-white px-10 py-4 font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-[#2f3131] transition-all hover:gap-4">
-              Choose Your State on the Map
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </button>
+            <Button type="button" variant="secondary" size="xl">
+              {t("categoryGrid.chooseStateOnMap")}
+              <ArrowRight className="w-4 h-4" />
+            </Button>
           </Link>
         </motion.div>
       </div>

@@ -73,13 +73,14 @@ function AuthPageContent() {
   const supabase = createClient()
   const next = searchParams.get("next") || searchParams.get("redirect")
 
-  const [tab, setTab]       = useState<Tab>("buyer")
+  const [tab, setTab]       = useState<Tab>(next?.startsWith("/seller") ? "seller" : "buyer")
   const [method, setMethod] = useState<AuthMethod>("phone")
   const [phone, setPhone]   = useState("")
   const [email, setEmail]   = useState("")
   const [password, setPassword] = useState("")
   const [fullName, setFullName] = useState("")
   const [otp, setOtp]           = useState(["", "", "", "", "", ""])
+  const [devOtp, setDevOtp]     = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError]         = useState("")
   const [notice, setNotice]       = useState("")
@@ -108,6 +109,8 @@ function AuthPageContent() {
         body: JSON.stringify({ phone: `+91${phone.replace(/\D/g, "")}` }),
       })
       if (!res.ok) throw new Error()
+      const data = await res.json()
+      setDevOtp(data.dev_otp || "")
       setMethod("otp")
     } catch { setError("Could not send OTP. Please try again.") }
     finally { setIsLoading(false) }
@@ -123,7 +126,8 @@ function AuthPageContent() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: `+91${phone.replace(/\D/g, "")}`, otp: code }),
       })
-      if (!res.ok) throw new Error()
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || "Invalid OTP. Please try again."); return }
       router.push(destinationFor())
       router.refresh()
     } catch { setError("Invalid OTP. Please try again.") }
@@ -212,7 +216,7 @@ function AuthPageContent() {
           <p className="text-[10px] font-black uppercase tracking-widest text-[#1a1c1c]/45 mb-4">Made in India, for India</p>
           <motion.h2 className="text-[48px] font-extrabold text-[#1a1c1c] tracking-tight leading-tight mb-5"
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.4 }}>
-            India's Own<br /><span className="opacity-35">Marketplace.</span>
+            India&apos;s Own<br /><span className="opacity-35">Marketplace.</span>
           </motion.h2>
           <p className="text-[#1a1c1c]/55 text-[15px] max-w-sm leading-relaxed">
             GST-verified sellers. State-tagged products. Swadeshi Ranked. Supporting artisans across all 36 states.
@@ -242,6 +246,11 @@ function AuthPageContent() {
                 ? `OTP sent to +91 ${phone}. Valid for 10 minutes.`
                 : "Choose how you'd like to continue."}
             </p>
+            {method === "otp" && devOtp && (
+              <p className="text-[12px] font-bold text-[#725c00] mt-1">
+                Dev mode (no SMS provider configured) — your OTP is {devOtp}
+              </p>
+            )}
           </div>
 
           {/* Buyer / Seller toggle */}
@@ -428,10 +437,13 @@ function AuthPageContent() {
               style={{ background: "rgba(252,208,32,0.12)", border: "1px solid rgba(252,208,32,0.3)" }}
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
               <p className="text-[12px] text-[#1a1c1c]/60">
-                New seller?{" "}
-                <Link href="/seller/register" className="text-[#1a1c1c] font-black hover:underline">
-                  Register your business
-                </Link>
+                {next === "/seller/register"
+                  ? "Sign in above and we'll take you straight to your seller application."
+                  : <>New seller?{" "}
+                      <Link href="/auth?redirect=/seller/register" className="text-[#1a1c1c] font-black hover:underline">
+                        Register your business
+                      </Link>
+                    </>}
               </p>
             </motion.div>
           )}

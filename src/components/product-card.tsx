@@ -2,15 +2,19 @@
 
 import * as React from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
-import { ShoppingCart, Heart, MapPin, Check, Star } from "lucide-react"
+import { ShoppingCart, Heart, MapPin, Check, Star, ImageOff, Truck, Store } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import type { Product } from "@/types/database"
 import { useCartStore } from "@/lib/store"
+import { useWishlist } from "@/hooks/useWishlist"
 
 interface ProductCardProps {
   product: Product
-  onWishlist?: () => void
+  /** Set when a corner ribbon (rank number / "New") is overlaid by the parent — shifts the card's own corner elements out of the way. */
+  cornerBadge?: "rank" | "new"
 }
 
 const STATE_NAMES: Record<string, string> = {
@@ -23,62 +27,72 @@ const STATE_NAMES: Record<string, string> = {
   NL: "Nagaland", SK: "Sikkim", AR: "Arunachal", LA: "Ladakh",
 }
 
-export function ProductCard({ product, onWishlist }: ProductCardProps) {
+export function ProductCard({ product, cornerBadge }: ProductCardProps) {
   const { addItem } = useCartStore()
-  const [isAdding,  setIsAdding]  = React.useState(false)
-  const [isWished,  setIsWished]  = React.useState(false)
-  const [isHovered, setIsHovered] = React.useState(false)
+  const { toggleWishlist, wishlistPendingId } = useWishlist()
+  const [isAdding,   setIsAdding]   = React.useState(false)
+  const [isWished,   setIsWished]   = React.useState(false)
+  const [isHovered,  setIsHovered]  = React.useState(false)
+  const [imageError, setImageError] = React.useState(false)
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    if (product.stock <= 0) return
     setIsAdding(true)
     addItem(product)
     setTimeout(() => setIsAdding(false), 1000)
   }
 
-  const handleWishlist = (e: React.MouseEvent) => {
+  const handleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setIsWished(!isWished)
-    onWishlist?.()
+    const result = await toggleWishlist(product.id, isWished)
+    if (result !== null) setIsWished(result)
   }
 
   const discount = product.mrp ? Math.round((1 - product.price / product.mrp) * 100) : 0
   const image    = product.images?.[0]
+  const inStock  = product.stock > 0
+  const lowStock = inStock && product.stock <= 10
+  const sellerName = product.sellers?.business_name
 
   return (
-    <Link href={`/product/${product.slug}`}>
-      <motion.article
-        className="group relative bg-white rounded-2xl overflow-hidden cursor-pointer border border-[#1a1c1c]/5"
-        onHoverStart={() => setIsHovered(true)}
-        onHoverEnd={() => setIsHovered(false)}
-        whileHover={{
-          y: -6,
-          boxShadow: "0 20px 60px rgba(26,28,28,0.12)",
-          transition: { duration: 0.25, ease: "easeOut" }
-        }}
-        initial={{ boxShadow: "0 2px 8px rgba(26,28,28,0.06)" }}
+    <Link href={`/product/${product.slug}`} className="block h-full">
+      <article
+        className="group relative bg-white rounded-[4px] overflow-hidden cursor-pointer border border-[#1a1c1c]/10 transition-shadow hover:shadow-[0_2px_10px_rgba(26,28,28,0.12)] h-full flex flex-col"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
         {/* Image */}
-        <div className="relative aspect-[4/5] overflow-hidden bg-[#f8f5f0]">
-          {image ? (
-            <motion.img
+        <div className="relative aspect-square overflow-hidden bg-[#f8f5f0]">
+          {image && !imageError ? (
+            <Image
               src={image}
               alt={product.name}
-              className="w-full h-full object-cover"
-              animate={{ scale: isHovered ? 1.06 : 1 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
+              className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+              onError={() => setImageError(true)}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-[#f8f5f0]">
-              <ShoppingCart className="w-10 h-10 text-[#1a1c1c]/20" />
+            <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-[#f8f5f0]">
+              <ImageOff className="w-6 h-6 text-[#1a1c1c]/15" />
+              <span className="text-[9px] font-semibold text-[#1a1c1c]/25 uppercase tracking-wide">No image</span>
+            </div>
+          )}
+
+          {!inStock && (
+            <div className="absolute inset-0 bg-white/55 flex items-center justify-center">
+              <span className="bg-[#1a1c1c] text-white text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-[3px]">
+                Out of Stock
+              </span>
             </div>
           )}
 
           {/* Badges top-left */}
-          <div className="absolute top-3 left-3 flex flex-col gap-1.5">
-            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-sm shadow-sm ${
+          <div className={`absolute left-2 flex flex-col gap-1 ${cornerBadge === "rank" ? "top-7" : "top-2"}`}>
+            <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-[3px] ${
               product.mode === "handmade"
                 ? "bg-[#fcd020] text-[#231b00]"
                 : "bg-[#1a1c1c] text-white"
@@ -86,120 +100,128 @@ export function ProductCard({ product, onWishlist }: ProductCardProps) {
               {product.mode === "handmade" ? "Handmade" : "Machine Made"}
             </span>
             {product.state_code && (
-              <span className="bg-white/90 text-[#1a1c1c] text-[9px] font-bold px-2 py-0.5 rounded-sm flex items-center gap-1 shadow-sm backdrop-blur-sm">
+              <span className="bg-white/90 text-[#1a1c1c] text-[9px] font-bold px-1.5 py-0.5 rounded-[3px] flex items-center gap-1">
                 <MapPin className="w-2.5 h-2.5" />
                 {STATE_NAMES[product.state_code] || product.state_code}
               </span>
             )}
           </div>
 
-          {/* Discount badge */}
-          {discount > 0 && (
-            <motion.span
-              className="absolute top-3 right-10 bg-green-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-sm"
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              -{discount}%
-            </motion.span>
-          )}
-
-          {/* Wishlist — always visible */}
-          <motion.button
+          {/* Wishlist */}
+          <button
             onClick={handleWishlist}
-            className="absolute top-3 right-3 w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-md"
-            whileTap={{ scale: 0.8 }}
+            disabled={wishlistPendingId === product.id}
+            className={`absolute right-2 w-7 h-7 bg-white/95 rounded-[3px] flex items-center justify-center shadow-sm disabled:opacity-60 ${cornerBadge === "new" ? "top-7" : "top-2"}`}
           >
-            <Heart className={`w-4 h-4 transition-colors ${isWished ? "fill-red-500 text-red-500" : "text-[#1a1c1c]/50"}`} />
-          </motion.button>
+            <Heart className={`w-3.5 h-3.5 transition-colors ${isWished ? "fill-red-500 text-red-500" : "text-[#1a1c1c]/50"}`} />
+          </button>
 
           {/* Add to cart — hover-reveal on desktop, always visible on mobile */}
-          <motion.button
-            onClick={handleAddToCart}
-            className={`absolute bottom-3 right-3 hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wide shadow-md transition-colors ${
-              isAdding ? "bg-green-500 text-white" : "bg-[#fcd020] text-[#1a1c1c] hover:brightness-95"
-            }`}
-            animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : 8 }}
-            transition={{ duration: 0.2 }}
-            whileTap={{ scale: 0.92 }}
-          >
-            <AnimatePresence mode="wait">
-              {isAdding ? (
-                <motion.span key="check" className="flex items-center gap-1"
-                  initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }}>
-                  <Check className="w-3 h-3" /> Added
-                </motion.span>
-              ) : (
-                <motion.span key="cart" className="flex items-center gap-1"
-                  initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }}>
-                  <ShoppingCart className="w-3 h-3" /> Add
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </motion.button>
-
-          {/* Units sold */}
-          {(product.sold_count || 0) > 0 && (
-            <span className="absolute bottom-3 left-3 text-[9px] text-white/80 bg-black/35 backdrop-blur-sm px-1.5 py-0.5 rounded font-medium">
-              {product.sold_count.toLocaleString()} bought
-            </span>
+          {inStock && (
+            <div className={`absolute inset-x-0 bottom-0 hidden sm:block transition-all duration-150 ${
+              isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1 pointer-events-none"
+            }`}>
+              <Button
+                type="button"
+                onClick={handleAddToCart}
+                size="sm"
+                className={`w-full rounded-none border-x-0 border-b-0 ${isAdding ? "!bg-green-500 !text-white !border-transparent" : ""}`}
+              >
+                <AnimatePresence mode="wait">
+                  {isAdding ? (
+                    <motion.span key="check" className="flex items-center gap-1"
+                      initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }}>
+                      <Check className="w-3 h-3" /> Added
+                    </motion.span>
+                  ) : (
+                    <motion.span key="cart" className="flex items-center gap-1"
+                      initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }}>
+                      <ShoppingCart className="w-3 h-3" /> Add to Cart
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </Button>
+            </div>
           )}
         </div>
 
         {/* Info */}
-        <div className="p-4">
-          <div className="flex justify-between items-start gap-2 mb-1">
-            <h2 className="text-sm font-bold tracking-tight text-[#1a1c1c] leading-snug line-clamp-2 flex-1">
-              {product.name}
-            </h2>
-            <span className="font-extrabold text-[#725c00] text-sm whitespace-nowrap">{formatCurrency(product.price)}</span>
-          </div>
+        <div className="p-2.5 sm:p-3 flex flex-col flex-1">
+          <h2 className="text-[12.5px] sm:text-sm font-medium tracking-tight text-[#1a1c1c] leading-snug line-clamp-2 mb-1 min-h-[2.5em] sm:min-h-[2.4em]">
+            {product.name}
+          </h2>
 
-          {product.mrp && product.mrp > product.price && (
-            <p className="text-[10px] text-[#4d4632] mb-1.5">
-              <span className="line-through">MRP {formatCurrency(product.mrp)}</span>
-              <span className="ml-1 text-green-700 font-semibold">{discount}% off</span>
-            </p>
-          )}
-
-          {product.rating > 0 && (
-            <div className="flex items-center gap-1 mb-2">
-              <Star className="w-3 h-3 fill-[#fcd020] text-[#fcd020]" />
-              <span className="text-[10px] font-bold text-[#1a1c1c]">{product.rating.toFixed(1)}</span>
-              {product.review_count > 0 && (
-                <span className="text-[10px] text-[#1a1c1c]/40">({product.review_count})</span>
+          <div className="min-h-[18px] mb-1">
+          {(product.rating > 0 || (product.sold_count || 0) > 0) && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {product.rating > 0 && (
+                <span className="flex items-center gap-0.5">
+                  <Star className="w-3 h-3 fill-[#fcd020] text-[#fcd020]" />
+                  <span className="text-[11px] font-semibold text-[#1a1c1c]">{product.rating.toFixed(1)}</span>
+                  {product.review_count > 0 && (
+                    <span className="text-[10.5px] text-[#0a6ac9]">({product.review_count})</span>
+                  )}
+                </span>
+              )}
+              {(product.sold_count || 0) > 0 && (
+                <span className="text-[10px] text-[#1a1c1c]/40">{product.sold_count.toLocaleString()} bought</span>
               )}
             </div>
           )}
+          </div>
 
-          {product.tags && product.tags.length > 0 && (
-            <div className="flex gap-1 flex-wrap mt-1.5">
-              {product.tags.slice(0, 2).map((tag) => (
-                <span key={tag} className="text-[9px] font-bold uppercase border border-[#d0c6ac]/60 px-1.5 py-0.5 rounded-sm text-[#4d4632]">
-                  {tag}
-                </span>
-              ))}
+          <div className="flex items-baseline gap-1.5 flex-wrap mb-1">
+            <span className="font-bold text-[#1a1c1c] text-[15px] sm:text-base">{formatCurrency(product.price)}</span>
+            {product.mrp && product.mrp > product.price && (
+              <>
+                <span className="text-[11px] text-[#1a1c1c]/45 line-through">{formatCurrency(product.mrp)}</span>
+                <span className="text-[11px] text-red-700 font-semibold">({discount}% off)</span>
+              </>
+            )}
+          </div>
+
+          <div className="min-h-[16px] mb-1">
+          {sellerName && (
+            <div className="flex items-center gap-1 min-w-0">
+              <Store className="w-2.5 h-2.5 text-[#1a1c1c]/30 shrink-0" />
+              <span className="text-[10px] text-[#1a1c1c]/40 truncate">{sellerName}</span>
             </div>
+          )}
+          </div>
+
+          <div className="flex-1" />
+
+          {inStock ? (
+            <div className="flex items-center gap-2 flex-wrap">
+              {product.price > 999 ? (
+                <span className="flex items-center gap-1 text-[10px] font-semibold text-green-700">
+                  <Truck className="w-2.5 h-2.5" /> Free delivery
+                </span>
+              ) : lowStock ? null : (
+                <span className="flex items-center gap-1 text-[10px] text-[#1a1c1c]/35">
+                  <Truck className="w-2.5 h-2.5" /> Delivery at checkout
+                </span>
+              )}
+              {lowStock && (
+                <span className="text-[10px] font-bold text-orange-600">Only {product.stock} left</span>
+              )}
+            </div>
+          ) : (
+            <span className="text-[10px] font-bold text-red-600">Out of stock</span>
           )}
 
           {/* Mobile Add to Cart — visible on touch, hidden on desktop (uses hover button instead) */}
-          <button onClick={handleAddToCart}
-            className={`sm:hidden w-full mt-2.5 py-2 rounded-xl text-[11px] font-black flex items-center justify-center gap-1.5 transition-colors ${
-              isAdding ? "bg-green-500 text-white" : "bg-[#fcd020] text-[#1a1c1c]"
-            }`}>
-            {isAdding ? <><Check className="w-3 h-3" /> Added!</> : <><ShoppingCart className="w-3 h-3" /> Add to Cart</>}
-          </button>
+          <Button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={!inStock}
+            size="sm"
+            className={`sm:hidden w-full mt-2 ${isAdding ? "!bg-green-500 !text-white !border-transparent" : ""}`}
+          >
+            {!inStock ? "Out of Stock" : isAdding ? <><Check className="w-3 h-3" /> Added!</> : <><ShoppingCart className="w-3 h-3" /> Add to Cart</>}
+          </Button>
         </div>
-
-        {/* Hover accent line */}
-        <motion.div
-          className="absolute bottom-0 left-0 h-0.5 bg-[#fcd020]"
-          initial={{ width: "0%" }}
-          animate={{ width: isHovered ? "100%" : "0%" }}
-          transition={{ duration: 0.3 }}
-        />
-      </motion.article>
+      </article>
     </Link>
   )
 }

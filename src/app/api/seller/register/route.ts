@@ -18,18 +18,31 @@ export async function POST(request: Request) {
       business_name,
       owner_name,
       phone,
+      business_type,
+      store_name,
+      description,
+      date_of_birth,
+      id_proof_type,
+      id_proof_number,
+      intended_categories,
       gstin,
       pan,
       address,
       city,
       state,
       pincode,
+      bank_account_name,
       bank_account_number,
       bank_ifsc,
     } = body
 
     // Validate required fields
-    if (!business_name || !owner_name || !pan || !address || !state || !pincode) {
+    if (
+      !business_name || !owner_name || !business_type || !store_name ||
+      !date_of_birth || !id_proof_type || !id_proof_number ||
+      !pan || !address || !city || !state || !pincode ||
+      !bank_account_name || !bank_account_number || !bank_ifsc
+    ) {
       return NextResponse.json({ error: "Required fields missing" }, { status: 400 })
     }
 
@@ -90,6 +103,13 @@ export async function POST(request: Request) {
         user_id: user.id,
         business_name,
         owner_name,
+        business_type,
+        store_name,
+        description: description || null,
+        date_of_birth,
+        id_proof_type,
+        id_proof_number,
+        intended_categories: Array.isArray(intended_categories) ? intended_categories : null,
         address,
         city,
         state,
@@ -97,8 +117,9 @@ export async function POST(request: Request) {
         pincode,
         gstin: gstin || null,
         pan,
-        bank_account_number: bank_account_number || null,
-        bank_ifsc: bank_ifsc || null,
+        bank_account_name,
+        bank_account_number,
+        bank_ifsc,
         approval_status: "pending",
         swadeshi_rank: 0,
         swadeshi_score: 0,

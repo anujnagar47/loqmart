@@ -1,19 +1,20 @@
 "use client"
 
 import { BadgeCheck, MapPin, Shield, Truck, Star, Award, Package, CreditCard } from "lucide-react"
-
-const items = [
-  { icon: BadgeCheck, text: "GST Verified Sellers" },
-  { icon: MapPin,     text: "State-Tagged Products" },
-  { icon: CreditCard, text: "Secure Razorpay Payments" },
-  { icon: Shield,     text: "Swadeshi Ranked" },
-  { icon: Truck,      text: "Pan-India Delivery" },
-  { icon: Star,       text: "Buyer Protection" },
-  { icon: Award,      text: "100% Made in India" },
-  { icon: Package,    text: "Easy Returns" },
-]
+import { useLanguage } from "@/lib/i18n/LanguageContext"
 
 export function TrustBar() {
+  const { t } = useLanguage()
+  const items = [
+    { icon: BadgeCheck, text: t("trustBar.gstVerified") },
+    { icon: MapPin,     text: t("trustBar.stateTagged") },
+    { icon: CreditCard, text: t("trustBar.securePayments") },
+    { icon: Shield,     text: t("trustBar.swadeshiRanked") },
+    { icon: Truck,      text: t("trustBar.panIndia") },
+    { icon: Star,       text: t("trustBar.buyerProtection") },
+    { icon: Award,      text: t("trustBar.madeInIndia") },
+    { icon: Package,    text: t("trustBar.easyReturns") },
+  ]
   const doubled = [...items, ...items]
   return (
     <div className="bg-[#f3f3f3] border-y border-[#eeeeee] py-3 overflow-hidden">

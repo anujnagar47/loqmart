@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import { ArrowRight, MapPin, Star, Award, Loader2 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { useLanguage } from "@/lib/i18n/LanguageContext"
 
 const STATE_NAMES: Record<string, string> = {
   RJ:"Rajasthan", UP:"Uttar Pradesh", MH:"Maharashtra", WB:"West Bengal",
@@ -13,6 +14,7 @@ const STATE_NAMES: Record<string, string> = {
 }
 
 export function SellerSpotlight() {
+  const { t } = useLanguage()
   const [sellers, setSellers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -36,11 +38,11 @@ export function SellerSpotlight() {
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
           <div>
-            <span className="text-xs font-black uppercase tracking-[0.3em] text-[#1a1c1c]/40 mb-2 block">Verified Partners</span>
-            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-[#1a1c1c]">Seller Spotlight</h2>
+            <span className="text-xs font-black uppercase tracking-[0.3em] text-[#1a1c1c]/40 mb-2 block">{t("sellerSpotlight.eyebrow")}</span>
+            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-[#1a1c1c]">{t("sellerSpotlight.title")}</h2>
           </div>
           <Link href="/sellers" className="flex items-center text-[#1a1c1c]/50 font-bold hover:text-[#1a1c1c] transition-colors">
-            View All Sellers <ArrowRight className="ml-2 w-4 h-4" />
+            {t("sellerSpotlight.viewAllSellers")} <ArrowRight className="ml-2 w-4 h-4" />
           </Link>
         </div>
 
@@ -49,9 +51,9 @@ export function SellerSpotlight() {
             <Loader2 className="w-7 h-7 animate-spin text-[#1a1c1c]/30" />
           </div>
         ) : sellers.length === 0 ? (
-          <p className="text-center text-[#1a1c1c]/40 py-12 font-medium">Seller profiles loading soon.</p>
+          <p className="text-center text-[#1a1c1c]/40 py-12 font-medium">{t("sellerSpotlight.loadingSoon")}</p>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-4">
             {sellers.map((seller, i) => {
               const initials = (seller.business_name || "?").split(" ").map((w: string) => w[0]).join("").substring(0, 2).toUpperCase()
               const stateName = STATE_NAMES[seller.state_code] || seller.state_code || "India"
@@ -65,7 +67,7 @@ export function SellerSpotlight() {
                   whileHover={{ y: -4 }}
                 >
                   <Link href={`/seller/${seller.id}`}
-                    className="group block bg-[#f8f5f0] rounded-2xl overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                    className="group block bg-[#f8f5f0] rounded-[4px] border border-[#1a1c1c]/10 overflow-hidden hover:shadow-[0_2px_10px_rgba(26,28,28,0.12)] transition-shadow duration-200">
                     <div className="relative h-28 bg-gradient-to-br from-[#fcd020] to-[#e6b800]">
                       <div className="absolute -bottom-8 left-5">
                         <div className="w-16 h-16 rounded-full border-4 border-white bg-[#1a1c1c] flex items-center justify-center shadow-lg">
