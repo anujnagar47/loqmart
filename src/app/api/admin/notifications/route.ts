@@ -9,7 +9,7 @@ export async function GET() {
     .select("id, user_id, type, title, message, is_read, created_at, users(email, full_name)")
     .order("created_at", { ascending: false })
     .limit(200)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ notifications: data || [] })
 }
 
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     if (!users || users.length === 0) return NextResponse.json({ sent: 0 })
     const rows = users.map(u => ({ user_id: u.id, type: type || "admin_broadcast", title, message, data: { broadcast: true } }))
     const { error } = await db.from("notifications").insert(rows)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
     return NextResponse.json({ sent: rows.length })
   }
 
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     if (!users || users.length === 0) return NextResponse.json({ sent: 0 })
     const rows = users.map(u => ({ user_id: u.id, type: type || "admin_broadcast", title, message, data: { broadcast: true, role } }))
     const { error } = await db.from("notifications").insert(rows)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
     return NextResponse.json({ sent: rows.length })
   }
 
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     if (!sellers || sellers.length === 0) return NextResponse.json({ sent: 0 })
     const rows = sellers.map(s => ({ user_id: s.user_id, type: type || "admin_broadcast", title, message, data: { broadcast: true, target: "sellers" } }))
     const { error } = await db.from("notifications").insert(rows)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
     return NextResponse.json({ sent: rows.length })
   }
 
@@ -61,6 +61,6 @@ export async function DELETE(req: NextRequest) {
   const { id } = await req.json()
   if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 })
   const { error } = await auth.db.from("notifications").delete().eq("id", id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ ok: true })
 }

@@ -11,7 +11,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ca
     if (f in body) allowed[f] = body[f]
   }
   const { error } = await auth.db.from("categories").update(allowed).eq("id", categoryId)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ ok: true })
 }
 
@@ -20,6 +20,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (!auth.authorized) return auth.response
   const { categoryId } = await params
   const { error } = await auth.db.from("categories").delete().eq("id", categoryId)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ ok: true })
 }

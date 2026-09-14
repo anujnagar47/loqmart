@@ -549,7 +549,7 @@ function SurveyInner() {
                 </h2>
                 <p className="text-[13px] mb-9" style={{ color: "rgba(255,255,255,0.32)" }}>
                   Your 5% discount code and referral link will be shown immediately.
-                  We don't send marketing emails.
+                  We don&apos;t send marketing emails.
                 </p>
 
                 <div className="space-y-3 mb-7">

@@ -2,12 +2,12 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { AlertTriangle, Send, CheckCircle, Phone, Mail } from "lucide-react"
+import { AlertTriangle, Send, CheckCircle, Mail } from "lucide-react"
 
 const inputCls = "w-full h-11 px-4 rounded-xl text-[13px] outline-none transition-all"
 const inputStyle = { border: "1px solid rgba(26,28,28,0.14)", background: "white", color: "#1a1c1c" }
-const onFocus = (e: any) => { e.currentTarget.style.borderColor = "#fcd020"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(252,208,32,0.1)" }
-const onBlur  = (e: any) => { e.currentTarget.style.borderColor = "rgba(26,28,28,0.14)"; e.currentTarget.style.boxShadow = "none" }
+const onFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => { e.currentTarget.style.borderColor = "#fcd020"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(252,208,32,0.1)" }
+const onBlur  = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => { e.currentTarget.style.borderColor = "rgba(26,28,28,0.14)"; e.currentTarget.style.boxShadow = "none" }
 
 export default function GrievancePage() {
   const [form, setForm] = useState({
@@ -15,11 +15,32 @@ export default function GrievancePage() {
     description: "", preferredContact: "email",
   })
   const [submitted, setSubmitted] = useState(false)
-  const [ticketId] = useState(`GR${Date.now().toString().slice(-8)}`)
+  const [ticketId, setTicketId] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState("")
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    setSubmitting(true)
+    setError("")
+    try {
+      const res = await fetch("/api/grievance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Failed to register your grievance. Please try again.")
+        return
+      }
+      setTicketId(data.ticket_number)
+      setSubmitted(true)
+    } catch {
+      setError("Failed to register your grievance. Please check your connection and try again.")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -44,15 +65,10 @@ export default function GrievancePage() {
               initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
               <h2 className="font-extrabold text-[#1a1c1c] mb-4 text-[15px]">Nodal Officer</h2>
               <p className="text-[13px] font-bold text-[#1a1c1c]">LoqMart Grievance Desk</p>
-              <p className="text-[11px] text-[#1a1c1c]/50 mt-1">Grievance Officer, LoqMart India Pvt. Ltd.</p>
               <div className="mt-4 space-y-2">
                 <div className="flex items-center gap-2 text-[12px] text-[#1a1c1c]/55">
                   <Mail className="w-4 h-4 text-[#1a1c1c]/40" />
                   <span>grievance@loqmart.in</span>
-                </div>
-                <div className="flex items-center gap-2 text-[12px] text-[#1a1c1c]/55">
-                  <Phone className="w-4 h-4 text-[#1a1c1c]/40" />
-                  <span>1800-LOQMART</span>
                 </div>
               </div>
               <p className="text-[11px] text-[#1a1c1c]/40 mt-4 pt-4"
@@ -197,10 +213,18 @@ export default function GrievancePage() {
                       </div>
                     </div>
 
-                    <motion.button type="submit" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.97 }}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-black text-[#1a1c1c]"
+                    {error && (
+                      <div className="flex items-center gap-2.5 p-3 rounded-xl"
+                        style={{ background: "rgba(220,38,38,0.06)", border: "1px solid rgba(220,38,38,0.18)" }}>
+                        <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                        <p className="text-[11px] text-red-700">{error}</p>
+                      </div>
+                    )}
+
+                    <motion.button type="submit" disabled={submitting} whileHover={{ scale: submitting ? 1 : 1.01 }} whileTap={{ scale: submitting ? 1 : 0.97 }}
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-black text-[#1a1c1c] disabled:opacity-50"
                       style={{ background: "#fcd020" }}>
-                      <Send size={14} /> Submit Grievance
+                      <Send size={14} /> {submitting ? "Submitting…" : "Submit Grievance"}
                     </motion.button>
 
                     <p className="text-[11px] text-[#1a1c1c]/35 text-center">

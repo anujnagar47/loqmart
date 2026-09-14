@@ -16,9 +16,10 @@ export async function GET(req: NextRequest) {
     .limit(300)
 
   if (status && status !== "all") query = query.eq("approval_status", status)
+  if (auth.role === "sub_admin" && auth.stateScope) query = query.eq("state_code", auth.stateScope)
 
   const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ products: data || [] })
 }
 
@@ -50,6 +51,6 @@ export async function POST(req: NextRequest) {
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ product: data }, { status: 201 })
 }

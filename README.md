@@ -173,7 +173,6 @@ loqmart/
 
 ### Commerce Tables
 - `addresses` - User delivery addresses
-- `carts` & `cart_items` - Shopping cart
 - `payments` - Payment records
 - `reviews` - Product reviews
 - `wishlists` - User wishlists

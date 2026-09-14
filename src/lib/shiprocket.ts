@@ -96,3 +96,41 @@ export async function generateManifest(shipmentIds: number[]) {
     body: JSON.stringify({ shipment_id: shipmentIds }),
   })
 }
+
+export interface ServiceabilityResult {
+  serviceable: boolean
+  estimatedDays: number | null
+  codAvailable: boolean
+}
+
+/**
+ * Real pincode-to-pincode delivery estimate via Shiprocket's courier
+ * serviceability check — returns the fastest estimated_delivery_days
+ * across all couriers that actually service the route, rather than a
+ * fabricated number.
+ */
+export async function checkServiceability(
+  pickupPincode: string,
+  deliveryPincode: string,
+  weightKg = 0.5
+): Promise<ServiceabilityResult> {
+  const data = await srFetch(
+    `/courier/serviceability/?pickup_postcode=${pickupPincode}&delivery_postcode=${deliveryPincode}&weight=${weightKg}&cod=0`
+  )
+  const couriers: Array<{ estimated_delivery_days?: string | number; cod?: number }> =
+    data?.data?.available_courier_companies || []
+
+  if (couriers.length === 0) {
+    return { serviceable: false, estimatedDays: null, codAvailable: false }
+  }
+
+  const days = couriers
+    .map(c => Number(c.estimated_delivery_days))
+    .filter(n => Number.isFinite(n) && n > 0)
+
+  return {
+    serviceable: true,
+    estimatedDays: days.length > 0 ? Math.min(...days) : null,
+    codAvailable: couriers.some(c => c.cod === 1),
+  }
+}

@@ -11,7 +11,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ review
     if (f in body) allowed[f] = body[f]
   }
   const { error } = await auth.db.from("reviews").update(allowed).eq("id", reviewId)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ ok: true })
 }
 
@@ -20,7 +20,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ revie
   if (!auth.authorized) return auth.response
   const { reviewId } = await params
   const { error } = await auth.db.from("reviews").delete().eq("id", reviewId)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   try { await auth.db.from("admin_logs").insert({
     admin_id: auth.userId, action: "review.delete", target_type: "review", target_id: reviewId,
   }) } catch { /* non-critical audit log */ }

@@ -19,7 +19,7 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { rating, title, comment } = body
+    const { rating, title, comment, images } = body
 
     if (!rating || rating < 1 || rating > 5) {
       return NextResponse.json({ error: "Rating must be between 1 and 5" }, { status: 400 })
@@ -30,6 +30,7 @@ export async function POST(
     if (comment.trim().length > 1000) {
       return NextResponse.json({ error: "Review comment must be under 1000 characters" }, { status: 400 })
     }
+    const reviewImages = Array.isArray(images) ? images.filter((u) => typeof u === "string").slice(0, 5) : []
 
     // Fetch product
     const { data: product, error: productError } = await supabase
@@ -83,6 +84,7 @@ export async function POST(
         rating,
         title: title?.trim() || null,
         comment: comment.trim(),
+        images: reviewImages,
         is_verified: isVerified,
       })
       .select()

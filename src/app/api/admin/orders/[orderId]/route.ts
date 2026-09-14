@@ -21,7 +21,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ord
     `)
     .eq("id", orderId)
     .single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ order: data })
 }
 
@@ -34,6 +34,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ or
   if (body.order_status)   update.order_status   = body.order_status
   if (body.payment_status) update.payment_status = body.payment_status
   const { error } = await auth.db.from("orders").update(update).eq("id", orderId)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ ok: true })
 }

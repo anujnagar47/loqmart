@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import { MapPin, Heart, ShoppingCart, Star, ChevronDown, Loader2 } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 import { useCartStore } from "@/lib/store"
+import { useWishlist } from "@/hooks/useWishlist"
 
 const STATE_NAMES: Record<string, string> = {
   RJ:"Rajasthan", UP:"Uttar Pradesh", MH:"Maharashtra", WB:"West Bengal",
@@ -15,7 +18,9 @@ const STATE_NAMES: Record<string, string> = {
 }
 
 function FeedItem({ item, index }: { item: any; index: number }) {
+  const router = useRouter()
   const { addItem } = useCartStore()
+  const { toggleWishlist } = useWishlist()
   const [liked, setLiked] = useState(false)
   const [added, setAdded] = useState(false)
 
@@ -36,22 +41,31 @@ function FeedItem({ item, index }: { item: any; index: number }) {
       viewport={{ once: true, margin: "-60px" }}
       transition={{ delay: index * 0.06, duration: 0.5 }}
       whileHover={{ y: -4 }}
-      className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-[#1a1c1c]/5">
+      className="bg-white rounded-[4px] overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-[#1a1c1c]/5">
       <Link href={`/product/${item.slug}`}>
         <div className="relative aspect-[4/5] overflow-hidden group">
           {image ? (
-            <img src={image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+            <Image src={image} alt={item.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover group-hover:scale-105 transition-transform duration-700" />
           ) : (
             <div className="w-full h-full bg-[#f8f5f0] flex items-center justify-center">
               <ShoppingCart className="w-10 h-10 text-[#1a1c1c]/20" />
             </div>
           )}
           <div className="absolute top-3 left-3">
-            <Link href={`/state/${item.state_code?.toLowerCase()}`} onClick={e => e.stopPropagation()}>
-              <span className="bg-[#fcd020] text-[#231b00] text-[10px] font-black uppercase px-2.5 py-1 rounded-full flex items-center gap-1 shadow hover:brightness-90 transition-all">
-                <MapPin className="w-3 h-3" />{stateName}
-              </span>
-            </Link>
+            {/* A plain span + router.push, not a nested <Link> — this badge
+                sits inside the card's own product <Link>, and an <a> inside
+                an <a> is invalid HTML that corrupts hydration (browsers
+                silently break out of the outer anchor, which can visibly
+                distort the surrounding layout). */}
+            <span
+              role="link"
+              tabIndex={0}
+              onClick={e => { e.preventDefault(); e.stopPropagation(); router.push(`/state/${item.state_code?.toLowerCase()}`) }}
+              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); router.push(`/state/${item.state_code?.toLowerCase()}`) } }}
+              className="bg-[#fcd020] text-[#231b00] text-[10px] font-black uppercase px-2.5 py-1 rounded-full flex items-center gap-1 shadow hover:brightness-90 transition-all cursor-pointer"
+            >
+              <MapPin className="w-3 h-3" />{stateName}
+            </span>
           </div>
           <span className={`absolute top-3 right-3 text-[9px] font-black uppercase px-2 py-1 rounded-full ${
             item.mode === "handmade" ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"
@@ -95,14 +109,14 @@ function FeedItem({ item, index }: { item: any; index: number }) {
           </div>
           <div className="flex gap-2">
             <motion.button whileTap={{ scale: 0.85 }}
-              onClick={(e) => { e.preventDefault(); setLiked(!liked) }}
+              onClick={async (e) => { e.preventDefault(); const result = await toggleWishlist(item.id, liked); if (result !== null) setLiked(result) }}
               className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all ${
                 liked ? "bg-red-50 border-red-200" : "border-[#1a1c1c]/15 hover:bg-[#f8f5f0]"
               }`}>
               <Heart className={`w-4 h-4 ${liked ? "fill-red-500 text-red-500" : "text-[#1a1c1c]/50"}`} />
             </motion.button>
             <motion.button whileTap={{ scale: 0.9 }} onClick={handleAdd}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-[4px] text-xs font-black uppercase tracking-wider transition-all ${
                 added ? "bg-green-500 text-white" : "bg-[#fcd020] text-[#1a1c1c] hover:brightness-95"
               }`}>
               <ShoppingCart className="w-3 h-3" />

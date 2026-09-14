@@ -2,19 +2,24 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createServiceClient } from "@/lib/supabase/admin"
 
-export async function GET() {
+export async function GET(request: Request) {
   const sessionClient = await createClient()
   const { data: { user }, error: authError } = await sessionClient.auth.getUser()
   if (authError || !user) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 })
   }
 
+  const { searchParams } = new URL(request.url)
+  const orderId = searchParams.get("id")
+
   const db = createServiceClient()
-  const { data, error } = await db
+  let query = db
     .from("orders")
     .select(`
       id, order_number, total, subtotal, shipping_cost, tax, discount_amount,
+      coins_used, coins_discount,
       payment_status, order_status, created_at, tracking_number, shipping_address,
+      confirmed_at, shipped_at, delivered_at,
       razorpay_order_id,
       order_items(
         id, quantity, price, total,
@@ -22,12 +27,20 @@ export async function GET() {
       )
     `)
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
+
+  // A caller can only ever fetch their own order — the id is just narrowing
+  // the already user_id-scoped query, never a substitute for ownership.
+  query = orderId ? query.eq("id", orderId) : query.order("created_at", { ascending: false })
+
+  const { data, error } = await query
 
   if (error) {
     console.error("User orders fetch error:", error)
     return NextResponse.json({ orders: [] })
   }
 
+  if (orderId) {
+    return NextResponse.json({ order: data?.[0] || null })
+  }
   return NextResponse.json({ orders: data || [] })
 }

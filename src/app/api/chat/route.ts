@@ -4,13 +4,22 @@ import { createServiceClient } from "@/lib/supabase/admin"
 
 export async function GET(request: Request) {
   try {
+    const sessionClient = await createClient()
+    const { data: { user }, error: authError } = await sessionClient.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 })
+    }
+
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId")
     const otherId = searchParams.get("otherId")
 
-    if (!userId || !otherId) {
+    if (!otherId) {
       return NextResponse.json({ error: "Missing parameters" }, { status: 400 })
     }
+
+    // The caller can only ever read threads they are a party to — userId is
+    // always the authenticated session's own id, never taken from the query string.
+    const userId = user.id
 
     const supabase = createServiceClient()
 

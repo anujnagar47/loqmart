@@ -54,12 +54,26 @@ export async function GET() {
       .eq("seller_id", seller.id)
       .order("created_at", { ascending: false })
 
-    // Calculate earnings breakdown per README §10.2
-    // Platform commission: 10% on handmade, 8% on machine-made (sample)
+    // Use this seller's actual commission override when admins have set one,
+    // falling back to the platform-wide global rate, and only defaulting to
+    // 10%/2% if no rate has been configured anywhere yet.
+    const { data: sellerRate } = await supabase
+      .from("commission_settings")
+      .select("rate, gateway_rate")
+      .eq("seller_id", seller.id)
+      .eq("scope", "seller")
+      .maybeSingle()
+    const { data: globalRate } = sellerRate ? { data: null } : await supabase
+      .from("commission_settings")
+      .select("rate, gateway_rate")
+      .eq("scope", "global")
+      .maybeSingle()
+    const effectiveRate = sellerRate || globalRate
+
     const totalOrders = orders?.length || 0
     const totalRevenue = orders?.reduce((sum, o) => sum + (o.total || 0), 0) || 0
-    const platformFeeRate = 0.10
-    const paymentGatewayRate = 0.02 // Razorpay 2%
+    const platformFeeRate = effectiveRate ? Number(effectiveRate.rate) / 100 : 0.10
+    const paymentGatewayRate = effectiveRate ? Number(effectiveRate.gateway_rate) / 100 : 0.02
     const grossCommission = totalRevenue * platformFeeRate
     const gatewayFee = totalRevenue * paymentGatewayRate
     const netPayable = totalRevenue - grossCommission - gatewayFee

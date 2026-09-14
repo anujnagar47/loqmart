@@ -77,7 +77,7 @@ export default function SellerTermsPage() {
         ))}
 
         <div className="border-t border-surface-container pt-8 text-center text-sm text-on-surface-variant">
-          <p>LoqMart India Pvt. Ltd. · CIN: U74999DL2024PTC123456 · New Delhi, India</p>
+          <p>LoqMart · New Delhi, India</p>
           <p className="mt-2">For seller queries: <strong className="text-on-surface">sellers@loqmart.in</strong></p>
         </div>
       </div>

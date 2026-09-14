@@ -9,7 +9,7 @@ export async function GET() {
     .from("users")
     .select("id, email, full_name, role, state_scope, created_at")
     .order("created_at", { ascending: false })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ users: data || [] })
 }
 
@@ -22,6 +22,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "email, password, full_name required" }, { status: 400 })
   }
 
+  // Only a full admin can create a privileged account (admin/sub_admin) or
+  // set a state_scope — otherwise a sub_admin could just create a fresh
+  // admin account instead of self-promoting through PATCH.
+  if (auth.role !== "admin" && ((role && role !== "buyer" && role !== "seller") || state_scope)) {
+    return NextResponse.json({ error: "Only admins can create admin/sub_admin accounts or set state scope" }, { status: 403 })
+  }
+
   const db = createServiceClient()
 
   // Create Supabase auth user (handle_new_user trigger auto-creates public.users)
@@ -32,7 +39,7 @@ export async function POST(req: NextRequest) {
     user_metadata: { full_name, role: role || "buyer" },
   })
 
-  if (authError) return NextResponse.json({ error: authError.message }, { status: 500 })
+  if (authError) { console.error("Admin API error:", authError); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
 
   // Set role + state_scope explicitly (trigger may default to 'buyer')
   const update: Record<string, unknown> = { role: role || "buyer", full_name }

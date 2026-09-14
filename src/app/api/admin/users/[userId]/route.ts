@@ -6,12 +6,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ us
   if (!auth.authorized) return auth.response
   const { userId } = await params
   const body = await req.json()
+
+  // Only a full admin can change role or state_scope — a sub_admin passes
+  // requireAdmin() too, and without this check could PATCH its own (or
+  // anyone's) role to "admin" through this same endpoint.
+  const privilegedFields = ["role", "state_scope"]
+  if (auth.role !== "admin" && privilegedFields.some(f => f in body)) {
+    return NextResponse.json({ error: "Only admins can change role or state scope" }, { status: 403 })
+  }
+
   const allowed: Record<string, unknown> = {}
   for (const f of ["role", "state_scope", "full_name"]) {
     if (f in body) allowed[f] = body[f]
   }
   const { error } = await auth.db.from("users").update(allowed).eq("id", userId)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ ok: true })
 }
 
@@ -32,11 +41,11 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   // Delete from public.users first (cascade may not be set up)
   const { error: dbError } = await auth.db.from("users").delete().eq("id", userId)
-  if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 })
+  if (dbError) { console.error("Admin API error:", dbError); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
 
   // Remove from auth.users so they can no longer log in
   const { error: authError } = await auth.db.auth.admin.deleteUser(userId)
-  if (authError) return NextResponse.json({ error: authError.message }, { status: 500 })
+  if (authError) { console.error("Admin API error:", authError); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
 
   return NextResponse.json({ ok: true })
 }

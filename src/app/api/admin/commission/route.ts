@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     rate: Number(rate), gateway_rate: Number(gateway_rate || 2),
     notes, changed_by: auth.userId, effective_from: new Date().toISOString(),
   }, { onConflict: "scope,category_id,seller_id" }).select().single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   try { await auth.db.from("admin_logs").insert({
     admin_id: auth.userId, action: "commission.update", target_type: "commission_settings",
     new_value: { scope, rate, gateway_rate },
@@ -36,6 +36,6 @@ export async function DELETE(req: Request) {
   const { id } = await req.json()
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 })
   const { error } = await auth.db.from("commission_settings").delete().eq("id", id).neq("scope", "global")
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ ok: true })
 }

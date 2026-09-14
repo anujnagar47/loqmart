@@ -6,11 +6,12 @@ import { motion, AnimatePresence } from "framer-motion"
 import {
   User, Package, MapPin, Wallet, Heart, Check, Truck, Clock,
   LogOut, ChevronRight, Plus, Trash2, Star, ShoppingBag,
-  Loader2, Save, X
+  Loader2, Save, X, RotateCcw
 } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import { useCartStore } from "@/lib/store"
+import { Toast, useToast } from "@/components/ui/toast"
 
 const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: "orders",    label: "Orders",    icon: Package },
@@ -32,10 +33,22 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; b
 const VALID_TABS = ["orders", "addresses", "coins", "wishlist", "profile"] as const
 type TabId = typeof VALID_TABS[number]
 
+// Mirrors the real `order_status` enum (pending/confirmed/processing/shipped/
+// delivered/cancelled) — "processing" has no timestamp column in the schema,
+// so it only ever shows a checkmark, never a fabricated date.
+const ORDER_STEPS: { key: string; label: string }[] = [
+  { key: "pending",    label: "Placed"     },
+  { key: "confirmed",  label: "Confirmed"  },
+  { key: "processing", label: "Processing" },
+  { key: "shipped",    label: "Shipped"    },
+  { key: "delivered",  label: "Delivered"  },
+]
+
 function AccountPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { addItem } = useCartStore()
+  const { toastProps, showError } = useToast()
   const tabParam = searchParams.get("tab") as TabId | null
   const [activeTab, setActiveTab] = useState<TabId>(
     tabParam && (VALID_TABS as readonly string[]).includes(tabParam) ? tabParam : "orders"
@@ -48,6 +61,15 @@ function AccountPageContent() {
   const [profile, setProfile]     = useState<any>(null)
   const [orders, setOrders]       = useState<any[]>([])
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null)
+  const [returnFormItemId, setReturnFormItemId] = useState<string | null>(null)
+  const [returnReason, setReturnReason] = useState("damaged")
+  const [returnDescription, setReturnDescription] = useState("")
+  const [returnSubmitting, setReturnSubmitting] = useState(false)
+  const [returnError, setReturnError] = useState("")
+  const [returnedItemIds, setReturnedItemIds] = useState<string[]>([])
+  const [cancelConfirming, setCancelConfirming] = useState(false)
+  const [cancelSubmitting, setCancelSubmitting] = useState(false)
+  const [cancelError, setCancelError] = useState("")
   const [addresses, setAddresses] = useState<any[]>([])
   const [coinBalance, setCoinBalance] = useState<any>(null)
   const [coinLedger, setCoinLedger]   = useState<any[]>([])
@@ -124,12 +146,12 @@ function AccountPageContent() {
 
   async function handleAddAddress() {
     if (!user) return
-    if (!newAddr.name.trim()) { alert("Full name is required."); return }
-    if (!/^\d{10}$/.test(newAddr.phone.replace(/\D/g, ""))) { alert("Enter a valid 10-digit phone number."); return }
-    if (!newAddr.address_line1.trim()) { alert("Address line 1 is required."); return }
-    if (!newAddr.city.trim()) { alert("City is required."); return }
-    if (!newAddr.state.trim()) { alert("State is required."); return }
-    if (!/^\d{6}$/.test(newAddr.pincode)) { alert("Enter a valid 6-digit pincode."); return }
+    if (!newAddr.name.trim()) { showError("Full name is required."); return }
+    if (!/^\d{10}$/.test(newAddr.phone.replace(/\D/g, ""))) { showError("Enter a valid 10-digit phone number."); return }
+    if (!newAddr.address_line1.trim()) { showError("Address line 1 is required."); return }
+    if (!newAddr.city.trim()) { showError("City is required."); return }
+    if (!newAddr.state.trim()) { showError("State is required."); return }
+    if (!/^\d{6}$/.test(newAddr.pincode)) { showError("Enter a valid 6-digit pincode."); return }
     const res = await fetch("/api/user/addresses", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -140,7 +162,7 @@ function AccountPageContent() {
       setAddresses([...addresses, json.address])
       setShowAddressForm(false)
       setNewAddr({ name: "", phone: "", address_line1: "", address_line2: "", city: "", state: "", state_code: "", pincode: "", is_default: false })
-    } else { alert(json.error || "Failed to save address. Please try again.") }
+    } else { showError(json.error || "Failed to save address. Please try again.") }
   }
 
   async function handleDeleteAddress(id: string) {
@@ -152,6 +174,55 @@ function AccountPageContent() {
     const supabase = createClient()
     await supabase.from("wishlists").delete().eq("user_id", user.id).eq("product_id", productId)
     setWishlist(wishlist.filter(w => w.product?.id !== productId))
+  }
+
+  async function handleCancelOrder(orderId: string) {
+    setCancelSubmitting(true)
+    setCancelError("")
+    try {
+      const res = await fetch(`/api/user/orders/${orderId}/cancel`, { method: "POST" })
+      const data = await res.json()
+      if (!res.ok) {
+        setCancelError(data.error || "Failed to cancel order.")
+        return
+      }
+      setOrders(orders.map(o => o.id === orderId ? { ...o, order_status: "cancelled" } : o))
+      setSelectedOrder((prev: any) => prev ? { ...prev, order_status: "cancelled" } : prev)
+      setCancelConfirming(false)
+    } catch {
+      setCancelError("Failed to cancel order. Please try again.")
+    } finally {
+      setCancelSubmitting(false)
+    }
+  }
+
+  async function handleRequestReturn(orderId: string, orderItemId: string) {
+    if (!returnDescription.trim() || returnDescription.trim().length < 10) {
+      setReturnError("Please describe the issue in more detail (at least 10 characters).")
+      return
+    }
+    setReturnSubmitting(true)
+    setReturnError("")
+    try {
+      const res = await fetch("/api/user/returns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: orderId, order_item_id: orderItemId, reason: returnReason, description: returnDescription }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setReturnError(data.error || "Failed to submit return request.")
+        return
+      }
+      setReturnedItemIds(ids => [...ids, orderItemId])
+      setReturnFormItemId(null)
+      setReturnDescription("")
+      setReturnReason("damaged")
+    } catch {
+      setReturnError("Failed to submit return request. Please try again.")
+    } finally {
+      setReturnSubmitting(false)
+    }
   }
 
   if (isLoading) {
@@ -171,6 +242,7 @@ function AccountPageContent() {
 
   return (
     <div className="min-h-screen" style={{ background: "#eeece8" }}>
+      {toastProps && <Toast {...toastProps} />}
       {/* Yellow header */}
       <div style={{ background: "#fcd020" }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-8 pb-0">
@@ -205,7 +277,7 @@ function AccountPageContent() {
             </div>
 
             <motion.button onClick={handleSignOut} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-              className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-semibold transition-colors"
+              className="hidden md:flex items-center gap-2 px-4 py-2 rounded-[4px] text-[12px] font-semibold transition-colors"
               style={{ background: "rgba(26,28,28,0.1)", color: "#1a1c1c" }}>
               <LogOut className="w-3.5 h-3.5" /> Sign out
             </motion.button>
@@ -257,7 +329,7 @@ function AccountPageContent() {
                         initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.05, type: "spring", stiffness: 280, damping: 26 }}
                         whileHover={{ y: -1, boxShadow: "0 4px 16px rgba(26,28,28,0.08)" }}
-                        className="bg-white rounded-2xl overflow-hidden cursor-pointer"
+                        className="bg-white rounded-[4px] overflow-hidden cursor-pointer"
                         style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
                         <div className="flex items-center justify-between px-5 py-2.5"
                           style={{ borderBottom: "1px solid rgba(26,28,28,0.06)", background: "rgba(238,236,232,0.5)" }}>
@@ -298,7 +370,7 @@ function AccountPageContent() {
                             <p className="text-[18px] font-black text-[#1a1c1c]">
                               {formatCurrency(order.total ?? order.subtotal ?? 0)}
                             </p>
-                            <motion.button onClick={() => setSelectedOrder(order)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                            <motion.button onClick={() => { setSelectedOrder(order); setCancelConfirming(false); setCancelError(""); setReturnFormItemId(null) }} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                               className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider text-[#1a1c1c] cursor-pointer"
                               style={{ background: "#fcd020" }}>
                               Details <ChevronRight className="w-3 h-3" />
@@ -323,7 +395,7 @@ function AccountPageContent() {
                       initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.15 } }}
                       transition={{ delay: i * 0.05 }}
-                      className="bg-white rounded-2xl p-5"
+                      className="bg-white rounded-[4px] p-5"
                       style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
                       <div className="flex items-start justify-between mb-3">
                         <div>
@@ -353,7 +425,7 @@ function AccountPageContent() {
                 <motion.button onClick={() => setShowAddressForm(true)}
                   whileHover={{ borderColor: "#fcd020", backgroundColor: "rgba(252,208,32,0.04)", scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
-                  className="bg-white rounded-2xl p-5 flex flex-col items-center justify-center min-h-[150px] transition-colors"
+                  className="bg-white rounded-[4px] p-5 flex flex-col items-center justify-center min-h-[150px] transition-colors"
                   style={{ border: "2px dashed rgba(26,28,28,0.15)" }}>
                   <div className="w-9 h-9 rounded-full flex items-center justify-center mb-2"
                     style={{ background: "rgba(252,208,32,0.25)" }}>
@@ -368,7 +440,7 @@ function AccountPageContent() {
                   <motion.div
                     initial={{ opacity: 0, y: 16, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 12, scale: 0.97, transition: { duration: 0.15 } }}
-                    className="mt-4 bg-white rounded-2xl p-6"
+                    className="mt-4 bg-white rounded-[4px] p-6"
                     style={{ border: "1px solid rgba(252,208,32,0.5)", boxShadow: "0 2px 12px rgba(252,208,32,0.12)" }}>
                     <div className="flex items-center justify-between mb-5">
                       <h3 className="text-[14px] font-black text-[#1a1c1c]">New Delivery Address</h3>
@@ -394,7 +466,7 @@ function AccountPageContent() {
                           <input type={type} placeholder={placeholder}
                             value={(newAddr as any)[key]}
                             onChange={e => setNewAddr(a => ({ ...a, [key]: e.target.value }))}
-                            className="w-full h-10 px-3 rounded-xl text-[13px] outline-none transition-colors"
+                            className="w-full h-10 px-3 rounded-[4px] text-[13px] outline-none transition-colors"
                             style={{ border: "1px solid rgba(26,28,28,0.14)", background: "#eeece8", color: "#1a1c1c" }}
                             onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = "#fcd020"}
                             onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = "rgba(26,28,28,0.14)"}
@@ -410,12 +482,12 @@ function AccountPageContent() {
                     </label>
                     <div className="flex gap-3 mt-5">
                       <motion.button onClick={handleAddAddress} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                        className="px-5 py-2.5 rounded-xl text-[13px] font-black text-[#1a1c1c]"
+                        className="px-5 py-2.5 rounded-[4px] text-[13px] font-black text-[#1a1c1c]"
                         style={{ background: "#fcd020" }}>
                         Save Address
                       </motion.button>
                       <button onClick={() => setShowAddressForm(false)}
-                        className="px-5 py-2.5 rounded-xl text-[13px] font-semibold text-[#1a1c1c]/60 transition-colors"
+                        className="px-5 py-2.5 rounded-[4px] text-[13px] font-semibold text-[#1a1c1c]/60 transition-colors"
                         style={{ border: "1px solid rgba(26,28,28,0.12)" }}>
                         Cancel
                       </button>
@@ -430,7 +502,7 @@ function AccountPageContent() {
           {activeTab === "coins" && (
             <motion.div key="coins" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                <motion.div className="rounded-2xl p-6 text-center" style={{ background: "#1a1c1c" }}
+                <motion.div className="rounded-[4px] p-6 text-center" style={{ background: "#1a1c1c" }}
                   initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 240, damping: 22 }}>
                   <motion.div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
                     style={{ background: "#fcd020" }}
@@ -451,7 +523,7 @@ function AccountPageContent() {
                 </motion.div>
 
                 <div className="lg:col-span-2 space-y-4">
-                  <div className="bg-white rounded-2xl p-5" style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
+                  <div className="bg-white rounded-[4px] p-5" style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
                     <h3 className="text-[13px] font-black text-[#1a1c1c] mb-4">How to Earn LoqCoins</h3>
                     <div className="space-y-2">
                       {[
@@ -462,7 +534,7 @@ function AccountPageContent() {
                       ].map((item, i) => (
                         <motion.div key={item.action}
                           initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
-                          className="flex items-center justify-between p-3 rounded-xl" style={{ background: "#eeece8" }}>
+                          className="flex items-center justify-between p-3 rounded-[4px]" style={{ background: "#eeece8" }}>
                           <div>
                             <p className="text-[13px] font-semibold text-[#1a1c1c]">{item.action}</p>
                             <p className="text-[11px] text-[#1a1c1c]/40">{item.note}</p>
@@ -474,7 +546,7 @@ function AccountPageContent() {
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-2xl p-5" style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
+                  <div className="bg-white rounded-[4px] p-5" style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
                     <h3 className="text-[13px] font-black text-[#1a1c1c] mb-4">Transaction History</h3>
                     {coinLedger.length === 0 ? (
                       <p className="text-center text-[12px] text-[#1a1c1c]/40 py-6">No transactions yet.</p>
@@ -525,7 +597,7 @@ function AccountPageContent() {
                           exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.15 } }}
                           transition={{ delay: i * 0.04, type: "spring", stiffness: 280, damping: 24 }}
                           whileHover={{ y: -3, boxShadow: "0 8px 24px rgba(26,28,28,0.1)" }}
-                          className="bg-white rounded-2xl overflow-hidden"
+                          className="bg-white rounded-[4px] overflow-hidden"
                           style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
                           <div className="relative aspect-square overflow-hidden" style={{ background: "#eeece8" }}>
                             {p.images?.[0] && (
@@ -555,7 +627,7 @@ function AccountPageContent() {
                             <motion.button
                               onClick={() => addItem(p, 1)}
                               whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                              className="w-full py-2 rounded-xl text-[12px] font-black text-[#1a1c1c]"
+                              className="w-full py-2 rounded-[4px] text-[12px] font-black text-[#1a1c1c]"
                               style={{ background: "#fcd020" }}>
                               Add to Cart
                             </motion.button>
@@ -573,7 +645,7 @@ function AccountPageContent() {
           {activeTab === "profile" && (
             <motion.div key="profile" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
               <div className="max-w-lg">
-                <div className="bg-white rounded-2xl p-6" style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
+                <div className="bg-white rounded-[4px] p-6" style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
                   <h3 className="text-[14px] font-black text-[#1a1c1c] mb-5">Personal Information</h3>
                   <div className="space-y-4">
                     {[
@@ -584,7 +656,7 @@ function AccountPageContent() {
                         <label className="block text-[10px] font-black uppercase tracking-wider text-[#1a1c1c]/45 mb-1.5">{label}</label>
                         <input type={type} value={value} placeholder={placeholder}
                           onChange={e => setter(e.target.value)}
-                          className="w-full h-11 px-4 rounded-xl text-[13px] outline-none transition-colors"
+                          className="w-full h-11 px-4 rounded-[4px] text-[13px] outline-none transition-colors"
                           style={{ border: "1px solid rgba(26,28,28,0.14)", background: "#eeece8", color: "#1a1c1c" }}
                           onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = "#fcd020"}
                           onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = "rgba(26,28,28,0.14)"}
@@ -594,7 +666,7 @@ function AccountPageContent() {
                     <div>
                       <label className="block text-[10px] font-black uppercase tracking-wider text-[#1a1c1c]/45 mb-1.5">Email Address</label>
                       <input type="email" disabled value={user?.email || ""}
-                        className="w-full h-11 px-4 rounded-xl text-[13px] cursor-not-allowed"
+                        className="w-full h-11 px-4 rounded-[4px] text-[13px] cursor-not-allowed"
                         style={{ border: "1px solid rgba(26,28,28,0.08)", background: "rgba(26,28,28,0.04)", color: "rgba(26,28,28,0.35)" }}
                       />
                       <p className="text-[10.5px] text-[#1a1c1c]/35 mt-1">Email cannot be changed here.</p>
@@ -604,7 +676,7 @@ function AccountPageContent() {
                   <AnimatePresence>
                     {saveMsg && (
                       <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                        className="mt-4 p-3 rounded-xl text-[12px] font-medium"
+                        className="mt-4 p-3 rounded-[4px] text-[12px] font-medium"
                         style={saveMsg.includes("success")
                           ? { background: "rgba(5,150,105,0.08)", color: "#065f46" }
                           : { background: "rgba(220,38,38,0.08)", color: "#b91c1c" }}>
@@ -616,20 +688,20 @@ function AccountPageContent() {
                   <div className="flex gap-3 mt-5">
                     <motion.button onClick={handleSaveProfile} disabled={isSaving}
                       whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-black text-[#1a1c1c] disabled:opacity-50"
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-[4px] text-[13px] font-black text-[#1a1c1c] disabled:opacity-50"
                       style={{ background: "#fcd020" }}>
                       {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                       {isSaving ? "Saving" : "Save Changes"}
                     </motion.button>
                     <motion.button onClick={handleSignOut} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-semibold transition-colors"
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-[4px] text-[13px] font-semibold transition-colors"
                       style={{ border: "1px solid rgba(185,28,28,0.2)", color: "#b91c1c" }}>
                       <LogOut className="w-3.5 h-3.5" /> Sign Out
                     </motion.button>
                   </div>
                 </div>
 
-                <div className="mt-4 bg-white rounded-2xl p-5" style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
+                <div className="mt-4 bg-white rounded-[4px] p-5" style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
                   <h3 className="text-[13px] font-black text-[#1a1c1c] mb-3">Account Status</h3>
                   <div className="flex items-center gap-2.5">
                     <motion.span className="w-2 h-2 rounded-full"
@@ -657,7 +729,7 @@ function AccountPageContent() {
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 flex flex-col ag-slide-up"
+              className="bg-white rounded-[4px] max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 flex flex-col ag-slide-up"
             >
               {/* Header */}
               <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid rgba(26,28,28,0.06)", background: "rgba(238,236,232,0.3)" }}>
@@ -675,7 +747,7 @@ function AccountPageContent() {
               {/* Body */}
               <div className="p-6 space-y-6 flex-1">
                 {/* Status and tracking */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl" style={{ background: "#f8f5f0" }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-[4px]" style={{ background: "#f8f5f0" }}>
                   <div>
                     <p className="text-[9px] font-black uppercase tracking-wider text-[#1a1c1c]/40">Status</p>
                     <p className="text-[13px] font-bold text-[#1a1c1c] mt-0.5 capitalize">{selectedOrder.order_status}</p>
@@ -690,6 +762,38 @@ function AccountPageContent() {
                       <p className="text-[12px] font-mono text-blue-600 mt-0.5">{selectedOrder.tracking_number}</p>
                     </div>
                   )}
+
+                  {["pending", "confirmed"].includes(selectedOrder.order_status) &&
+                    ["pending", "failed"].includes(selectedOrder.payment_status) && (
+                    <div className="col-span-2 pt-3" style={{ borderTop: "1px solid rgba(26,28,28,0.06)" }}>
+                      {cancelError && <p className="text-[11px] text-red-600 mb-2">{cancelError}</p>}
+                      {cancelConfirming ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[12px] text-[#1a1c1c]/60">Cancel this order?</span>
+                          <button
+                            onClick={() => handleCancelOrder(selectedOrder.id)}
+                            disabled={cancelSubmitting}
+                            className="px-3 py-1.5 rounded-lg text-[11.5px] font-black text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                          >
+                            {cancelSubmitting ? "Cancelling…" : "Yes, Cancel Order"}
+                          </button>
+                          <button
+                            onClick={() => setCancelConfirming(false)}
+                            className="px-3 py-1.5 rounded-lg text-[11.5px] font-bold text-[#1a1c1c]/60"
+                          >
+                            Keep Order
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setCancelConfirming(true)}
+                          className="text-[11.5px] font-bold text-red-600 hover:text-red-700 transition-colors"
+                        >
+                          Cancel Order
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Items List */}
@@ -698,20 +802,81 @@ function AccountPageContent() {
                   <div className="space-y-3">
                     {selectedOrder.order_items?.map((item: any) => {
                       const p = item.product || item.products
+                      const canReturn = selectedOrder.order_status === "delivered"
+                      const alreadyRequested = returnedItemIds.includes(item.id)
+                      const formOpen = returnFormItemId === item.id
                       return (
-                        <div key={item.id} className="flex items-center gap-4 py-2" style={{ borderBottom: "1px solid rgba(26,28,28,0.04)" }}>
-                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-[#eeece8] shrink-0">
-                            {p?.images?.[0] ? (
-                              <img src={p.images[0]} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">No Image</div>
-                            )}
+                        <div key={item.id} className="py-2" style={{ borderBottom: "1px solid rgba(26,28,28,0.04)" }}>
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-[#eeece8] shrink-0">
+                              {p?.images?.[0] ? (
+                                <img src={p.images[0]} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">No Image</div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[13px] font-bold text-[#1a1c1c] truncate">{p?.name || "Product"}</p>
+                              <p className="text-[11px] text-[#1a1c1c]/40 mt-0.5">Qty: {item.quantity} · {formatCurrency(item.price)} each</p>
+                            </div>
+                            <span className="text-[14px] font-black text-[#1a1c1c] shrink-0">{formatCurrency(item.total)}</span>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-bold text-[#1a1c1c] truncate">{p?.name || "Product"}</p>
-                            <p className="text-[11px] text-[#1a1c1c]/40 mt-0.5">Qty: {item.quantity} · {formatCurrency(item.price)} each</p>
-                          </div>
-                          <span className="text-[14px] font-black text-[#1a1c1c] shrink-0">{formatCurrency(item.total)}</span>
+
+                          {canReturn && (
+                            <div className="mt-2 ml-16">
+                              {alreadyRequested ? (
+                                <p className="text-[11px] font-semibold text-green-700 flex items-center gap-1.5">
+                                  <Check className="w-3.5 h-3.5" /> Return requested — we&apos;ll review it shortly.
+                                </p>
+                              ) : formOpen ? (
+                                <div className="p-3 rounded-[4px] space-y-2" style={{ background: "#f8f5f0" }}>
+                                  <select
+                                    value={returnReason}
+                                    onChange={e => setReturnReason(e.target.value)}
+                                    className="w-full h-9 px-2.5 rounded-lg text-[12px] outline-none"
+                                    style={{ border: "1px solid rgba(26,28,28,0.14)", background: "white", color: "#1a1c1c" }}
+                                  >
+                                    <option value="damaged">Item arrived damaged</option>
+                                    <option value="wrong_product">Wrong item received</option>
+                                    <option value="not_as_described">Not as described</option>
+                                    <option value="quality_issue">Quality issue</option>
+                                    <option value="other">Other</option>
+                                  </select>
+                                  <textarea
+                                    value={returnDescription}
+                                    onChange={e => setReturnDescription(e.target.value)}
+                                    placeholder="Describe the issue (at least 10 characters)..."
+                                    className="w-full min-h-[70px] px-2.5 py-2 rounded-lg text-[12px] outline-none resize-none"
+                                    style={{ border: "1px solid rgba(26,28,28,0.14)", background: "white", color: "#1a1c1c" }}
+                                  />
+                                  {returnError && <p className="text-[11px] text-red-600">{returnError}</p>}
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => handleRequestReturn(selectedOrder.id, item.id)}
+                                      disabled={returnSubmitting}
+                                      className="px-3.5 py-1.5 rounded-lg text-[11.5px] font-black text-[#1a1c1c] disabled:opacity-50"
+                                      style={{ background: "#fcd020" }}
+                                    >
+                                      {returnSubmitting ? "Submitting…" : "Submit Request"}
+                                    </button>
+                                    <button
+                                      onClick={() => { setReturnFormItemId(null); setReturnError("") }}
+                                      className="px-3.5 py-1.5 rounded-lg text-[11.5px] font-bold text-[#1a1c1c]/60"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => { setReturnFormItemId(item.id); setReturnError("") }}
+                                  className="flex items-center gap-1.5 text-[11.5px] font-bold text-[#1a1c1c]/60 hover:text-[#1a1c1c] transition-colors"
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5" /> Request Return / Refund
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )
                     })}
@@ -772,7 +937,7 @@ function AccountPageContent() {
 
               {/* Footer */}
               <div className="px-6 py-4 bg-gray-50 flex justify-end rounded-b-2xl">
-                <button onClick={() => setSelectedOrder(null)} className="px-5 py-2 rounded-xl text-[12px] font-bold text-[#1a1c1c] bg-[#eeeeee] hover:bg-black/5 transition-colors cursor-pointer">
+                <button onClick={() => setSelectedOrder(null)} className="px-5 py-2 rounded-[4px] text-[12px] font-bold text-[#1a1c1c] bg-[#eeeeee] hover:bg-black/5 transition-colors cursor-pointer">
                   Close
                 </button>
               </div>
@@ -784,12 +949,63 @@ function AccountPageContent() {
   )
 }
 
+function OrderTrackingStepper({ order }: { order: any }) {
+  if (order.order_status === "cancelled") {
+    return (
+      <p className="flex items-center gap-1.5 text-red-600 font-bold text-[13px]">
+        <X className="w-4 h-4" /> Order Cancelled
+      </p>
+    )
+  }
+
+  const currentIndex = ORDER_STEPS.findIndex(s => s.key === order.order_status)
+  const timestamps: Record<string, string | null> = {
+    pending: order.created_at,
+    confirmed: order.confirmed_at || null,
+    processing: null,
+    shipped: order.shipped_at || null,
+    delivered: order.delivered_at || null,
+  }
+
+  return (
+    <div className="flex items-start w-full">
+      {ORDER_STEPS.map((step, i) => {
+        const done = currentIndex >= 0 && i <= currentIndex
+        const isLast = i === ORDER_STEPS.length - 1
+        const ts = timestamps[step.key]
+        return (
+          <div key={step.key} className={`flex items-center ${isLast ? "" : "flex-1"}`}>
+            <div className="flex flex-col items-center shrink-0 w-12">
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 ${
+                done ? "bg-[#1a1c1c] text-white" : "bg-[#1a1c1c]/10 text-[#1a1c1c]/30"
+              }`}>
+                {done ? <Check className="w-3 h-3" /> : i + 1}
+              </div>
+              <span className={`mt-1 text-[9px] font-semibold text-center leading-tight ${done ? "text-[#1a1c1c]" : "text-[#1a1c1c]/35"}`}>
+                {step.label}
+              </span>
+              {ts && (
+                <span className="text-[8px] text-[#1a1c1c]/35 mt-0.5 whitespace-nowrap">
+                  {new Date(ts).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                </span>
+              )}
+            </div>
+            {!isLast && (
+              <div className={`flex-1 h-0.5 mx-0.5 mb-4 ${i < currentIndex ? "bg-[#1a1c1c]" : "bg-[#1a1c1c]/10"}`} />
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function EmptyState({ icon: Icon, title, subtitle }: { icon: any; title: string; subtitle: string }) {
   return (
-    <motion.div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl"
+    <motion.div className="flex flex-col items-center justify-center py-20 bg-white rounded-[4px]"
       style={{ border: "1px solid rgba(26,28,28,0.07)" }}
       initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 22 }}>
-      <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
+      <div className="w-14 h-14 rounded-[4px] flex items-center justify-center mb-4"
         style={{ background: "rgba(252,208,32,0.15)" }}>
         <Icon className="w-6 h-6 text-[#1a1c1c]/30" />
       </div>

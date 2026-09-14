@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { Home, Search, ShoppingCart, User } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { CartSync } from "@/components/cart-sync"
 import { useCartStore } from "@/lib/store"
 
 function MobileBottomNav() {
@@ -58,13 +59,14 @@ export function ConditionalLayout({ children }: { children: React.ReactNode }) {
     pathname?.startsWith("/seller/dashboard")
 
   if (noLayout) {
-    return <>{children}</>
+    return <><CartSync />{children}</>
   }
 
   return (
     <>
+      <CartSync />
       <Header />
-      <main className="flex-1 pt-16 pb-16 lg:pb-0">{children}</main>
+      <main className="flex-1 pt-14 lg:pt-24 pb-16 lg:pb-0">{children}</main>
       <Footer />
       <MobileBottomNav />
     </>

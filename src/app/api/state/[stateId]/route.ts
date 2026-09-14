@@ -62,7 +62,8 @@ export async function GET(
         specifications,
         rating,
         review_count,
-        sold_count
+        sold_count,
+        sellers(id, business_name, swadeshi_rank, state_code)
       `)
       .eq("state_code", stateCode)
       .eq("approval_status", "approved")

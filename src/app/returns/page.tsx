@@ -30,7 +30,7 @@ export default function ReturnsPage() {
         <span className="text-xs font-bold text-primary uppercase tracking-[0.3em] block mb-3">Policies</span>
         <h1 className="text-4xl font-extrabold tracking-tight text-on-surface mb-3">Return & Refund Policy</h1>
         <p className="text-on-surface-variant max-w-lg mx-auto">
-          We want you to love what you bought. If something's wrong, we're here to fix it.
+          We want you to love what you bought. If something&apos;s wrong, we&apos;re here to fix it.
         </p>
       </div>
 

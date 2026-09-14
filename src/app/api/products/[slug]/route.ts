@@ -36,10 +36,26 @@ export async function GET(
       .order("created_at", { ascending: false })
       .limit(20)
 
+    // Fetch variants (flat list — sort_order then name)
+    const { data: variants } = await supabase
+      .from("product_variants")
+      .select("*")
+      .eq("product_id", product.id)
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true })
+
+    // Fetch Q&A with nested answers
+    const { data: questions } = await supabase
+      .from("product_questions")
+      .select("*, users(full_name), product_answers(*, users(full_name))")
+      .eq("product_id", product.id)
+      .order("created_at", { ascending: false })
+      .limit(50)
+
     // Fetch related products (same category, same state, approved)
     const { data: related } = await supabase
       .from("products")
-      .select("id, name, slug, price, mrp, images, mode, state_code, rating, review_count, sold_count, tags")
+      .select("id, name, slug, price, mrp, stock, images, mode, state_code, rating, review_count, sold_count, tags, sellers(id, business_name, swadeshi_rank, state_code)")
       .eq("approval_status", "approved")
       .eq("category_id", product.category_id)
       .neq("id", product.id)
@@ -49,7 +65,7 @@ export async function GET(
     const sameStateQuery = product.state_code
       ? await supabase
           .from("products")
-          .select("id, name, slug, price, mrp, images, mode, state_code, rating, review_count, sold_count, tags")
+          .select("id, name, slug, price, mrp, stock, images, mode, state_code, rating, review_count, sold_count, tags, sellers(id, business_name, swadeshi_rank, state_code)")
           .eq("approval_status", "approved")
           .eq("state_code", product.state_code)
           .neq("id", product.id)
@@ -62,6 +78,8 @@ export async function GET(
       reviews: reviews || [],
       relatedProducts: related || [],
       sameStateProducts: sameState || [],
+      variants: variants || [],
+      questions: questions || [],
     })
   } catch (error) {
     console.error("Product detail API error:", error)

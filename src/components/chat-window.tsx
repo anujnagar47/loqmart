@@ -40,7 +40,7 @@ export function ChatWindow({
 
   const fetchMessages = async () => {
     try {
-      const res = await fetch(`/api/chat?userId=${currentUserId}&otherId=${receiverId}`)
+      const res = await fetch(`/api/chat?otherId=${receiverId}`)
       if (res.ok) {
         const data = await res.json()
         setMessages(data.messages || [])

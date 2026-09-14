@@ -8,15 +8,25 @@ export async function POST(request: Request) {
   try {
     const body = await request.text()
     const signature = request.headers.get("x-razorpay-signature")
-    const secret = process.env.RAZORPAY_WEBHOOK_SECRET || ""
+    const secret = process.env.RAZORPAY_WEBHOOK_SECRET
 
-    // Verify Razorpay signature
+    if (!secret) {
+      console.error("RAZORPAY_WEBHOOK_SECRET is not configured — refusing to process webhook")
+      return NextResponse.json({ error: "Webhook not configured" }, { status: 500 })
+    }
+
+    // Verify Razorpay signature (constant-time compare — signature is attacker-influenced input)
     const expectedSignature = crypto
       .createHmac("sha256", secret)
       .update(body)
       .digest("hex")
 
-    if (signature !== expectedSignature) {
+    const signatureValid =
+      !!signature &&
+      signature.length === expectedSignature.length &&
+      crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))
+
+    if (!signatureValid) {
       console.error("Invalid Razorpay webhook signature")
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
     }
@@ -94,6 +104,41 @@ export async function POST(request: Request) {
             reference_type: "order",
             description: `LoqCoins earned on Order #${order.order_number}`,
             expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          })
+        }
+      }
+
+      // Spend any LoqCoins reserved at checkout — deferred to here (rather than
+      // /api/checkout) so a failed/abandoned Razorpay payment never actually
+      // debits the buyer's wallet.
+      const coinsUsed = order.coins_used || 0
+      if (coinsUsed > 0) {
+        const { data: redeemBalance } = await supabase
+          .from("loqcoin_balances")
+          .select("balance, lifetime_redeemed")
+          .eq("user_id", order.user_id)
+          .single()
+
+        if (redeemBalance) {
+          const newRedeemBalance = redeemBalance.balance - coinsUsed
+          await supabase
+            .from("loqcoin_balances")
+            .update({
+              balance: newRedeemBalance,
+              lifetime_redeemed: (redeemBalance.lifetime_redeemed || 0) + coinsUsed,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("user_id", order.user_id)
+
+          await supabase.from("loqcoin_ledger").insert({
+            user_id: order.user_id,
+            transaction_type: "redeem",
+            amount: -coinsUsed,
+            balance_after: newRedeemBalance,
+            source: "checkout",
+            reference_id: orderId,
+            reference_type: "order",
+            description: `LoqCoins redeemed on Order #${order.order_number}`,
           })
         }
       }

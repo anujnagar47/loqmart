@@ -64,8 +64,12 @@ export default function ProductsPage() {
     setSaving(false)
   }
 
-  const setStatus = async (id: string, status: string) => {
-    await fetch(`/api/admin/products/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ approval_status: status }) })
+  const setStatus = async (id: string, status: "approved" | "rejected") => {
+    // Routed through the dedicated approve/reject endpoints (not a generic
+    // PATCH) so this always writes the same seller notification + admin_logs
+    // entry as approving/rejecting from the Overview queue does.
+    const endpoint = status === "approved" ? "approve" : "reject"
+    await fetch(`/api/admin/products/${id}/${endpoint}`, { method: "POST" })
     setProducts(p => p.map(x => x.id === id ? { ...x, approval_status: status } : x))
     showToast(`Product ${status}`)
   }

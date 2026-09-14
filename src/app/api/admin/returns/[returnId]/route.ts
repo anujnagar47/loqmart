@@ -16,7 +16,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ return
   }
   allowed.updated_at = new Date().toISOString()
   const { error } = await auth.db.from("return_requests").update(allowed).eq("id", returnId)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   try { await auth.db.from("admin_logs").insert({
     admin_id: auth.userId, action: "return.update", target_type: "return_request", target_id: returnId, new_value: allowed,
   }) } catch { /* non-critical audit log */ }

@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation"
 import {
   Package, Plus, Edit2, Trash2,
   Check, X, RefreshCw, Search, ChevronDown, AlertCircle, LogOut,
-  Star, ArrowRight, Bell, ImagePlus, Loader2,
+  Star, ArrowRight, Bell, ImagePlus, Loader2, Layers,
 } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
+import { VariantManager } from "@/components/seller/VariantManager"
 
 // ──────────────────────────────────────────────
 // Helpers / micro-components
@@ -109,6 +110,7 @@ export default function SellerDashboard() {
   const [showAddProduct, setShowAddProduct] = useState(false)
   const [editProduct, setEditProduct]       = useState<any>(null)
   const [productForm, setProductForm]       = useState(EMPTY_PRODUCT)
+  const [variantProduct, setVariantProduct] = useState<{ id: string; name: string } | null>(null)
   const [savingProduct, setSavingProduct]   = useState(false)
   const [uploadingImages, setUploadingImages] = useState(false)
   const [categories, setCategories]         = useState<any[]>([])
@@ -336,7 +338,7 @@ export default function SellerDashboard() {
             </div>
             <h2 className="text-[20px] font-black text-[#1a1c1c] mb-2">Application Submitted!</h2>
             <p className="text-[13px] text-[#1a1c1c]/55 mb-7 leading-relaxed">
-              Your seller application is under review. We'll notify you within 2–3 business days once approved.
+              Your seller application is under review. We&apos;ll notify you within 2–3 business days once approved.
             </p>
             <div className="text-left space-y-3 mb-7 p-4 rounded-xl" style={{ background: "#eeece8" }}>
               <p className="text-[10px] font-black uppercase tracking-widest text-[#1a1c1c]/35 mb-2">What happens next</p>
@@ -426,6 +428,13 @@ export default function SellerDashboard() {
       backgroundImage: `radial-gradient(ellipse at 80% 10%, rgba(252,208,32,0.07) 0%, transparent 45%)`,
     }}>
       {toast && <Toast msg={toast} onDone={() => setToast("")} />}
+      {variantProduct && (
+        <VariantManager
+          productId={variantProduct.id}
+          productName={variantProduct.name}
+          onClose={() => setVariantProduct(null)}
+        />
+      )}
 
       {/* ── Top header ── */}
       <div style={{ background: "linear-gradient(180deg, #1a1c1c 0%, #232525 100%)", borderBottom: "1px solid rgba(252,208,32,0.12)" }}>
@@ -937,6 +946,12 @@ export default function SellerDashboard() {
                           <td className="px-5 py-3"><Pill status={p.approval_status} /></td>
                           <td className="px-5 py-3">
                             <div className="flex gap-1">
+                              <button onClick={() => setVariantProduct({ id: p.id, name: p.name })}
+                                title="Manage variants"
+                                className="w-7 h-7 rounded-lg flex items-center justify-center ag-btn transition-colors"
+                                style={{ background: "rgba(37,99,235,0.08)", color: "#1d4ed8" }}>
+                                <Layers size={11} />
+                              </button>
                               <button onClick={() => openEditProduct(p)}
                                 className="w-7 h-7 rounded-lg flex items-center justify-center ag-btn transition-colors"
                                 style={{ background: "rgba(252,208,32,0.12)", color: "#725c00" }}>
@@ -1149,8 +1164,10 @@ export default function SellerDashboard() {
                     <tbody>
                       {orders.map((o: any, i: number) => {
                         const gross    = o.total || 0
-                        const platform = Math.round(gross * 0.10)
-                        const gateway  = Math.round(gross * 0.02)
+                        const platformRate = parseFloat(earnings.commissionRate) || 10
+                        const gatewayRate  = parseFloat(earnings.gatewayRate) || 2
+                        const platform = Math.round(gross * (platformRate / 100))
+                        const gateway  = Math.round(gross * (gatewayRate / 100))
                         const net      = gross - platform - gateway
                         return (
                           <tr key={o.id} className="ag-table-row" style={{ borderBottom: "1px solid rgba(0,0,0,0.03)" }}>

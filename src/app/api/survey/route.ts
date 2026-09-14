@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
+import { sendDiscountCodeEmail } from "@/lib/email"
 
 const CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
@@ -175,6 +176,7 @@ export async function POST(req: NextRequest) {
       free_order: false,
       milestone: "submission",
     })
+    await sendDiscountCodeEmail(emailLower, baseCode, "5% off your first LoqMart order")
 
     // Update referrer
     if (referrer) {
@@ -210,6 +212,9 @@ export async function POST(req: NextRequest) {
 
       if (newMilestoneRows.length > 0) {
         await supabase.from("survey_discount_codes").insert(newMilestoneRows)
+        for (const row of newMilestoneRows) {
+          await sendDiscountCodeEmail(row.email, row.code, row.description)
+        }
       }
     }
 

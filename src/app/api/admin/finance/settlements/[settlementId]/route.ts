@@ -14,7 +14,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ settle
   allowed.processed_by = auth.userId
   allowed.updated_at = new Date().toISOString()
   const { error } = await auth.db.from("settlements").update(allowed).eq("id", settlementId)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
 
   try { await auth.db.from("admin_logs").insert({
     admin_id: auth.userId, action: "settlement.update", target_type: "settlement", target_id: settlementId, new_value: allowed,

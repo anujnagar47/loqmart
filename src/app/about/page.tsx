@@ -47,7 +47,7 @@ export default function AboutPage() {
             Shop India.<br />Support India.<br />Build India.
           </h1>
           <p className="text-white/60 text-lg max-w-2xl mx-auto leading-relaxed">
-            LoqMart was built with one belief: Indian buyers should be able to discover and buy the best of India's manufacturing and craftsmanship - state by state, craft by craft, maker by maker.
+            LoqMart was built with one belief: Indian buyers should be able to discover and buy the best of India&apos;s manufacturing and craftsmanship - state by state, craft by craft, maker by maker.
           </p>
         </div>
       </div>
@@ -58,7 +58,7 @@ export default function AboutPage() {
           <Target className="w-12 h-12 text-primary mx-auto mb-4" />
           <h2 className="text-3xl font-extrabold text-on-surface mb-4">Our Mission</h2>
           <p className="text-on-surface-variant max-w-2xl mx-auto text-lg leading-relaxed">
-            To become the primary discovery platform for verified Indian-made products - connecting <strong className="text-on-surface">1 lakh+ sellers</strong> across all 28 states and 8 union territories to buyers who want to invest in India's economic future.
+            To become the primary discovery platform for verified Indian-made products - connecting <strong className="text-on-surface">1 lakh+ sellers</strong> across all 28 states and 8 union territories to buyers who want to invest in India&apos;s economic future.
           </p>
         </section>
 
@@ -114,7 +114,7 @@ export default function AboutPage() {
 
         {/* CTA */}
         <section className="text-center">
-          <p className="text-on-surface-variant mb-4">Ready to support India's artisans and manufacturers?</p>
+          <p className="text-on-surface-variant mb-4">Ready to support India&apos;s artisans and manufacturers?</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/" className="inline-flex items-center justify-center bg-primary-container text-on-primary-fixed font-bold px-8 py-3 rounded-lg hover:brightness-95 transition-all">
               Start Shopping

@@ -11,7 +11,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ produc
     approved_at: new Date().toISOString(),
     approved_by: auth.userId,
   }).eq("id", productId)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
 
   const { data: product } = await auth.db.from("products").select("name, seller_id").eq("id", productId).single()
   if (product?.seller_id) {

@@ -12,6 +12,7 @@ interface AnalyticsData {
   productSplit:   { handmade: number; machineMade: number }
   sellerFunnel:   { approved: number; pending: number; rejected: number }
   totals: { sellers: number; orders: number; products: number; users: number; revenue: number }
+  trends: { revenue: "up" | "down" | "flat"; orders: "up" | "down" | "flat"; users: "up" | "down" | "flat"; sellers: "up" | "down" | "flat"; products: "up" | "down" | "flat" }
 }
 
 const ORDER_COLOR: Record<string, string> = {
@@ -75,11 +76,11 @@ export default function AnalyticsPage() {
       {/* KPI row */}
       <div className="grid grid-cols-5 gap-4 mb-6 ag-slide-up" style={{ animationDelay: "60ms" }}>
         {loading ? [...Array(5)].map((_, i) => <div key={i} className="rounded-2xl h-28 ag-shimmer" />) : data ? [
-          { label: "Total Revenue",  value: formatCurrency(data.totals.revenue),   trend: "up"   as const },
-          { label: "Orders",         value: data.totals.orders.toLocaleString(),   trend: "up"   as const },
-          { label: "Products",       value: data.totals.products.toLocaleString(), trend: "flat" as const },
-          { label: "Sellers",        value: data.totals.sellers.toLocaleString(),  trend: "up"   as const },
-          { label: "Users",          value: data.totals.users.toLocaleString(),    trend: "up"   as const },
+          { label: "Total Revenue",  value: formatCurrency(data.totals.revenue),   trend: data.trends.revenue  },
+          { label: "Orders",         value: data.totals.orders.toLocaleString(),   trend: data.trends.orders   },
+          { label: "Products",       value: data.totals.products.toLocaleString(), trend: data.trends.products },
+          { label: "Sellers",        value: data.totals.sellers.toLocaleString(),  trend: data.trends.sellers  },
+          { label: "Users",          value: data.totals.users.toLocaleString(),    trend: data.trends.users    },
         ].map((k, i) => <KPI key={k.label} {...k} />) : null}
       </div>
 

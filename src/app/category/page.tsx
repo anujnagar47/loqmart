@@ -1,52 +1,31 @@
 import type { Metadata } from "next"
-import { createServiceClient } from "@/lib/supabase/admin"
-import { CategoryClient } from "./CategoryClient"
-import type { Product } from "@/types/database"
+import { fetchProductsList, parseProductListSearchParams } from "@/lib/products"
+import { ProductListingClient } from "@/components/product-listing/ProductListingClient"
 
 export const metadata: Metadata = {
   title: "Shop Handmade & Machine-Made Products | LoqMart",
-  description: "Browse verified handmade crafts and machine-made products from Indian sellers, filterable by state, price and category.",
+  description: "Browse verified handmade crafts and machine-made products from Indian sellers, filterable by state, price, rating, discount and category.",
 }
 
-async function fetchInitialProducts(mode: "handmade" | "machine_made", search: string): Promise<Product[]> {
-  try {
-    const supabase = createServiceClient()
-    let query = supabase
-      .from("products")
-      .select("*, sellers(id, business_name, swadeshi_rank, state_code), categories(id, name, slug)")
-      .eq("approval_status", "approved")
-      .eq("mode", mode)
-      .order("rating", { ascending: false })
-      .range(0, 99)
+type SearchParams = Record<string, string | undefined>
 
-    if (search) query = query.ilike("name", `%${search.slice(0, 100)}%`)
+export default async function CategoryPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const sp = await searchParams
+  const params = parseProductListSearchParams(sp)
+  const result = await fetchProductsList(params)
 
-    const { data, error } = await query
-    if (error) { console.error("Category initial fetch error:", error); return [] }
-    return data || []
-  } catch (err) {
-    console.error("Category initial fetch failed:", err)
-    return []
-  }
-}
-
-export default async function CategoryPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ mode?: string; search?: string }>
-}) {
-  const params = await searchParams
-  const mode = params.mode === "machine_made" ? "machine_made" : "handmade"
-  const search = params.search || ""
-
-  const initialProducts = await fetchInitialProducts(mode, search)
+  const eyebrow = params.mode === "handmade" ? "Artisan Crafts" : params.mode === "machine_made" ? "Industrial Quality" : "Full Catalogue"
+  const title = sp.search
+    ? `Search: "${sp.search}"`
+    : params.mode === "handmade" ? "Handmade Collection" : params.mode === "machine_made" ? "Machine-Made Collection" : "All Products"
 
   return (
-    <CategoryClient
-      key={`${mode}:${search}`}
-      initialProducts={initialProducts}
-      initialMode={mode}
-      initialSearch={search}
+    <ProductListingClient
+      key={JSON.stringify(sp)}
+      title={title}
+      eyebrow={eyebrow}
+      initialProducts={result.products}
+      initialTotal={result.total}
     />
   )
 }

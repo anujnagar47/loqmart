@@ -3,7 +3,7 @@ import { createServiceClient } from "@/lib/supabase/admin"
 import { NextResponse } from "next/server"
 
 export type AdminAuth =
-  | { authorized: true; db: ReturnType<typeof createServiceClient>; userId: string }
+  | { authorized: true; db: ReturnType<typeof createServiceClient>; userId: string; role: "admin" | "sub_admin"; stateScope: string | null }
   | { authorized: false; response: NextResponse }
 
 export async function requireAdmin(): Promise<AdminAuth> {
@@ -27,5 +27,5 @@ export async function requireAdmin(): Promise<AdminAuth> {
     return { authorized: false, response: NextResponse.json({ error: "Forbidden" }, { status: 403 }) }
   }
 
-  return { authorized: true, db, userId: user.id }
+  return { authorized: true, db, userId: user.id, role: userRecord.role, stateScope: userRecord.state_scope ?? null }
 }

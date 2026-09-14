@@ -14,6 +14,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ sel
     db.from("commission_settings").select("*").eq("seller_id", sellerId).eq("scope", "seller").maybeSingle(),
   ])
 
+  if (auth.role === "sub_admin" && auth.stateScope && seller?.state_code !== auth.stateScope) {
+    return NextResponse.json({ error: "Forbidden — seller outside your assigned state" }, { status: 403 })
+  }
+
   const totalRevenue = orders?.filter(o => o.payment_status === "paid").reduce((s, o) => s + (o.total || 0), 0) || 0
   const activeProducts = products?.filter(p => p.approval_status === "approved").length || 0
 
@@ -29,6 +33,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ sel
   const auth = await requireAdmin()
   if (!auth.authorized) return auth.response
   const { sellerId } = await params
+
+  if (auth.role === "sub_admin" && auth.stateScope) {
+    const { data: sellerCheck } = await auth.db.from("sellers").select("state_code").eq("id", sellerId).single()
+    if (sellerCheck?.state_code !== auth.stateScope) {
+      return NextResponse.json({ error: "Forbidden — seller outside your assigned state" }, { status: 403 })
+    }
+  }
+
   const { action } = await req.json()
   const newStatus = action === "approve" ? "approved" : "rejected"
   const { error } = await auth.db.from("sellers").update({
@@ -36,7 +48,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ sel
     approved_at: action === "approve" ? new Date().toISOString() : null,
     approved_by: action === "approve" ? auth.userId : null,
   }).eq("id", sellerId)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ success: true, status: newStatus })
 }
 
@@ -44,12 +56,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ se
   const auth = await requireAdmin()
   if (!auth.authorized) return auth.response
   const { sellerId } = await params
+
+  if (auth.role === "sub_admin" && auth.stateScope) {
+    const { data: sellerCheck } = await auth.db.from("sellers").select("state_code").eq("id", sellerId).single()
+    if (sellerCheck?.state_code !== auth.stateScope) {
+      return NextResponse.json({ error: "Forbidden — seller outside your assigned state" }, { status: 403 })
+    }
+  }
+
   const body = await req.json()
   const allowed: Record<string, unknown> = {}
   for (const f of ["swadeshi_rank", "approval_status", "rejection_reason"]) {
     if (f in body) allowed[f] = body[f]
   }
   const { error } = await auth.db.from("sellers").update(allowed).eq("id", sellerId)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ ok: true })
 }

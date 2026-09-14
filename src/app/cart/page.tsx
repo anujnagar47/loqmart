@@ -1,13 +1,47 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
-import { Minus, Plus, Trash2, ArrowLeft, ArrowRight, Package, ShieldCheck, Truck } from "lucide-react"
-import { formatCurrency } from "@/lib/utils"
+import { Minus, Plus, Trash2, Heart, ArrowLeft, ArrowRight, Package, ShieldCheck, Truck, ImageOff } from "lucide-react"
+import { formatCurrency, cartItemPrice, cartItemStock } from "@/lib/utils"
 import { useCartStore } from "@/lib/store"
+import { useWishlist } from "@/hooks/useWishlist"
+import { HomeProductRow } from "@/components/home-product-row"
+import { Button } from "@/components/ui/button"
+import type { CartItem, Product } from "@/types/database"
+
+function CartLineImage({ item }: { item: CartItem }) {
+  const [imageError, setImageError] = useState(false)
+  const src = item.product?.images?.[0]
+
+  if (!src || imageError) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        {src ? <ImageOff size={18} className="text-[#1a1c1c]/20" /> : <Package size={20} className="text-[#1a1c1c]/20" />}
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative w-full h-full">
+      <Image
+        src={src}
+        alt={item.product?.name || "Product"}
+        fill
+        sizes="80px"
+        className="object-cover"
+        onError={() => setImageError(true)}
+      />
+    </div>
+  )
+}
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, clearCart, getTotal } = useCartStore()
+  const { toggleWishlist } = useWishlist()
+  const [recommended, setRecommended] = useState<Product[]>([])
 
   const subtotal = getTotal()
   const shipping = subtotal > 999 ? 0 : 49
@@ -15,12 +49,39 @@ export default function CartPage() {
   const total    = subtotal + shipping + tax
   const coinsToEarn = Math.floor(subtotal / 100)
 
+  async function handleMoveToWishlist(item: CartItem) {
+    const added = await toggleWishlist(item.product_id, false)
+    if (added !== null) removeItem(item.product_id, item.variant_id)
+  }
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    if (items.length === 0) {
+      queueMicrotask(() => { if (!controller.signal.aborted) setRecommended([]) })
+      return () => controller.abort()
+    }
+
+    const cartProductIds = new Set(items.map(i => i.product_id))
+    fetch("/api/products?sort=rating_desc&limit=12", { signal: controller.signal })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (controller.signal.aborted) return
+        const list: Product[] = (d?.products || []).filter((p: Product) => !cartProductIds.has(p.id)).slice(0, 5)
+        setRecommended(list)
+      })
+      .catch(() => { /* recommendations are non-critical */ })
+
+    return () => controller.abort()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length])
+
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-[#eeece8] flex items-center justify-center px-4">
         <motion.div className="text-center max-w-sm"
           initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 22 }}>
-          <div className="w-20 h-20 rounded-2xl bg-white/70 flex items-center justify-center mx-auto mb-5"
+          <div className="w-20 h-20 rounded-[4px] bg-white/70 flex items-center justify-center mx-auto mb-5"
             style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
             <Package size={28} className="text-[#1a1c1c]/25" />
           </div>
@@ -28,11 +89,11 @@ export default function CartPage() {
           <p className="text-[13px] text-[#1a1c1c]/45 mb-6 leading-relaxed">
             You have not added anything yet. Explore our collection of authentic Indian crafts.
           </p>
-          <Link href="/category"
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-[13px] font-black text-[#1a1c1c] transition-colors"
-            style={{ background: "#fcd020" }}>
-            Browse Products <ArrowRight size={13} />
-          </Link>
+          <Button asChild>
+            <Link href="/category">
+              Browse Products <ArrowRight size={13} />
+            </Link>
+          </Button>
         </motion.div>
       </div>
     )
@@ -49,7 +110,7 @@ export default function CartPage() {
             <p className="text-[17px] font-black text-[#1a1c1c]">{formatCurrency(total)}</p>
           </div>
           <Link href="/checkout"
-            className="flex items-center justify-center gap-1.5 h-11 px-6 rounded-xl text-[13px] font-black text-[#1a1c1c]"
+            className="flex items-center justify-center gap-1.5 h-11 px-6 rounded-[4px] text-[13px] font-black text-[#1a1c1c]"
             style={{ background: "#fcd020" }}>
             Checkout →
           </Link>
@@ -76,23 +137,17 @@ export default function CartPage() {
           <div className="space-y-3">
             <AnimatePresence initial={false}>
               {items.map((item, i) => (
-                <motion.div key={item.product_id}
+                <motion.div key={item.id}
                   layout
                   initial={{ opacity: 0, y: 20, scale: 0.97 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, x: -60, scale: 0.95, transition: { duration: 0.22, ease: "easeIn" } }}
                   transition={{ type: "spring", stiffness: 300, damping: 28, delay: i * 0.04 }}
-                  className="bg-white rounded-2xl p-4 flex gap-4"
+                  className="bg-white rounded-[4px] p-4 flex gap-4"
                   style={{ border: "1px solid rgba(26,28,28,0.06)", boxShadow: "0 1px 4px rgba(26,28,28,0.04)" }}>
                   {/* Image */}
-                  <div className="w-20 h-24 rounded-xl overflow-hidden shrink-0 bg-[#eeece8]">
-                    {item.product?.images?.[0] ? (
-                      <img src={item.product.images[0]} alt={item.product.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Package size={20} className="text-[#1a1c1c]/20" />
-                      </div>
-                    )}
+                  <div className="w-20 h-24 rounded-[4px] overflow-hidden shrink-0 bg-[#eeece8]">
+                    <CartLineImage item={item} />
                   </div>
 
                   {/* Content */}
@@ -110,23 +165,36 @@ export default function CartPage() {
                         <h3 className="font-bold text-[#1a1c1c] text-[14px] leading-snug truncate pr-2">
                           {item.product?.name}
                         </h3>
-                        {item.product?.state_code && (
-                          <p className="text-[11px] text-[#1a1c1c]/35 mt-0.5">{item.product.state_code}</p>
+                        {item.variant_name && (
+                          <p className="text-[11px] text-[#1a1c1c]/45 font-semibold mt-0.5">{item.variant_name}</p>
+                        )}
+                        {item.product?.sellers?.business_name && (
+                          <p className="text-[11px] text-[#1a1c1c]/35 mt-0.5 truncate">Sold by {item.product.sellers.business_name}</p>
                         )}
                       </div>
-                      <motion.button onClick={() => removeItem(item.product_id)}
-                        whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                        className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors"
-                        style={{ background: "rgba(220,38,38,0.06)", color: "#ef4444" }}>
-                        <Trash2 size={12} />
-                      </motion.button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <motion.button onClick={() => handleMoveToWishlist(item)}
+                          title="Move to wishlist"
+                          whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                          className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+                          style={{ background: "rgba(26,28,28,0.05)", color: "#1a1c1c" }}>
+                          <Heart size={12} className="opacity-60" />
+                        </motion.button>
+                        <motion.button onClick={() => removeItem(item.product_id, item.variant_id)}
+                          title="Remove"
+                          whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                          className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+                          style={{ background: "rgba(220,38,38,0.06)", color: "#ef4444" }}>
+                          <Trash2 size={12} />
+                        </motion.button>
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between mt-3">
                       {/* Qty control */}
-                      <div className="flex items-center rounded-xl overflow-hidden"
+                      <div className="flex items-center rounded-[4px] overflow-hidden"
                         style={{ border: "1px solid rgba(26,28,28,0.1)" }}>
-                        <motion.button onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
+                        <motion.button onClick={() => updateQuantity(item.product_id, item.quantity - 1, item.variant_id)}
                           whileTap={{ scale: 0.85 }}
                           className="w-8 h-8 flex items-center justify-center hover:bg-[#1a1c1c]/5 transition-colors text-[#1a1c1c]/50">
                           <Minus size={12} />
@@ -137,9 +205,9 @@ export default function CartPage() {
                           className="w-9 text-center text-[13px] font-black text-[#1a1c1c]">
                           {item.quantity}
                         </motion.span>
-                        <motion.button onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
+                        <motion.button onClick={() => updateQuantity(item.product_id, item.quantity + 1, item.variant_id)}
                           whileTap={{ scale: 0.85 }}
-                          disabled={item.quantity >= (item.product?.stock || 0)}
+                          disabled={item.quantity >= cartItemStock(item)}
                           className="w-8 h-8 flex items-center justify-center hover:bg-[#1a1c1c]/5 transition-colors text-[#1a1c1c]/50 disabled:opacity-30 disabled:cursor-not-allowed">
                           <Plus size={12} />
                         </motion.button>
@@ -149,11 +217,11 @@ export default function CartPage() {
                       <div className="text-right">
                         <motion.p key={item.quantity} className="text-[16px] font-black text-[#1a1c1c]"
                           initial={{ y: -6, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: "spring", stiffness: 400 }}>
-                          {formatCurrency((item.product?.price || 0) * item.quantity)}
+                          {formatCurrency(cartItemPrice(item) * item.quantity)}
                         </motion.p>
                         {item.quantity > 1 && (
                           <p className="text-[10px] text-[#1a1c1c]/35">
-                            {formatCurrency(item.product?.price || 0)} each
+                            {formatCurrency(cartItemPrice(item))} each
                           </p>
                         )}
                       </div>
@@ -190,7 +258,7 @@ export default function CartPage() {
           {/* Order summary */}
           <motion.div
             initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ type: "spring", stiffness: 260, damping: 24, delay: 0.1 }}>
-            <div className="bg-white rounded-2xl p-5 sticky top-24"
+            <div className="bg-white rounded-[4px] p-5 sticky top-24 lg:top-28"
               style={{ border: "1px solid rgba(26,28,28,0.06)", boxShadow: "0 2px 8px rgba(26,28,28,0.05)" }}>
               <h2 className="text-[14px] font-black text-[#1a1c1c] tracking-tight mb-4">Order Summary</h2>
 
@@ -226,7 +294,7 @@ export default function CartPage() {
               </div>
 
               {/* LoqCoins */}
-              <motion.div className="rounded-xl px-3 py-2.5 mb-4 flex items-center justify-between"
+              <motion.div className="rounded-[4px] px-3 py-2.5 mb-4 flex items-center justify-between"
                 style={{ background: "rgba(252,208,32,0.12)", border: "1px solid rgba(252,208,32,0.3)" }}
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
                 <span className="text-[11px] font-bold text-[#725c00]">LoqCoins you will earn</span>
@@ -237,11 +305,11 @@ export default function CartPage() {
               </motion.div>
 
               <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
-                <Link href="/checkout"
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-[14px] font-black text-[#1a1c1c] transition-all"
-                  style={{ background: "#fcd020" }}>
-                  Proceed to Checkout <ArrowRight size={14} />
-                </Link>
+                <Button asChild size="xl" className="w-full">
+                  <Link href="/checkout">
+                    Proceed to Checkout <ArrowRight size={14} />
+                  </Link>
+                </Button>
               </motion.div>
 
               <p className="text-[10px] text-center text-[#1a1c1c]/30 mt-3">
@@ -251,6 +319,15 @@ export default function CartPage() {
           </motion.div>
         </div>
       </div>
+
+      {recommended.length > 0 && (
+        <HomeProductRow
+          eyebrow="You Might Also Like"
+          title="Complete Your Order"
+          href="/category"
+          products={recommended}
+        />
+      )}
     </div>
   )
 }

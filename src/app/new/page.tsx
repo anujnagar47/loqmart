@@ -18,7 +18,7 @@ export default function NewArrivalsPage() {
     const supabase = createClient()
     let query = supabase
       .from("products")
-      .select("*")
+      .select("*, sellers(id, business_name, swadeshi_rank, state_code)")
       .eq("approval_status", "approved")
       .order("created_at", { ascending: false })
       .limit(32)
@@ -88,7 +88,7 @@ export default function NewArrivalsPage() {
             <p className="text-sm text-[#1a1c1c]/30 mt-2">Check back soon - sellers add new products daily.</p>
           </div>
         ) : (
-          <div className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4" : "grid-cols-1"}`}>
+          <div className={`grid gap-3 sm:gap-4 ${viewMode === "grid" ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" : "grid-cols-1"}`}>
             {products.map((product, i) => (
               <motion.div key={product.id}
                 initial={{ opacity: 0, y: 16 }}

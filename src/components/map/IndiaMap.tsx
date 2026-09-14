@@ -100,6 +100,23 @@ const STATIC_STATE_DATA: Record<string, StateInfo> = {
 
 const DEFAULT_STATES = ["Rajasthan", "Uttar Pradesh", "Karnataka", "Maharashtra", "Tamil Nadu", "West Bengal", "Gujarat", "Kerala", "Assam", "Odisha"];
 
+// Deterministic pseudo-random generator (seeded by index) so particle
+// positions/timings match between server and client render and avoid
+// a hydration mismatch. Math.random() would produce different values
+// on the server vs. the client for the same render.
+function seededRandom(seed: number): number {
+    const x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+}
+
+const PARTICLES = Array.from({ length: 15 }, (_, i) => ({
+    left: 10 + seededRandom(i * 1.7 + 1) * 80,
+    top: 60 + seededRandom(i * 3.1 + 2) * 30,
+    xOffset: seededRandom(i * 5.3 + 3) * 30 - 15,
+    duration: 4 + seededRandom(i * 7.9 + 4) * 2,
+    delay: seededRandom(i * 11.3 + 5) * 4,
+}));
+
 function getStateCode(stateName: string): string {
   return STATE_CODE_MAP[stateName] || stateName.toUpperCase().slice(0, 2);
 }
@@ -190,24 +207,24 @@ export function IndiaMap() {
             <div className={styles.bgPattern} />
             
             <div className={styles.particles}>
-                {[...Array(15)].map((_, i) => (
+                {PARTICLES.map((particle, i) => (
                     <motion.div
                         key={i}
                         className={styles.particle}
                         initial={{ opacity: 0 }}
-                        animate={{ 
+                        animate={{
                             opacity: [0, 0.4, 0],
                             y: [-20, -80],
-                            x: Math.random() * 30 - 15
+                            x: particle.xOffset
                         }}
                         transition={{
-                            duration: 4 + Math.random() * 2,
+                            duration: particle.duration,
                             repeat: Infinity,
-                            delay: Math.random() * 4,
+                            delay: particle.delay,
                         }}
                         style={{
-                            left: `${10 + Math.random() * 80}%`,
-                            top: `${60 + Math.random() * 30}%`,
+                            left: `${particle.left}%`,
+                            top: `${particle.top}%`,
                         }}
                     />
                 ))}

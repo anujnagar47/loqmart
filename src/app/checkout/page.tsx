@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { Check, Lock, CreditCard, Package, Loader2, MapPin } from "lucide-react"
-import { formatCurrency } from "@/lib/utils"
+import { formatCurrency, cartItemPrice } from "@/lib/utils"
 import { useCartStore } from "@/lib/store"
 import { createClient } from "@/lib/supabase/client"
+import { Toast, useToast } from "@/components/ui/toast"
+import { Button } from "@/components/ui/button"
 // createClient is still used for auth.getSession
 
 const STEPS = ["Address", "Payment", "Review"] as const
@@ -15,6 +17,7 @@ const STEPS = ["Address", "Payment", "Review"] as const
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, getTotal } = useCartStore()
+  const { toastProps, showError } = useToast()
   const [step, setStep] = useState(1)
 
   const [addresses, setAddresses] = useState<any[]>([])
@@ -29,6 +32,9 @@ export default function CheckoutPage() {
   const [promoData,     setPromoData]     = useState<{ code: string; description: string; discount_percent: number; free_delivery: boolean; free_order: boolean } | null>(null)
   const [promoError,    setPromoError]    = useState("")
   const [applyingPromo, setApplyingPromo] = useState(false)
+
+  const [coinBalance, setCoinBalance] = useState(0)
+  const [useCoins,    setUseCoins]    = useState(false)
 
   const [newAddress, setNewAddress] = useState({
     name: "", phone: "", address_line1: "", city: "", state: "", state_code: "", pincode: "",
@@ -49,6 +55,14 @@ export default function CheckoutPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) { router.push("/auth"); return }
       setUser(session.user)
+
+      const { data: balanceRow } = await supabase
+        .from("loqcoin_balances")
+        .select("balance")
+        .eq("user_id", session.user.id)
+        .maybeSingle()
+      setCoinBalance(balanceRow?.balance || 0)
+
       // Use API route (service client) to bypass RLS
       const res = await fetch("/api/user/addresses")
       if (res.ok) {
@@ -95,17 +109,20 @@ export default function CheckoutPage() {
   const afterDiscount = subtotal - discount
   const shipping    = (promoData?.free_delivery || promoData?.free_order || afterDiscount > 999) ? 0 : 49
   const tax         = Math.round(afterDiscount * 0.02)
+  const preCoinsTotal = afterDiscount + shipping + tax
+  const maxRedeemableCoins = Math.min(coinBalance, Math.floor(preCoinsTotal * 0.5))
+  const coinsToRedeem = useCoins ? maxRedeemableCoins : 0
   const coinsEarned = Math.floor(afterDiscount / 100)
-  const total       = afterDiscount + shipping + tax
+  const total       = Math.max(0, preCoinsTotal - coinsToRedeem)
 
   const handleContinue = () => {
-    if (step === 1 && !selectedAddress) { alert("Please select or add a delivery address."); return }
+    if (step === 1 && !selectedAddress) { showError("Please select or add a delivery address."); return }
     if (step < 3) setStep(step + 1)
   }
 
   const handleSaveAddress = async () => {
     if (!newAddress.name || !newAddress.address_line1 || !newAddress.phone || !newAddress.pincode) {
-      alert("Please fill all required fields."); return
+      showError("Please fill all required fields."); return
     }
     const res = await fetch("/api/user/addresses", {
       method: "POST",
@@ -113,7 +130,7 @@ export default function CheckoutPage() {
       body: JSON.stringify({ ...newAddress, is_default: addresses.length === 0 }),
     })
     const json = await res.json()
-    if (!res.ok) { alert(json.error || "Failed to save address."); return }
+    if (!res.ok) { showError(json.error || "Failed to save address."); return }
     setAddresses([...addresses, json.address])
     setSelectedAddress(json.address.id)
     setShowNewAddress(false)
@@ -131,22 +148,23 @@ export default function CheckoutPage() {
   }
 
   const handlePlaceOrder = async () => {
-    if (!selectedAddress) { alert("Please select a delivery address."); return }
+    if (!selectedAddress) { showError("Please select a delivery address."); return }
     setIsProcessing(true)
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
+          items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity, variant_id: i.variant_id || undefined })),
           address_id: selectedAddress,
           payment_method: paymentMethod,
           promo_code: promoData?.code || null,
           discount_amount: discount,
+          loqcoins_to_redeem: coinsToRedeem,
         }),
       })
       const data = await res.json()
-      if (!res.ok) { alert(data.error || "Failed to place order."); setIsProcessing(false); return }
+      if (!res.ok) { showError(data.error || "Failed to place order."); setIsProcessing(false); return }
       if (paymentMethod === "razorpay" && typeof window !== "undefined") {
         const rzpKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
         if (rzpKey && (window as any).Razorpay) {
@@ -168,7 +186,7 @@ export default function CheckoutPage() {
       useCartStore.getState().clearCart()
       router.push(`/checkout/success?order=${data.order_id}`)
     } catch {
-      alert("Something went wrong. Please try again.")
+      showError("Something went wrong. Please try again.")
       setIsProcessing(false)
     }
   }
@@ -181,7 +199,7 @@ export default function CheckoutPage() {
           <h1 className="text-[20px] font-black text-[#1a1c1c] mb-2">Your cart is empty</h1>
           <p className="text-[13px] text-[#1a1c1c]/40 mb-5">Add items to proceed with checkout</p>
           <Link href="/category"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-black text-[#1a1c1c]"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-[4px] text-[13px] font-black text-[#1a1c1c]"
             style={{ background: "#fcd020" }}>
             Browse Products
           </Link>
@@ -202,6 +220,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "#eeece8" }}>
+      {toastProps && <Toast {...toastProps} />}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <h1 className="text-[24px] font-black text-[#1a1c1c] tracking-tight mb-6">Checkout</h1>
 
@@ -237,7 +256,7 @@ export default function CheckoutPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
           {/* Left panel */}
-          <motion.div className="bg-white rounded-2xl p-6" style={{ border: "1px solid rgba(26,28,28,0.07)", boxShadow: "0 1px 4px rgba(26,28,28,0.04)" }}
+          <motion.div className="bg-white rounded-[4px] p-6" style={{ border: "1px solid rgba(26,28,28,0.07)", boxShadow: "0 1px 4px rgba(26,28,28,0.04)" }}
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
 
             {/* Step 1: Address */}
@@ -255,7 +274,7 @@ export default function CheckoutPage() {
                 </div>
 
                 {showNewAddress && (
-                  <div className="mb-5 rounded-xl p-5" style={{ background: "#eeece8" }}>
+                  <div className="mb-5 rounded-[4px] p-5" style={{ background: "#eeece8" }}>
                     <h3 className="text-[13px] font-black text-[#1a1c1c] mb-4">New Address</h3>
                     <div className="grid grid-cols-2 gap-3">
                       {[
@@ -269,7 +288,7 @@ export default function CheckoutPage() {
                         <input key={key} type="text" placeholder={placeholder}
                           value={(newAddress as any)[key]}
                           onChange={e => setNewAddress(a => ({ ...a, [key]: e.target.value }))}
-                          className={`h-10 px-3 rounded-xl text-[13px] outline-none ${span ? "col-span-2" : ""}`}
+                          className={`h-10 px-3 rounded-[4px] text-[13px] outline-none ${span ? "col-span-2" : ""}`}
                           style={{ border: "1px solid rgba(26,28,28,0.14)", background: "white", color: "#1a1c1c" }}
                           onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = "#fcd020"}
                           onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = "rgba(26,28,28,0.14)"}
@@ -277,7 +296,7 @@ export default function CheckoutPage() {
                       ))}
                     </div>
                     <button onClick={handleSaveAddress}
-                      className="mt-4 px-5 py-2 rounded-xl text-[13px] font-black text-[#1a1c1c]"
+                      className="mt-4 px-5 py-2 rounded-[4px] text-[13px] font-black text-[#1a1c1c]"
                       style={{ background: "#fcd020" }}>
                       Save Address
                     </button>
@@ -285,7 +304,7 @@ export default function CheckoutPage() {
                 )}
 
                 {addresses.length === 0 && !showNewAddress && (
-                  <div className="py-10 text-center text-[13px] text-[#1a1c1c]/40 rounded-xl"
+                  <div className="py-10 text-center text-[13px] text-[#1a1c1c]/40 rounded-[4px]"
                     style={{ border: "2px dashed rgba(26,28,28,0.12)" }}>
                     No saved addresses. Add a new address to continue.
                   </div>
@@ -294,7 +313,7 @@ export default function CheckoutPage() {
                 <div className="space-y-3">
                   {addresses.map(addr => (
                     <div key={addr.id} onClick={() => setSelectedAddress(addr.id)}
-                      className="flex items-start gap-3 p-4 rounded-xl cursor-pointer transition-all"
+                      className="flex items-start gap-3 p-4 rounded-[4px] cursor-pointer transition-all"
                       style={{
                         border: `2px solid ${selectedAddress === addr.id ? "#fcd020" : "rgba(26,28,28,0.08)"}`,
                         background: selectedAddress === addr.id ? "rgba(252,208,32,0.04)" : "white",
@@ -345,7 +364,7 @@ export default function CheckoutPage() {
                     },
                   ].map(opt => (
                     <div key={opt.id} onClick={() => setPaymentMethod(opt.id)}
-                      className="flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-all"
+                      className="flex items-center gap-4 p-4 rounded-[4px] cursor-pointer transition-all"
                       style={{
                         border: `2px solid ${paymentMethod === opt.id ? "#fcd020" : "rgba(26,28,28,0.08)"}`,
                         background: paymentMethod === opt.id ? "rgba(252,208,32,0.04)" : "white",
@@ -354,7 +373,7 @@ export default function CheckoutPage() {
                         style={{ borderColor: paymentMethod === opt.id ? "#fcd020" : "rgba(26,28,28,0.2)" }}>
                         {paymentMethod === opt.id && <div className="w-2 h-2 rounded-full" style={{ background: "#fcd020" }} />}
                       </div>
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "#eeece8" }}>
+                      <div className="w-10 h-10 rounded-[4px] flex items-center justify-center shrink-0" style={{ background: "#eeece8" }}>
                         {opt.icon}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -373,7 +392,7 @@ export default function CheckoutPage() {
                   ))}
                 </div>
 
-                <div className="mt-5 p-4 rounded-xl flex items-start gap-3"
+                <div className="mt-5 p-4 rounded-[4px] flex items-start gap-3"
                   style={{ background: "rgba(252,208,32,0.1)", border: "1px solid rgba(252,208,32,0.3)" }}>
                   <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-black text-[13px]"
                     style={{ background: "#fcd020", color: "#725c00" }}>L</div>
@@ -382,6 +401,20 @@ export default function CheckoutPage() {
                     <p className="text-[11px] text-[#725c00]/60">Credited after delivery confirmation</p>
                   </div>
                 </div>
+
+                {coinBalance > 0 && (
+                  <label className="mt-3 p-4 rounded-[4px] flex items-center gap-3 cursor-pointer"
+                    style={{ border: "1px solid rgba(26,28,28,0.1)" }}>
+                    <input type="checkbox" checked={useCoins} onChange={e => setUseCoins(e.target.checked)}
+                      className="w-4 h-4 accent-[#fcd020]" />
+                    <div className="flex-1">
+                      <p className="text-[13px] font-bold text-[#1a1c1c]">Use LoqCoins</p>
+                      <p className="text-[11px] text-[#1a1c1c]/40">
+                        You have {coinBalance} coins available{useCoins ? ` — applying ${maxRedeemableCoins} (₹${maxRedeemableCoins})` : ""}
+                      </p>
+                    </div>
+                  </label>
+                )}
               </div>
             )}
 
@@ -392,7 +425,7 @@ export default function CheckoutPage() {
 
                 <div className="space-y-3 mb-5">
                   {/* Address summary */}
-                  <div className="p-4 rounded-xl" style={{ background: "#eeece8" }}>
+                  <div className="p-4 rounded-[4px]" style={{ background: "#eeece8" }}>
                     <div className="flex items-center gap-2 mb-2">
                       <MapPin size={12} className="text-[#1a1c1c]/40" />
                       <span className="text-[11px] font-black uppercase tracking-wider text-[#1a1c1c]/45">Delivery Address</span>
@@ -410,7 +443,7 @@ export default function CheckoutPage() {
                   </div>
 
                   {/* Payment summary */}
-                  <div className="p-4 rounded-xl" style={{ background: "#eeece8" }}>
+                  <div className="p-4 rounded-[4px]" style={{ background: "#eeece8" }}>
                     <div className="flex items-center gap-2 mb-1">
                       <CreditCard size={12} className="text-[#1a1c1c]/40" />
                       <span className="text-[11px] font-black uppercase tracking-wider text-[#1a1c1c]/45">Payment</span>
@@ -421,7 +454,7 @@ export default function CheckoutPage() {
                   </div>
 
                   {/* Items summary */}
-                  <div className="p-4 rounded-xl" style={{ background: "#eeece8" }}>
+                  <div className="p-4 rounded-[4px]" style={{ background: "#eeece8" }}>
                     <div className="flex items-center gap-2 mb-3">
                       <Package size={12} className="text-[#1a1c1c]/40" />
                       <span className="text-[11px] font-black uppercase tracking-wider text-[#1a1c1c]/45">
@@ -430,16 +463,19 @@ export default function CheckoutPage() {
                     </div>
                     <div className="space-y-2.5">
                       {items.map(item => (
-                        <div key={item.product_id} className="flex items-center gap-3">
+                        <div key={item.id} className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0" style={{ background: "rgba(26,28,28,0.06)" }}>
                             {item.product?.images?.[0] && (
                               <img src={item.product.images[0]} alt={item.product.name} className="w-full h-full object-cover" />
                             )}
                           </div>
-                          <p className="flex-1 text-[12px] font-medium text-[#1a1c1c] line-clamp-1">{item.product?.name}</p>
+                          <p className="flex-1 text-[12px] font-medium text-[#1a1c1c] line-clamp-1">
+                            {item.product?.name}
+                            {item.variant_name && <span className="text-[#1a1c1c]/40"> · {item.variant_name}</span>}
+                          </p>
                           <span className="text-[11px] text-[#1a1c1c]/40 shrink-0">×{item.quantity}</span>
                           <p className="text-[13px] font-bold text-[#1a1c1c] shrink-0">
-                            {formatCurrency((item.product?.price || 0) * item.quantity)}
+                            {formatCurrency(cartItemPrice(item) * item.quantity)}
                           </p>
                         </div>
                       ))}
@@ -454,17 +490,13 @@ export default function CheckoutPage() {
             <div className="flex gap-3 mt-6 pt-5" style={{ borderTop: "1px solid rgba(26,28,28,0.07)" }}>
               {step > 1 && (
                 <button onClick={() => setStep(step - 1)}
-                  className="px-5 py-2.5 rounded-xl text-[13px] font-semibold text-[#1a1c1c]/60 transition-colors"
+                  className="px-5 py-2.5 rounded-[4px] text-[13px] font-semibold text-[#1a1c1c]/60 transition-colors"
                   style={{ border: "1px solid rgba(26,28,28,0.12)" }}>
                   Back
                 </button>
               )}
-              <button onClick={step < 3 ? handleContinue : handlePlaceOrder}
-                disabled={isProcessing}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-black text-[#1a1c1c] disabled:opacity-50 transition-all"
-                style={{ background: "#fcd020" }}
-                onMouseEnter={e => { if (!isProcessing) (e.currentTarget as HTMLElement).style.filter = "brightness(0.95)" }}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.filter = ""}>
+              <Button type="button" onClick={step < 3 ? handleContinue : handlePlaceOrder}
+                disabled={isProcessing} size="lg" className="flex-1">
                 {isProcessing && <Loader2 size={14} className="animate-spin" />}
                 {step < 3
                   ? "Continue"
@@ -472,19 +504,19 @@ export default function CheckoutPage() {
                     ? "Processing"
                     : "Place Order"}
                 {!isProcessing && step === 3 && <Lock size={13} />}
-              </button>
+              </Button>
             </div>
           </motion.div>
 
           {/* Right: order summary */}
           <div>
-            <div className="bg-white rounded-2xl p-5 sticky top-24"
+            <div className="bg-white rounded-[4px] p-5 sticky top-24 lg:top-28"
               style={{ border: "1px solid rgba(26,28,28,0.07)", boxShadow: "0 2px 8px rgba(26,28,28,0.04)" }}>
               <h2 className="text-[13px] font-black text-[#1a1c1c] mb-4">Order Summary</h2>
 
               <div className="max-h-44 overflow-y-auto space-y-2.5 mb-4 pr-1" style={{ scrollbarWidth: "none" }}>
                 {items.map(item => (
-                  <div key={item.product_id} className="flex items-center gap-2.5">
+                  <div key={item.id} className="flex items-center gap-2.5">
                     <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0" style={{ background: "#eeece8" }}>
                       {item.product?.images?.[0] && (
                         <img src={item.product.images[0]} alt={item.product.name} className="w-full h-full object-cover" />
@@ -492,10 +524,12 @@ export default function CheckoutPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[12px] font-medium text-[#1a1c1c] line-clamp-1">{item.product?.name}</p>
-                      <p className="text-[10px] text-[#1a1c1c]/35">Qty: {item.quantity}</p>
+                      <p className="text-[10px] text-[#1a1c1c]/35">
+                        {item.variant_name && <>{item.variant_name} · </>}Qty: {item.quantity}
+                      </p>
                     </div>
                     <p className="text-[12px] font-bold text-[#1a1c1c] shrink-0">
-                      {formatCurrency((item.product?.price || 0) * item.quantity)}
+                      {formatCurrency(cartItemPrice(item) * item.quantity)}
                     </p>
                   </div>
                 ))}
@@ -504,7 +538,7 @@ export default function CheckoutPage() {
               {/* Promo code */}
               <div className="pt-4 mt-1" style={{ borderTop: "1px solid rgba(26,28,28,0.07)" }}>
                 {promoData ? (
-                  <div className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+                  <div className="flex items-center justify-between px-3 py-2.5 rounded-[4px]"
                     style={{ background: "rgba(22,163,74,0.08)", border: "1px solid rgba(22,163,74,0.18)" }}>
                     <div>
                       <p className="text-[10.5px] font-black text-green-700">{promoData.code}</p>
@@ -523,7 +557,7 @@ export default function CheckoutPage() {
                         onChange={e => { setPromoInput(e.target.value.toUpperCase()); setPromoError("") }}
                         onKeyDown={e => e.key === "Enter" && handleApplyPromo()}
                         placeholder="Promo code"
-                        className="flex-1 h-9 px-3 rounded-xl text-[12px] font-semibold tracking-wider outline-none"
+                        className="flex-1 h-9 px-3 rounded-[4px] text-[12px] font-semibold tracking-wider outline-none"
                         style={{ border: "1px solid rgba(26,28,28,0.14)", background: "#eeece8", color: "#1a1c1c" }}
                         onFocus={e => (e.currentTarget.style.borderColor = "#fcd020")}
                         onBlur={e => (e.currentTarget.style.borderColor = "rgba(26,28,28,0.14)")}
@@ -531,7 +565,7 @@ export default function CheckoutPage() {
                       <button
                         onClick={handleApplyPromo}
                         disabled={applyingPromo || !promoInput.trim()}
-                        className="px-3 h-9 rounded-xl text-[11px] font-black disabled:opacity-40 transition-colors"
+                        className="px-3 h-9 rounded-[4px] text-[11px] font-black disabled:opacity-40 transition-colors"
                         style={{ background: "#fcd020", color: "#1a1c1c" }}>
                         {applyingPromo ? "..." : "Apply"}
                       </button>
@@ -549,6 +583,7 @@ export default function CheckoutPage() {
                   ...(discount > 0 ? [{ label: promoData?.free_order ? "Free order discount" : `Discount (${promoData?.discount_percent}%)`, value: <span className="text-green-600 font-black">−{formatCurrency(discount)}</span> }] : []),
                   { label: "Shipping", value: shipping === 0 ? <span className="text-green-600 font-black">FREE</span> : formatCurrency(shipping) },
                   { label: "GST (2%)", value: formatCurrency(tax) },
+                  ...(coinsToRedeem > 0 ? [{ label: "LoqCoins used", value: <span className="text-green-600 font-black">−{formatCurrency(coinsToRedeem)}</span> }] : []),
                 ].map(row => (
                   <div key={row.label} className="flex justify-between text-[12px]">
                     <span className="text-[#1a1c1c]/45">{row.label}</span>
@@ -565,7 +600,7 @@ export default function CheckoutPage() {
                 style={{ borderTop: "1px solid rgba(26,28,28,0.07)" }}>
                 <span className="text-[14px] font-black text-[#1a1c1c]">Total</span>
                 <div className="text-right">
-                  {discount > 0 && (
+                  {(discount > 0 || coinsToRedeem > 0) && (
                     <p className="text-[11px] line-through text-[#1a1c1c]/35">{formatCurrency(subtotal + (subtotal > 999 ? 0 : 49) + Math.round(subtotal * 0.02))}</p>
                   )}
                   <span className="text-[20px] font-black text-[#1a1c1c]">{formatCurrency(total)}</span>

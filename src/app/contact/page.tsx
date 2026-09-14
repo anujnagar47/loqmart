@@ -2,25 +2,48 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Mail, Phone, MapPin, Send, MessageCircle, AlertCircle, Check } from "lucide-react"
+import { Mail, MapPin, Send, AlertCircle, Check } from "lucide-react"
 
+// Phone/WhatsApp support and the company's CIN are deliberately omitted
+// until real values exist — an honest gap beats a fabricated number.
 const contactOptions = [
-  { icon: Mail,          title: "Email Support",     desc: "support@loqmart.in",    detail: "We reply within 24 hours"          },
-  { icon: Phone,         title: "Toll-Free Helpline", desc: "1800-LOQMART",          detail: "Mon–Sat, 9am–6pm IST"              },
-  { icon: MessageCircle, title: "WhatsApp",           desc: "+91 9999 999 999",      detail: "Quick queries, Mon–Sat 10am–5pm"   },
-  { icon: MapPin,        title: "Registered Office",  desc: "New Delhi, India",      detail: "CIN: U74999DL2024PTC123456"        },
+  { icon: Mail,   title: "Email Support",    desc: "support@loqmart.in", detail: "We reply within 24 hours" },
+  { icon: MapPin, title: "Registered Office", desc: "New Delhi, India",   detail: "" },
 ]
 
 const inputCls = "w-full px-4 py-3 rounded-xl text-[13px] outline-none transition-all"
 const inputStyle = { border: "1px solid rgba(26,28,28,0.14)", background: "white", color: "#1a1c1c" }
-const onFocus = (e: any) => { e.currentTarget.style.borderColor = "#fcd020"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(252,208,32,0.1)" }
-const onBlur  = (e: any) => { e.currentTarget.style.borderColor = "rgba(26,28,28,0.14)"; e.currentTarget.style.boxShadow = "none" }
+const onFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => { e.currentTarget.style.borderColor = "#fcd020"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(252,208,32,0.1)" }
+const onBlur  = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => { e.currentTarget.style.borderColor = "rgba(26,28,28,0.14)"; e.currentTarget.style.boxShadow = "none" }
 
 export default function ContactPage() {
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" })
   const [sent, setSent] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState("")
 
-  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); setSent(true) }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setError("")
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Failed to send your message. Please try again.")
+        return
+      }
+      setSent(true)
+    } catch {
+      setError("Failed to send your message. Please check your connection and try again.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <div className="min-h-screen" style={{ background: "#eeece8" }}>
@@ -30,14 +53,14 @@ export default function ContactPage() {
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#1a1c1c]/50 block mb-2">Get in Touch</p>
           <h1 className="text-[32px] font-extrabold tracking-tight text-[#1a1c1c] mb-2">Contact LoqMart</h1>
           <p className="text-[14px] text-[#1a1c1c]/55 max-w-lg mx-auto">
-            Buyer, seller, or just curious? We're here to help. Reach us via any channel below.
+            Buyer, seller, or just curious? We&apos;re here to help. Reach us via any channel below.
           </p>
         </motion.div>
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
         {/* Contact options */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-12 max-w-md mx-auto">
           {contactOptions.map((opt, i) => (
             <motion.div key={opt.title}
               initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
@@ -51,7 +74,7 @@ export default function ContactPage() {
               </div>
               <h3 className="font-bold text-[13px] text-[#1a1c1c] mb-1">{opt.title}</h3>
               <p className="font-semibold text-[12px] text-[#725c00] mb-0.5">{opt.desc}</p>
-              <p className="text-[10.5px] text-[#1a1c1c]/40">{opt.detail}</p>
+              {opt.detail && <p className="text-[10.5px] text-[#1a1c1c]/40">{opt.detail}</p>}
             </motion.div>
           ))}
         </div>
@@ -73,7 +96,7 @@ export default function ContactPage() {
                 </div>
                 <h3 className="text-[18px] font-bold text-[#1a1c1c] mb-2">Message Sent!</h3>
                 <p className="text-[13px] text-[#1a1c1c]/45">
-                  Thank you for reaching out. We'll reply to your email within 24 hours.
+                  Thank you for reaching out. We&apos;ll reply to your email within 24 hours.
                 </p>
               </motion.div>
             ) : (
@@ -112,13 +135,20 @@ export default function ContactPage() {
                     style={{ background: "rgba(217,119,6,0.07)", border: "1px solid rgba(217,119,6,0.18)" }}>
                     <AlertCircle size={14} className="text-amber-600 shrink-0" />
                     <p className="text-[11px] text-amber-700">
-                      For urgent order issues, use the toll-free helpline: <strong>1800-LOQMART</strong>
+                      For urgent order issues, mention your order number and we&apos;ll prioritize your email.
                     </p>
                   </div>
-                  <motion.button type="submit" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-black text-[#1a1c1c]"
+                  {error && (
+                    <div className="flex items-center gap-2.5 p-3 rounded-xl"
+                      style={{ background: "rgba(220,38,38,0.06)", border: "1px solid rgba(220,38,38,0.18)" }}>
+                      <AlertCircle size={14} className="text-red-600 shrink-0" />
+                      <p className="text-[11px] text-red-700">{error}</p>
+                    </div>
+                  )}
+                  <motion.button type="submit" disabled={submitting} whileHover={{ scale: submitting ? 1 : 1.01 }} whileTap={{ scale: submitting ? 1 : 0.98 }}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-black text-[#1a1c1c] disabled:opacity-50"
                     style={{ background: "#fcd020" }}>
-                    <Send size={14} /> Send Message
+                    <Send size={14} /> {submitting ? "Sending…" : "Send Message"}
                   </motion.button>
                 </div>
               </motion.form>

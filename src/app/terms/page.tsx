@@ -7,7 +7,7 @@ const sections = [
   {
     id: "1",
     title: "1. Acceptance of Terms",
-    content: `By accessing or using LoqMart (the "Platform"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree, do not use the Platform. These Terms constitute a legally binding agreement between you and LoqMart India Pvt. Ltd. ("LoqMart", "Company").`,
+    content: `By accessing or using LoqMart (the "Platform"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree, do not use the Platform. These Terms constitute a legally binding agreement between you and LoqMart ("LoqMart", "Company").`,
   },
   {
     id: "2",
@@ -32,7 +32,7 @@ const sections = [
   {
     id: "6",
     title: "6. Intellectual Property",
-    content: `All content on LoqMart, including logos, designs, text, and code, is the property of LoqMart India Pvt. Ltd. or its licensors. Sellers retain ownership of product images and descriptions they upload but grant LoqMart a royalty-free licence to display them on the Platform.`,
+    content: `All content on LoqMart, including logos, designs, text, and code, is the property of LoqMart or its licensors. Sellers retain ownership of product images and descriptions they upload but grant LoqMart a royalty-free licence to display them on the Platform.`,
   },
   {
     id: "7",
@@ -80,7 +80,7 @@ export default function TermsPage() {
         ))}
 
         <div className="border-t border-surface-container pt-8 text-center text-sm text-on-surface-variant">
-          <p>LoqMart India Pvt. Ltd. · CIN: U74999DL2024PTC123456 · New Delhi, India</p>
+          <p>LoqMart · New Delhi, India</p>
           <p className="mt-2">For legal queries: <strong className="text-on-surface">legal@loqmart.in</strong></p>
         </div>
       </div>

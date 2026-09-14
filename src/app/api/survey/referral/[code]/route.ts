@@ -26,9 +26,13 @@ export async function GET(
       return NextResponse.json({ error: "Referral code not found" }, { status: 404 })
     }
 
+    // This is a public, unauthenticated lookup (anyone who has — or guesses —
+    // a referral code can call it), so it must never return the actual
+    // redeemable code strings. Those go out only via email (sendDiscountCodeEmail)
+    // to the person who earned them, never through this endpoint.
     const { data: discounts } = await supabase
       .from("survey_discount_codes")
-      .select("*")
+      .select("description, discount_percent, free_delivery, free_order, is_used, milestone")
       .eq("survey_response_id", survey.id)
       .order("created_at", { ascending: true })
 

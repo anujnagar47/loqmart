@@ -12,7 +12,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ po
   }
   if (body.is_published === true) allowed.published_at = new Date().toISOString()
   const { error } = await auth.db.from("blog_posts").update(allowed).eq("id", postId)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ ok: true })
 }
 
@@ -21,6 +21,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (!auth.authorized) return auth.response
   const { postId } = await params
   const { error } = await auth.db.from("blog_posts").delete().eq("id", postId)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ ok: true })
 }

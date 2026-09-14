@@ -100,8 +100,47 @@ export interface Product {
   is_featured?: boolean
   created_at: string
   updated_at: string
-  seller?: Seller
+  // Matches Supabase's actual join key for the products→sellers FK
+  // (`.select("*, sellers(...)")`) — every real query uses this plural key,
+  // never a singular `seller`, so this is typed to match reality.
+  sellers?: { id: string; business_name: string; swadeshi_rank?: number; state_code?: string | null } | null
   category?: Category
+  product_variants?: ProductVariant[]
+}
+
+export interface ProductVariant {
+  id: string
+  product_id: string
+  name: string
+  sku: string | null
+  price: number | null
+  mrp: number | null
+  stock: number
+  image_url: string | null
+  is_default: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ProductAnswer {
+  id: string
+  question_id: string
+  user_id: string
+  is_seller: boolean
+  answer: string
+  created_at: string
+  users?: { full_name: string } | null
+}
+
+export interface ProductQuestion {
+  id: string
+  product_id: string
+  user_id: string
+  question: string
+  created_at: string
+  users?: { full_name: string } | null
+  product_answers?: ProductAnswer[]
 }
 
 export interface Address {
@@ -128,6 +167,12 @@ export interface CartItem {
   quantity: number
   created_at: string
   product?: Product
+  // Present only when the line item is a specific variant, not the base
+  // product — variant_price is a snapshot override (null = use product.price).
+  variant_id?: string | null
+  variant_name?: string | null
+  variant_price?: number | null
+  variant_stock?: number | null
 }
 
 export interface Order {

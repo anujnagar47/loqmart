@@ -24,10 +24,10 @@ export default function NotFoundPage() {
           transition={{ delay: 0.18, duration: 0.35 }}>
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#1a1c1c]/35 mb-3">404 Not Found</p>
           <h1 className="text-[32px] font-extrabold text-[#1a1c1c] tracking-tight mb-3">
-            This page isn't on the map.
+            This page isn&apos;t on the map.
           </h1>
           <p className="text-[14px] text-[#1a1c1c]/50 leading-relaxed mb-8 max-w-sm mx-auto">
-            The page you're looking for doesn't exist or has been moved. Try exploring India's best handmade products instead.
+            The page you&apos;re looking for doesn&apos;t exist or has been moved. Try exploring India&apos;s best handmade products instead.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">

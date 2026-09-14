@@ -36,6 +36,8 @@ export async function GET() {
   const now = new Date()
   const monthlyRevenue: { month: string; revenue: number; orders: number }[] = []
   const monthlySignups: { month: string; count: number }[] = []
+  const monthlySellers: number[] = []
+  const monthlyProducts: number[] = []
 
   for (let i = 5; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
@@ -45,13 +47,32 @@ export async function GET() {
     const monthOrders = (orders || []).filter(o => o.created_at >= monthStart && o.created_at <= monthEnd)
     monthlyRevenue.push({ month: label, revenue: monthOrders.reduce((s, o) => s + (o.total || 0), 0), orders: monthOrders.length })
     monthlySignups.push({ month: label, count: (users || []).filter(u => u.created_at >= monthStart && u.created_at <= monthEnd).length })
+    monthlySellers.push((sellers || []).filter(s => s.created_at >= monthStart && s.created_at <= monthEnd).length)
+    monthlyProducts.push((products || []).filter(p => p.created_at >= monthStart && p.created_at <= monthEnd).length)
+  }
+
+  // Real period-over-period trend (this month vs. last month) instead of a
+  // hardcoded "up"/"flat" label on every load.
+  function trendOf(series: number[]): "up" | "down" | "flat" {
+    const current = series[series.length - 1] || 0
+    const previous = series[series.length - 2] || 0
+    if (current > previous) return "up"
+    if (current < previous) return "down"
+    return "flat"
+  }
+  const trends = {
+    revenue:  trendOf(monthlyRevenue.map(m => m.revenue)),
+    orders:   trendOf(monthlyRevenue.map(m => m.orders)),
+    users:    trendOf(monthlySignups.map(m => m.count)),
+    sellers:  trendOf(monthlySellers),
+    products: trendOf(monthlyProducts),
   }
 
   const handmade   = (products || []).filter(p => p.mode === "handmade").length
   const machineMade = (products || []).filter(p => p.mode === "machine_made").length
 
   return NextResponse.json({
-    stateDist, orderStatusMap, monthlyRevenue, monthlySignups,
+    stateDist, orderStatusMap, monthlyRevenue, monthlySignups, trends,
     productSplit:  { handmade, machineMade },
     sellerFunnel: {
       approved: (sellers || []).filter(s => s.approval_status === "approved").length,

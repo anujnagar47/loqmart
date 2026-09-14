@@ -19,6 +19,6 @@ export async function POST(req: Request) {
     net_payable: net_payable || gross_amount, order_id: order_id || null,
     status: "pending", processed_by: auth.userId,
   }).select().single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ settlement: data }, { status: 201 })
 }

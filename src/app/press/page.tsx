@@ -6,10 +6,9 @@ export const metadata = {
 }
 
 const facts = [
-  { label: "Company", value: "LoqMart India Pvt. Ltd." },
+  { label: "Company", value: "LoqMart" },
   { label: "Founded", value: "2024" },
   { label: "Headquarters", value: "New Delhi, India" },
-  { label: "CIN", value: "U74999DL2024PTC123456" },
   { label: "Sector", value: "Multi-vendor e-commerce marketplace" },
   { label: "Focus", value: "Handmade and machine-made Indian-manufactured goods" },
 ]

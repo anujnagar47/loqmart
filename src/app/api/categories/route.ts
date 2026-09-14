@@ -15,7 +15,12 @@ export async function GET() {
       return NextResponse.json({ error: "Failed to fetch categories" }, { status: 500 })
     }
 
-    return NextResponse.json({ categories: data || [] })
+    // Categories change rarely (admin CRUD only) — safe to cache longer
+    // than the products listing.
+    return NextResponse.json(
+      { categories: data || [] },
+      { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=1800" } }
+    )
   } catch (error) {
     console.error("Categories API error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

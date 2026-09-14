@@ -6,12 +6,16 @@ export async function GET(req: Request) {
   if (!auth.authorized) return auth.response
   const url    = new URL(req.url)
   const status = url.searchParams.get("status") || "all"
+  const scoped = auth.role === "sub_admin" && auth.stateScope
+  const sellerSelect = scoped ? "sellers!inner(business_name,state,state_code)" : "sellers(business_name,state)"
+
   let query = auth.db.from("penalties")
-    .select("*,sellers(business_name,state),users!penalties_issued_by_fkey(full_name)")
+    .select(`*,${sellerSelect},users!penalties_issued_by_fkey(full_name)`)
     .order("created_at", { ascending: false })
   if (status !== "all") query = query.eq("status", status)
+  if (scoped) query = query.eq("sellers.state_code", auth.stateScope)
   const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ penalties: data || [] })
 }
 
@@ -30,7 +34,7 @@ export async function POST(req: Request) {
     status: "active",
     issued_by: auth.userId,
   }).select().single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
 
   if (trust_score_impact) {
     const { data: sellerRow } = await auth.db.from("sellers").select("swadeshi_score").eq("id", seller_id).single()

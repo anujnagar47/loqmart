@@ -1,22 +1,70 @@
 "use client"
 
-import { useEffect } from "react"
+import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { CheckCircle, Package, MapPin, ArrowRight } from "lucide-react"
+import { CheckCircle, Package, MapPin, ArrowRight, Loader2 } from "lucide-react"
 import { useCartStore } from "@/lib/store"
 import { formatCurrency } from "@/lib/utils"
 
+interface OrderItem {
+  id: string
+  quantity: number
+  total: number
+  product: { name: string; images: string[] } | null
+}
+interface Order {
+  id: string
+  order_number: string
+  total: number
+  subtotal: number
+  discount_amount: number
+  order_items: OrderItem[]
+}
+
 export default function CheckoutSuccessPage() {
-  const { items, getTotal, clearCart } = useCartStore()
-  const total = getTotal()
-  const coinsEarned = Math.floor(total / 100)
-  const orderNumber = `LM${Date.now().toString().slice(-6)}`
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#eeece8" }}>
+        <Loader2 className="w-7 h-7 animate-spin text-[#1a1c1c]/30" />
+      </div>
+    }>
+      <CheckoutSuccessContent />
+    </Suspense>
+  )
+}
+
+function CheckoutSuccessContent() {
+  const searchParams = useSearchParams()
+  const orderId = searchParams.get("order")
+  const { clearCart } = useCartStore()
+
+  const [order, setOrder] = useState<Order | null>(null)
+  const [loading, setLoading] = useState(!!orderId)
 
   useEffect(() => {
     const timer = setTimeout(() => clearCart(), 1000)
     return () => clearTimeout(timer)
   }, [clearCart])
+
+  useEffect(() => {
+    if (!orderId) return
+    fetch(`/api/user/orders?id=${orderId}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => setOrder(data?.order || null))
+      .finally(() => setLoading(false))
+  }, [orderId])
+
+  const coinsEarned = order ? Math.max(0, Math.floor((order.subtotal - (order.discount_amount || 0)) / 100)) : 0
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#eeece8" }}>
+        <Loader2 className="w-7 h-7 animate-spin text-[#1a1c1c]/30" />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12" style={{ background: "#eeece8" }}>
@@ -36,12 +84,14 @@ export default function CheckoutSuccessPage() {
           </motion.div>
           <h1 className="text-[32px] font-extrabold text-[#1a1c1c] tracking-tight mb-2">Order Placed!</h1>
           <p className="text-[14px] text-[#1a1c1c]/50">
-            Your order <span className="font-bold text-[#1a1c1c]">#{orderNumber}</span> is confirmed
+            {order
+              ? <>Your order <span className="font-bold text-[#1a1c1c]">#{order.order_number}</span> is confirmed</>
+              : "Your order is confirmed"}
           </p>
         </motion.div>
 
         {/* LoqCoins earned */}
-        {coinsEarned > 0 && (
+        {order && coinsEarned > 0 && (
           <motion.div className="rounded-2xl p-5 flex items-center gap-4 mb-5"
             style={{ background: "rgba(252,208,32,0.12)", border: "1px solid rgba(252,208,32,0.35)" }}
             initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
@@ -53,42 +103,40 @@ export default function CheckoutSuccessPage() {
             </motion.div>
             <div>
               <p className="text-[16px] font-black text-[#725c00]">+{coinsEarned} LoqCoins Earned!</p>
-              <p className="text-[12px] text-[#725c00]/60 mt-0.5">Credited after delivery. Redeem on future purchases.</p>
+              <p className="text-[12px] text-[#725c00]/60 mt-0.5">Credited now. Redeem on future purchases.</p>
             </div>
           </motion.div>
         )}
 
         {/* Order summary */}
-        {items.length > 0 && (
+        {order && order.order_items.length > 0 && (
           <motion.div className="bg-white rounded-2xl p-5 mb-5"
             style={{ border: "1px solid rgba(26,28,28,0.07)" }}
             initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
             <h2 className="text-[13px] font-black text-[#1a1c1c] mb-4">Order Summary</h2>
             <div className="space-y-3 mb-4">
-              {items.slice(0, 3).map(item => (
-                <div key={item.product_id} className="flex items-center gap-3">
+              {order.order_items.slice(0, 3).map(item => (
+                <div key={item.id} className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0" style={{ background: "#eeece8" }}>
                     {item.product?.images?.[0] && (
-                      <img src={item.product.images[0]} alt={item.product.name} className="w-full h-full object-cover" />
+                      <img src={item.product.images[0]} alt={item.product?.name || ""} className="w-full h-full object-cover" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] font-semibold text-[#1a1c1c] line-clamp-1">{item.product?.name}</p>
                     <p className="text-[11px] text-[#1a1c1c]/35">Qty: {item.quantity}</p>
                   </div>
-                  <p className="text-[13px] font-bold text-[#1a1c1c]">
-                    {formatCurrency((item.product?.price || 0) * item.quantity)}
-                  </p>
+                  <p className="text-[13px] font-bold text-[#1a1c1c]">{formatCurrency(item.total)}</p>
                 </div>
               ))}
-              {items.length > 3 && (
-                <p className="text-[12px] text-[#1a1c1c]/40">+{items.length - 3} more items</p>
+              {order.order_items.length > 3 && (
+                <p className="text-[12px] text-[#1a1c1c]/40">+{order.order_items.length - 3} more items</p>
               )}
             </div>
             <div className="flex justify-between items-center pt-4"
               style={{ borderTop: "1px solid rgba(26,28,28,0.07)" }}>
               <span className="text-[14px] font-black text-[#1a1c1c]">Total Paid</span>
-              <span className="text-[20px] font-black text-[#1a1c1c]">{formatCurrency(total)}</span>
+              <span className="text-[20px] font-black text-[#1a1c1c]">{formatCurrency(order.total)}</span>
             </div>
           </motion.div>
         )}
@@ -142,7 +190,6 @@ export default function CheckoutSuccessPage() {
         </motion.div>
 
         <p className="text-center text-[11px] text-[#1a1c1c]/35 mt-5">
-          Confirmation sent to your mobile.{" "}
           <Link href="/account" className="text-[#725c00] font-semibold hover:underline">
             View all orders
           </Link>

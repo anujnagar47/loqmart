@@ -85,7 +85,7 @@ export default function PrivacyPage() {
 
       <div className="max-w-4xl mx-auto px-6 py-16 space-y-12">
         <p className="text-on-surface-variant leading-relaxed bg-surface-container-lowest rounded-xl p-6">
-          LoqMart India Pvt. Ltd. ("LoqMart", "we", "us") is committed to protecting your privacy. This policy explains how we collect, use, share and protect personal information when you use the LoqMart platform (website and mobile applications).
+          LoqMart (&quot;LoqMart&quot;, &quot;we&quot;, &quot;us&quot;) is committed to protecting your privacy. This policy explains how we collect, use, share and protect personal information when you use the LoqMart platform (website and mobile applications).
         </p>
 
         {sections.map((section) => (
@@ -107,7 +107,7 @@ export default function PrivacyPage() {
           <p className="text-sm text-amber-800">
             For any privacy concerns, data access requests, or grievances:<br />
             <strong>Email:</strong> privacy@loqmart.in<br />
-            <strong>Address:</strong> LoqMart India Pvt. Ltd., New Delhi – 110001<br />
+            <strong>Address:</strong> LoqMart, New Delhi – 110001<br />
             We aim to respond within <strong>30 business days</strong>.
           </p>
         </section>

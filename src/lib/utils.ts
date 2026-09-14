@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import type { CartItem } from "@/types/database"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -33,4 +34,15 @@ export function slugify(text: string): string {
 export function truncate(text: string, length: number): string {
   if (text.length <= length) return text
   return text.slice(0, length) + "..."
+}
+
+/** Effective unit price for a cart line — a selected variant's price
+ *  override if present, otherwise the parent product's price. */
+export function cartItemPrice(item: CartItem): number {
+  return item.variant_price ?? item.product?.price ?? 0
+}
+
+/** Effective stock ceiling for a cart line's quantity stepper. */
+export function cartItemStock(item: CartItem): number {
+  return item.variant_id ? (item.variant_stock ?? 0) : (item.product?.stock ?? 0)
 }

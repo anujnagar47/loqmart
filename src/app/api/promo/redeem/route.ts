@@ -13,13 +13,23 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServiceClient()
 
+    // A discount code belongs to whoever submitted the survey/referral with
+    // that email — bind redemption to the caller's own profile email so one
+    // user can't redeem a code they merely learned of (chat, screenshot,
+    // the old public referral-lookup response, etc.) rather than earned.
+    const { data: profile } = await supabase.from("users").select("email").eq("id", user.id).single()
+    const callerEmail = profile?.email?.trim().toLowerCase()
+
     const { data } = await supabase
       .from("survey_discount_codes")
-      .select("id, is_used, expires_at")
+      .select("id, email, is_used, expires_at")
       .ilike("code", code.trim())
       .maybeSingle()
 
     if (!data)          return NextResponse.json({ error: "Invalid code."       }, { status: 404 })
+    if (!callerEmail || data.email?.trim().toLowerCase() !== callerEmail) {
+      return NextResponse.json({ error: "This code isn't linked to your account. Add the email you used to earn it in your profile." }, { status: 403 })
+    }
     if (data.is_used)   return NextResponse.json({ error: "Already used."       }, { status: 400 })
     if (data.expires_at && new Date(data.expires_at) < new Date()) {
       return NextResponse.json({ error: "Code expired." }, { status: 400 })

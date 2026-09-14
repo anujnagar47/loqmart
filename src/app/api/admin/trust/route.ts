@@ -31,7 +31,7 @@ export async function PATCH(req: Request) {
   if (trust_score    != null) update.trust_score    = trust_score
 
   const { error } = await auth.db.from("sellers").update(update).eq("id", seller_id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
 
   try { await auth.db.from("swadeshi_rank_history").insert({
     seller_id, rank: swadeshi_rank || 0, score: swadeshi_score || 0,

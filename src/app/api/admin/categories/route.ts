@@ -8,7 +8,7 @@ export async function GET() {
     .from("categories")
     .select("id, name, slug, description, image_url, icon, mode, sort_order, is_active, product_count, created_at")
     .order("sort_order", { ascending: true })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ categories: data || [] })
 }
 
@@ -23,6 +23,6 @@ export async function POST(req: NextRequest) {
     .insert({ name, slug, description, image_url, icon, mode: mode || null, sort_order: sort_order ?? 99, is_active: true })
     .select()
     .single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ category: data }, { status: 201 })
 }

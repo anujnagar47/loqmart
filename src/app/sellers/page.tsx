@@ -63,13 +63,13 @@ export default async function SellersPage() {
             <p className="text-[#1a1c1c]/40 font-medium">Seller profiles loading soon.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-4">
             {sellers.map((seller) => {
               const initials = (seller.business_name || "?").split(" ").map((w) => w[0]).join("").substring(0, 2).toUpperCase()
               const stateName = STATE_NAMES[seller.state_code || ""] || seller.state_code || "India"
               return (
                 <Link key={seller.id} href={`/seller/${seller.id}`}
-                  className="group block bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-shadow duration-300"
+                  className="group block bg-white rounded-[4px] overflow-hidden hover:shadow-xl transition-shadow duration-300"
                   style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
                   <div className="relative h-24 bg-gradient-to-br from-[#fcd020] to-[#e6b800]">
                     <div className="absolute -bottom-7 left-5">

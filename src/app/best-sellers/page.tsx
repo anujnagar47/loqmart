@@ -19,7 +19,7 @@ export default function BestSellersPage() {
     const supabase = createClient()
     let query = supabase
       .from("products")
-      .select("*")
+      .select("*, sellers(id, business_name, swadeshi_rank, state_code)")
       .eq("approval_status", "approved")
       .order("sold_count", { ascending: false })
       .limit(24)
@@ -42,7 +42,7 @@ export default function BestSellersPage() {
             <span className="text-xs font-black uppercase tracking-[0.3em] text-[#1a1c1c]/60">Trending</span>
           </div>
           <h1 className="text-5xl font-extrabold text-[#1a1c1c] tracking-tight">Best Sellers</h1>
-          <p className="text-[#1a1c1c]/60 mt-3 text-lg">India's most-loved products - ranked by orders, reviews and Swadeshi Rank.</p>
+          <p className="text-[#1a1c1c]/60 mt-3 text-lg">India&apos;s most-loved products - ranked by orders, reviews and Swadeshi Rank.</p>
         </div>
       </div>
 
@@ -83,7 +83,7 @@ export default function BestSellersPage() {
             <p className="text-sm text-[#1a1c1c]/30 mt-2">Products will appear here once sellers list them.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
             {products.map((product, i) => (
               <motion.div key={product.id}
                 initial={{ opacity: 0, y: 16 }}

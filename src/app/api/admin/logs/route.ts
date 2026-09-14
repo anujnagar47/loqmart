@@ -15,6 +15,6 @@ export async function GET(req: Request) {
   if (action) query = query.ilike("action", `%${action}%`)
 
   const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ logs: data || [] })
 }

@@ -93,7 +93,7 @@ export default function ShippingPage() {
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-5 h-5 bg-primary-container rounded-full flex items-center justify-center text-on-primary-fixed text-xs font-bold">2</span>
-                A direct tracking link in your LoqMart account under "My Orders"
+                A direct tracking link in your LoqMart account under &quot;My Orders&quot;
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-5 h-5 bg-primary-container rounded-full flex items-center justify-center text-on-primary-fixed text-xs font-bold">3</span>

@@ -13,6 +13,6 @@ export async function GET(req: Request) {
   if (filter === "flagged")   query = query.eq("is_flagged", true)
   if (filter === "hidden")    query = query.eq("is_hidden", true)
   const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error("Admin API error:", error); return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 }) }
   return NextResponse.json({ reviews: data || [] })
 }
