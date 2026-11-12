@@ -7,8 +7,12 @@ export async function GET(request: Request) {
     const rawSearch = searchParams.get("q")
     const state = searchParams.get("state")
 
+    const craftType = searchParams.get("craft_type")
     const result = await fetchProductsList({
-      mode: searchParams.get("mode"),
+      mode: craftType === "handcrafted" ? "handmade" : craftType === "contemporary" ? "machine_made" : searchParams.get("mode"),
+      giCertified: searchParams.get("gi_certified") === "1",
+      handloom: searchParams.get("handloom") === "1",
+      cluster: searchParams.get("cluster"),
       category: searchParams.get("category"),
       state: state ? state.toUpperCase() : null,
       minPrice: searchParams.get("minPrice") ? Number(searchParams.get("minPrice")) : null,
@@ -22,6 +26,10 @@ export async function GET(request: Request) {
       page: searchParams.get("page") ? Number(searchParams.get("page")) : 1,
       limit: searchParams.get("limit") ? Number(searchParams.get("limit")) : 24,
     })
+
+    if (result.error) {
+      return NextResponse.json({ error: result.error }, { status: 503, headers: { "Cache-Control": "no-store" } })
+    }
 
     return NextResponse.json(
       result,

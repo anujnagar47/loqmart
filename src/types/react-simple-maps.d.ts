@@ -1,5 +1,5 @@
 declare module 'react-simple-maps' {
-  import { ComponentType, ReactNode } from 'react';
+  import { ComponentType, KeyboardEvent, ReactNode } from 'react';
 
   export interface ComposableMapProps {
     projection?: string;
@@ -40,6 +40,13 @@ declare module 'react-simple-maps' {
     onClick?: (geo: Geography) => void;
     onMouseEnter?: (geo: Geography) => void;
     onMouseLeave?: () => void;
+    onFocus?: () => void;
+    onBlur?: () => void;
+    onKeyDown?: (event: KeyboardEvent<SVGPathElement>) => void;
+    role?: string;
+    tabIndex?: number;
+    'aria-label'?: string;
+    'aria-pressed'?: boolean;
     tabable?: boolean;
   }
 

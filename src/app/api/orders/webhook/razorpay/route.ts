@@ -37,13 +37,14 @@ export async function POST(request: Request) {
     if (event.event === "payment.captured") {
       const payment = event.payload.payment.entity
       const orderId = payment.notes?.order_id
+      const orderNumber = payment.notes?.order_number
 
-      if (!orderId) {
+      if (!orderId && !orderNumber) {
         return NextResponse.json({ error: "Order ID not found in payment" }, { status: 400 })
       }
 
       // Update order status
-      const { data: order, error: orderError } = await supabase
+      let orderQuery = supabase
         .from("orders")
         .update({
           payment_status: "paid",
@@ -51,18 +52,84 @@ export async function POST(request: Request) {
           payment_id: payment.id,
           confirmed_at: new Date().toISOString(),
         })
-        .eq("id", orderId)
+      orderQuery = orderId
+        ? orderQuery.eq("id", orderId)
+        : orderQuery.eq("order_number", orderNumber)
+      const { data: order, error: orderError } = await orderQuery
+        .neq("order_status", "cancelled")
+        .in("payment_status", ["pending", "failed"])
         .select("*, users(id)")
-        .single()
+        .maybeSingle()
 
-      if (orderError || !order) {
+      if (orderError) {
         console.error("Order update error:", orderError)
         return NextResponse.json({ error: "Order not found" }, { status: 404 })
       }
 
+      if (!order) {
+        let existingQuery = supabase.from("orders").select("id, order_number, user_id, order_status, payment_status")
+        existingQuery = orderId
+          ? existingQuery.eq("id", orderId)
+          : existingQuery.eq("order_number", orderNumber)
+        const { data: existingOrder } = await existingQuery.maybeSingle()
+
+        // Razorpay can retry a webhook; an already-paid order must not be
+        // awarded coins or recorded a second time.
+        if (existingOrder?.payment_status === "paid") {
+          return NextResponse.json({ success: true, order_id: existingOrder.id, duplicate: true })
+        }
+
+        // A payment can finish just as a buyer cancels. Keep the cancellation
+        // and released stock intact, record the capture, and alert the buyer
+        // that support must arrange the refund manually.
+        if (existingOrder?.order_status === "cancelled") {
+          await supabase.from("orders").update({
+            payment_status: "paid",
+            payment_id: payment.id,
+            updated_at: new Date().toISOString(),
+          }).eq("id", existingOrder.id)
+          await supabase.from("payments").insert({
+            order_id: existingOrder.id,
+            amount: payment.amount / 100,
+            currency: payment.currency,
+            payment_status: "paid",
+            payment_method: payment.method,
+            razorpay_payment_id: payment.id,
+            razorpay_order_id: payment.order_id,
+            razorpay_signature: signature,
+            metadata: { event: event.event, payload: payment, refund_required: true },
+          })
+          await supabase.from("notifications").insert({
+            user_id: existingOrder.user_id,
+            type: "payment_refund_required",
+            title: "Payment received for a cancelled order",
+            message: `Payment for cancelled order #${existingOrder.order_number} was captured. Contact support to arrange a refund.`,
+            data: { order_id: existingOrder.id, order_number: existingOrder.order_number },
+          })
+          return NextResponse.json({ success: true, order_id: existingOrder.id, refund_required: true })
+        }
+
+        return NextResponse.json({ error: "Order not found" }, { status: 404 })
+      }
+
+      const resolvedOrderId = order.id
+
+      // A promo is consumed only after the payment provider confirms capture.
+      if (order.coupon_code) {
+        await supabase
+          .from("survey_discount_codes")
+          .update({
+            is_used: true,
+            used_at: new Date().toISOString(),
+            used_by_order_id: resolvedOrderId,
+          })
+          .eq("code", order.coupon_code)
+          .eq("is_used", false)
+      }
+
       // Record payment
       await supabase.from("payments").insert({
-        order_id: orderId,
+        order_id: resolvedOrderId,
         amount: payment.amount / 100, // Razorpay sends in paise
         currency: payment.currency,
         payment_status: "paid",
@@ -100,7 +167,7 @@ export async function POST(request: Request) {
             amount: coinsEarned,
             balance_after: newBalance,
             source: "purchase",
-            reference_id: orderId,
+            reference_id: resolvedOrderId,
             reference_type: "order",
             description: `LoqCoins earned on Order #${order.order_number}`,
             expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
@@ -136,7 +203,7 @@ export async function POST(request: Request) {
             amount: -coinsUsed,
             balance_after: newRedeemBalance,
             source: "checkout",
-            reference_id: orderId,
+            reference_id: resolvedOrderId,
             reference_type: "order",
             description: `LoqCoins redeemed on Order #${order.order_number}`,
           })
@@ -149,7 +216,7 @@ export async function POST(request: Request) {
         type: "order_confirmed",
         title: "Order Confirmed!",
         message: `Your order #${order.order_number} is confirmed. ${coinsEarned} LoqCoins will be credited on delivery.`,
-        data: { order_id: orderId, order_number: order.order_number },
+        data: { order_id: resolvedOrderId, order_number: order.order_number },
       })
 
       // Trigger Shiprocket shipment creation if credentials are configured
@@ -162,7 +229,7 @@ export async function POST(request: Request) {
               addresses(name, phone, address_line1, city, state, pincode),
               order_items(quantity, price, products(name))
             `)
-            .eq("id", orderId)
+            .eq("id", resolvedOrderId)
             .single()
 
           if (fullOrder) {
@@ -201,7 +268,7 @@ export async function POST(request: Request) {
               await supabase
                 .from("orders")
                 .update({ tracking_number: trackingNumber })
-                .eq("id", orderId)
+                .eq("id", resolvedOrderId)
               await schedulePickup([srOrder.shipment_id])
             }
           }
@@ -210,19 +277,27 @@ export async function POST(request: Request) {
         }
       }
 
-      console.log(`Order ${orderId} confirmed, ${coinsEarned} LoqCoins queued for buyer`)
-      return NextResponse.json({ success: true, order_id: orderId })
+      console.log(`Order ${resolvedOrderId} confirmed, ${coinsEarned} LoqCoins queued for buyer`)
+      return NextResponse.json({ success: true, order_id: resolvedOrderId })
     }
 
     if (event.event === "payment.failed") {
       const payment = event.payload.payment.entity
       const orderId = payment.notes?.order_id
+      const orderNumber = payment.notes?.order_number
 
       if (orderId) {
         await supabase
           .from("orders")
           .update({ payment_status: "failed" })
           .eq("id", orderId)
+          .in("payment_status", ["pending", "failed"])
+      } else if (orderNumber) {
+        await supabase
+          .from("orders")
+          .update({ payment_status: "failed" })
+          .eq("order_number", orderNumber)
+          .in("payment_status", ["pending", "failed"])
       }
 
       return NextResponse.json({ success: true, event: "payment.failed" })

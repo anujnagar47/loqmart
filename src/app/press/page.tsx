@@ -2,15 +2,14 @@ import { Mail, FileText, Building2 } from "lucide-react"
 
 export const metadata = {
   title: "Press & Media | LoqMart",
-  description: "Press contact and company information for journalists and media covering LoqMart, India's Swadeshi marketplace.",
+  description: "Company information and press contact for LoqMart.",
 }
 
 const facts = [
   { label: "Company", value: "LoqMart" },
-  { label: "Founded", value: "2024" },
   { label: "Headquarters", value: "New Delhi, India" },
   { label: "Sector", value: "Multi-vendor e-commerce marketplace" },
-  { label: "Focus", value: "Handmade and machine-made Indian-manufactured goods" },
+  { label: "Focus", value: "Handmade and machine-made products from sellers across India" },
 ]
 
 export default function PressPage() {
@@ -46,7 +45,7 @@ export default function PressPage() {
             <h2 className="text-lg font-extrabold text-on-surface">Boilerplate</h2>
           </div>
           <p className="text-sm text-on-surface-variant leading-relaxed">
-            LoqMart is an Indian multi-vendor marketplace connecting GST-verified artisans, MSMEs and manufacturers directly to buyers across India. Every product is tagged to its state of origin, and sellers are ranked using a Swadeshi Rank that reflects verification, service quality and years in business.
+            LoqMart is a marketplace where shoppers can discover handmade and machine-made products from sellers across India. Buyers can browse by category or seller location, review product details, and learn more about each shop before ordering.
           </p>
         </section>
 

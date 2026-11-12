@@ -54,16 +54,16 @@ export default function LoqCoinsPage() {
   }, [])
 
   return (
-    <div className="min-h-screen" style={{ background: "#f8f5f0" }}>
+    <div className="min-h-screen" style={{ background: "#ffffff" }}>
       {/* Hero */}
       <div className="relative py-20 px-4 text-center overflow-hidden"
-        style={{ background: "linear-gradient(135deg, #231b00 0%, #3d2f00 100%)" }}>
+        style={{ background: "linear-gradient(135deg, #111827 0%, #3d2f00 100%)" }}>
         <div className="relative max-w-2xl mx-auto">
           <motion.div initial={{ scale: 0, rotate: -10 }} animate={{ scale: 1, rotate: 0 }}
             transition={{ type: "spring", stiffness: 220, damping: 16 }}
             className="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6"
-            style={{ background: "#fcd020" }}>
-            <Star className="w-12 h-12 text-[#231b00]" />
+            style={{ background: "#FACC15" }}>
+            <Star className="w-12 h-12 text-[#111827]" />
           </motion.div>
           <motion.h1 className="text-[44px] font-black text-white tracking-tight mb-3"
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
@@ -87,16 +87,16 @@ export default function LoqCoinsPage() {
                 <motion.div key={s.label} className="rounded-2xl p-4"
                   style={{ background: "rgba(255,255,255,0.1)" }}
                   initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 + i * 0.07 }}>
-                  <p className="text-[22px] font-black" style={{ color: "#fcd020" }}>{s.value}</p>
+                  <p className="text-[22px] font-black" style={{ color: "#FACC15" }}>{s.value}</p>
                   <p className="text-white/45 text-[11px] mt-1">{s.label}</p>
                 </motion.div>
               ))}
             </motion.div>
           ) : (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-              <Link href="/auth"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-[13px] font-black text-[#1a1c1c]"
-                style={{ background: "#fcd020" }}>
+              <Link href="/login"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-[13px] font-black text-[#111827]"
+                style={{ background: "#FACC15" }}>
                 Sign in to see your balance <ArrowRight size={14} />
               </Link>
             </motion.div>
@@ -107,24 +107,24 @@ export default function LoqCoinsPage() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14">
         {/* How to Earn */}
         <section className="mb-14">
-          <h2 className="text-[26px] font-extrabold text-[#1a1c1c] tracking-tight mb-1">How to Earn LoqCoins</h2>
-          <p className="text-[13px] text-[#1a1c1c]/45 mb-6">Every interaction on LoqMart earns you coins. Coins expire 1 year from earning date.</p>
+          <h2 className="text-[26px] font-extrabold text-[#111827] tracking-tight mb-1">How to Earn LoqCoins</h2>
+          <p className="text-[13px] text-[#111827]/45 mb-6">Every interaction on LoqMart earns you coins. Coins expire 1 year from earning date.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {earnWays.map((way, i) => (
-              <motion.div key={way.title} className="bg-white rounded-2xl p-5" style={{ border: "1px solid rgba(26,28,28,0.07)" }}
+              <motion.div key={way.title} className="bg-white rounded-2xl p-5" style={{ border: "1px solid rgba(17,24,39,0.07)" }}
                 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.07 }}
-                whileHover={{ y: -2, boxShadow: "0 6px 20px rgba(26,28,28,0.08)" }}>
+                whileHover={{ y: -2, boxShadow: "0 6px 20px rgba(17,24,39,0.08)" }}>
                 <div className="flex items-start gap-4">
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: "#fcd020" }}>
-                    <way.icon size={20} className="text-[#1a1c1c]" />
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: "#FACC15" }}>
+                    <way.icon size={20} className="text-[#111827]" />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-bold text-[14px] text-[#1a1c1c]">{way.title}</h3>
+                      <h3 className="font-bold text-[14px] text-[#111827]">{way.title}</h3>
                       <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
-                        style={{ border: "1px solid rgba(26,28,28,0.15)", color: "#1a1c1c" }}>{way.coins}</span>
+                        style={{ border: "1px solid rgba(17,24,39,0.15)", color: "#111827" }}>{way.coins}</span>
                     </div>
-                    <p className="text-[12px] text-[#1a1c1c]/45">{way.desc}</p>
+                    <p className="text-[12px] text-[#111827]/45">{way.desc}</p>
                   </div>
                 </div>
               </motion.div>
@@ -134,19 +134,19 @@ export default function LoqCoinsPage() {
 
         {/* How to Redeem */}
         <section className="mb-14">
-          <h2 className="text-[26px] font-extrabold text-[#1a1c1c] tracking-tight mb-1">How to Redeem</h2>
-          <p className="text-[13px] text-[#1a1c1c]/45 mb-6">Apply LoqCoins at checkout. 1 LoqCoin = ₹1 discount.</p>
+          <h2 className="text-[26px] font-extrabold text-[#111827] tracking-tight mb-1">How to Redeem</h2>
+          <p className="text-[13px] text-[#111827]/45 mb-6">Apply LoqCoins at checkout. 1 LoqCoin = ₹1 discount.</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {redeemWays.map((way, i) => (
-              <motion.div key={way.title} className="bg-white rounded-2xl p-5 text-center" style={{ border: "1px solid rgba(26,28,28,0.07)" }}
+              <motion.div key={way.title} className="bg-white rounded-2xl p-5 text-center" style={{ border: "1px solid rgba(17,24,39,0.07)" }}
                 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.07 }}
-                whileHover={{ y: -2, boxShadow: "0 6px 20px rgba(26,28,28,0.08)" }}>
-                <div className="w-11 h-11 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "#fcd020" }}>
-                  <Gift size={20} className="text-[#1a1c1c]" />
+                whileHover={{ y: -2, boxShadow: "0 6px 20px rgba(17,24,39,0.08)" }}>
+                <div className="w-11 h-11 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "#FACC15" }}>
+                  <Gift size={20} className="text-[#111827]" />
                 </div>
-                <p className="font-bold text-[14px] text-[#1a1c1c] mb-1">{way.title}</p>
-                <p className="font-black text-[16px] text-[#725c00] mb-2">{way.coins}</p>
-                <p className="text-[12px] text-[#1a1c1c]/45">{way.desc}</p>
+                <p className="font-bold text-[14px] text-[#111827] mb-1">{way.title}</p>
+                <p className="font-black text-[16px] text-[#111827] mb-2">{way.coins}</p>
+                <p className="text-[12px] text-[#111827]/45">{way.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -155,36 +155,36 @@ export default function LoqCoinsPage() {
         {/* Transaction history */}
         <section>
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-[26px] font-extrabold text-[#1a1c1c] tracking-tight">Transaction History</h2>
-            <span className="flex items-center gap-1 text-[11px] text-[#1a1c1c]/40">
+            <h2 className="text-[26px] font-extrabold text-[#111827] tracking-tight">Transaction History</h2>
+            <span className="flex items-center gap-1 text-[11px] text-[#111827]/40">
               <Clock size={12} /> Coins expire after 1 year
             </span>
           </div>
 
           {!loggedIn ? (
-            <div className="bg-white rounded-2xl p-12 text-center" style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
-              <Star size={32} className="text-[#1a1c1c]/15 mx-auto mb-3" />
-              <p className="font-bold text-[14px] text-[#1a1c1c]/40 mb-4">Sign in to see your transaction history</p>
-              <Link href="/auth" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-black text-[#1a1c1c]"
-                style={{ background: "#fcd020" }}>
+            <div className="bg-white rounded-2xl p-12 text-center" style={{ border: "1px solid rgba(17,24,39,0.07)" }}>
+              <Star size={32} className="text-[#111827]/15 mx-auto mb-3" />
+              <p className="font-bold text-[14px] text-[#111827]/40 mb-4">Sign in to see your transaction history</p>
+              <Link href="/login" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-black text-[#111827]"
+                style={{ background: "#FACC15" }}>
                 Sign In <ArrowRight size={13} />
               </Link>
             </div>
           ) : loading ? (
-            <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-[#1a1c1c]/30" /></div>
+            <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-[#111827]/30" /></div>
           ) : ledger.length === 0 ? (
-            <div className="bg-white rounded-2xl p-12 text-center" style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
-              <Star size={32} className="text-[#1a1c1c]/15 mx-auto mb-3" />
-              <p className="font-bold text-[14px] text-[#1a1c1c]/40 mb-1">No transactions yet</p>
-              <p className="text-[12px] text-[#1a1c1c]/30">Start shopping to earn your first LoqCoins!</p>
+            <div className="bg-white rounded-2xl p-12 text-center" style={{ border: "1px solid rgba(17,24,39,0.07)" }}>
+              <Star size={32} className="text-[#111827]/15 mx-auto mb-3" />
+              <p className="font-bold text-[14px] text-[#111827]/40 mb-1">No transactions yet</p>
+              <p className="text-[12px] text-[#111827]/30">Start shopping to earn your first LoqCoins!</p>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
+            <div className="bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(17,24,39,0.07)" }}>
               {ledger.map((entry, i) => {
                 const isEarn = entry.amount > 0
                 return (
                   <motion.div key={entry.id} className="flex items-center justify-between p-4"
-                    style={{ borderBottom: i < ledger.length - 1 ? "1px solid rgba(26,28,28,0.05)" : "none" }}
+                    style={{ borderBottom: i < ledger.length - 1 ? "1px solid rgba(17,24,39,0.05)" : "none" }}
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}>
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full flex items-center justify-center"
@@ -194,10 +194,10 @@ export default function LoqCoinsPage() {
                           : <Gift size={14} className="text-orange-600" />}
                       </div>
                       <div>
-                        <p className="text-[13px] font-medium text-[#1a1c1c]">
+                        <p className="text-[13px] font-medium text-[#111827]">
                           {entry.description || TYPE_LABEL[entry.transaction_type] || entry.transaction_type}
                         </p>
-                        <p className="text-[10.5px] text-[#1a1c1c]/35">
+                        <p className="text-[10.5px] text-[#111827]/35">
                           {new Date(entry.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                           {entry.expires_at && ` · Expires ${new Date(entry.expires_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`}
                         </p>
@@ -215,8 +215,8 @@ export default function LoqCoinsPage() {
           <div className="text-center mt-10">
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
               <Link href="/"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-[13px] font-black text-[#1a1c1c]"
-                style={{ background: "#fcd020" }}>
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-[13px] font-black text-[#111827]"
+                style={{ background: "#FACC15" }}>
                 Start Earning LoqCoins <ArrowRight size={14} />
               </Link>
             </motion.div>

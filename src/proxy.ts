@@ -5,7 +5,7 @@ import { createServerClient } from "@supabase/ssr"
 const PROTECTED_ROUTES = ["/account", "/checkout", "/seller/dashboard", "/seller/register"]
 const ADMIN_ROUTES = ["/admin"]
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Create a response we can mutate cookies on
@@ -36,7 +36,7 @@ export async function middleware(request: NextRequest) {
 
   if ((isProtected || isAdmin) && !user) {
     const loginUrl = new URL("/auth", request.url)
-    loginUrl.searchParams.set("next", pathname)
+    loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`)
     return NextResponse.redirect(loginUrl)
   }
 

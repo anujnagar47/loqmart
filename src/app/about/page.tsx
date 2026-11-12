@@ -3,51 +3,44 @@ import { Heart, Shield, MapPin, Target, Users, TrendingUp } from "lucide-react"
 
 export const metadata = {
   title: "About LoqMart – India's Swadeshi Marketplace",
-  description: "Learn about LoqMart's mission to connect Indian manufacturers, artisans, and MSMEs directly to buyers across India.",
+  description: "Learn how LoqMart helps shoppers discover handmade and machine-made products from sellers across India.",
 }
 
 const values = [
   {
     icon: Heart,
-    title: "Swadeshi First",
-    desc: "Every product on LoqMart is made in India, by Indians. We verify every seller's origin before listing.",
+    title: "Made across India",
+    desc: "Find handmade work and machine-made goods from sellers in different parts of the country.",
   },
   {
     icon: Shield,
-    title: "Verified Sellers",
-    desc: "GST registration, PAN verification, and bank account checks ensure every seller is legitimate.",
+    title: "Seller details in view",
+    desc: "Open a seller profile to learn about the shop and see the products it offers.",
   },
   {
     icon: MapPin,
-    title: "State-Origin Transparency",
-    desc: "Every product is tagged to its state of manufacture. Buy Banarasi silk from UP. Channapatna toys from Karnataka.",
+    title: "Browse by location",
+    desc: "Explore sellers and products by state, and see where a shop is based before you choose.",
   },
   {
     icon: TrendingUp,
-    title: "MSME Growth",
-    desc: "Our commission structure is the lowest in the industry for handmade products - so more money stays with the maker.",
+    title: "A place for independent sellers",
+    desc: "LoqMart gives artisans, small businesses, and manufacturers a dedicated place to present their products online.",
   },
-]
-
-const milestones = [
-  { year: "2024", event: "LoqMart founded. First 100 sellers onboarded from Rajasthan and UP." },
-  { year: "2024", event: "India Map feature launched - first e-commerce platform with state-tagged discovery." },
-  { year: "2024", event: "LoqCoins loyalty program introduced." },
-  { year: "2025", event: "Craft Chronicles blog launched. Covering heritage crafts from 28 states." },
 ]
 
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-surface">
       {/* Hero */}
-      <div className="relative py-24 px-6 overflow-hidden" style={{ background: "linear-gradient(135deg, #231b00 0%, #3d2f00 100%)" }}>
+      <div className="relative py-24 px-6 overflow-hidden" style={{ background: "linear-gradient(135deg, #111827 0%, #3d2f00 100%)" }}>
         <div className="max-w-4xl mx-auto text-center">
-          <span className="text-[#fcd020]/70 text-xs font-bold uppercase tracking-[0.3em] block mb-4">Our Story</span>
+          <span className="text-[#FACC15]/70 text-xs font-bold uppercase tracking-[0.3em] block mb-4">Our Story</span>
           <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight mb-6">
-            Shop India.<br />Support India.<br />Build India.
+            A marketplace for goods made across India
           </h1>
           <p className="text-white/60 text-lg max-w-2xl mx-auto leading-relaxed">
-            LoqMart was built with one belief: Indian buyers should be able to discover and buy the best of India&apos;s manufacturing and craftsmanship - state by state, craft by craft, maker by maker.
+            LoqMart brings handmade goods and machine-made products together, with seller profiles and state-wise discovery to help you choose with context.
           </p>
         </div>
       </div>
@@ -56,9 +49,9 @@ export default function AboutPage() {
         {/* Mission */}
         <section className="text-center">
           <Target className="w-12 h-12 text-primary mx-auto mb-4" />
-          <h2 className="text-3xl font-extrabold text-on-surface mb-4">Our Mission</h2>
+          <h2 className="text-3xl font-extrabold text-on-surface mb-4">Why we built LoqMart</h2>
           <p className="text-on-surface-variant max-w-2xl mx-auto text-lg leading-relaxed">
-            To become the primary discovery platform for verified Indian-made products - connecting <strong className="text-on-surface">1 lakh+ sellers</strong> across all 28 states and 8 union territories to buyers who want to invest in India&apos;s economic future.
+            Finding a product is only part of the decision. We want shoppers to see what is being sold, who is selling it, and where that seller is based, all before they reach checkout.
           </p>
         </section>
 
@@ -80,41 +73,18 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* Numbers */}
-        <section className="bg-surface-container-lowest rounded-2xl p-10">
-          <h2 className="text-3xl font-extrabold text-on-surface text-center mb-10">By the Numbers</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            {[
-              { value: "28+", label: "States Covered" },
-              { value: "5,000+", label: "Verified Sellers" },
-              { value: "50,000+", label: "Products Listed" },
-              { value: "10 Lakh+", label: "Orders Delivered" },
-            ].map((stat) => (
-              <div key={stat.label}>
-                <p className="text-4xl font-black text-primary mb-1">{stat.value}</p>
-                <p className="text-sm text-on-surface-variant font-medium">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Timeline */}
-        <section>
-          <h2 className="text-3xl font-extrabold text-on-surface text-center mb-10">Our Journey</h2>
-          <div className="relative border-l-2 border-primary-container ml-4 space-y-8">
-            {milestones.map((m, i) => (
-              <div key={i} className="relative pl-8">
-                <div className="absolute -left-[9px] top-1 w-4 h-4 bg-primary-container rounded-full border-2 border-surface" />
-                <span className="text-xs font-black text-primary uppercase tracking-wider block mb-1">{m.year}</span>
-                <p className="text-on-surface text-sm leading-relaxed">{m.event}</p>
-              </div>
-            ))}
+        <section className="bg-surface-container-lowest rounded-2xl p-8 md:p-10">
+          <h2 className="text-3xl font-extrabold text-on-surface text-center mb-8">How to use LoqMart</h2>
+          <div className="grid gap-8 md:grid-cols-3">
+            <div><p className="text-xs font-bold uppercase tracking-widest text-primary mb-2">01 · Discover</p><h3 className="font-bold text-on-surface mb-2">Start with what you need</h3><p className="text-sm text-on-surface-variant leading-relaxed">Browse by category, compare handmade and machine-made options, or explore by seller location.</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-widest text-primary mb-2">02 · Learn</p><h3 className="font-bold text-on-surface mb-2">Check the product and seller</h3><p className="text-sm text-on-surface-variant leading-relaxed">Review product details, ratings, price, and the seller profile before adding an item to your cart.</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-widest text-primary mb-2">03 · Decide</p><h3 className="font-bold text-on-surface mb-2">Sign in when you are ready</h3><p className="text-sm text-on-surface-variant leading-relaxed">You can browse and build a cart as a guest. Sign in is required when you proceed to checkout.</p></div>
           </div>
         </section>
 
         {/* CTA */}
         <section className="text-center">
-          <p className="text-on-surface-variant mb-4">Ready to support India&apos;s artisans and manufacturers?</p>
+          <p className="text-on-surface-variant mb-4">Ready to find something useful, thoughtful, or new?</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/" className="inline-flex items-center justify-center bg-primary-container text-on-primary-fixed font-bold px-8 py-3 rounded-lg hover:brightness-95 transition-all">
               Start Shopping

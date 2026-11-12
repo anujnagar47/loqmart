@@ -28,7 +28,7 @@ export async function PUT(
 
     // Confirm product belongs to this seller
     const { data: existing } = await supabase
-      .from("products").select("id, approval_status").eq("id", productId).eq("seller_id", seller.id).single()
+      .from("products").select("id, approval_status, tags").eq("id", productId).eq("seller_id", seller.id).single()
     if (!existing) return NextResponse.json({ error: "Product not found" }, { status: 404 })
 
     const body = await request.json()
@@ -58,7 +58,13 @@ export async function PUT(
     if (mode !== undefined)           updates.mode           = mode
     if (state_code !== undefined)     updates.state_code     = state_code
     if (images !== undefined)         updates.images         = images
-    if (tags !== undefined)           updates.tags           = tags
+    if (tags !== undefined) {
+      const verifiedMarks = (existing.tags || []).filter((tag: string) => ["gi-certified", "handloom-certified"].includes(tag.trim().toLowerCase()))
+      const sellerTags = Array.isArray(tags)
+        ? tags.filter((tag: unknown) => !["gi-certified", "handloom-certified"].includes(String(tag).trim().toLowerCase()))
+        : []
+      updates.tags = [...sellerTags, ...verifiedMarks]
+    }
     if (specifications !== undefined) updates.specifications = specifications
     updates.updated_at = new Date().toISOString()
 

@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
-import { motion } from "framer-motion"
 import { ProductCard } from "@/components/product-card"
 import { useLanguage } from "@/lib/i18n/LanguageContext"
 import type { Product } from "@/types/database"
@@ -12,15 +11,6 @@ const PRESETS = {
   deals:       { eyebrow: "row.deals.eyebrow",       title: "row.deals.title",       subtitle: "row.deals.subtitle"       },
   newArrivals: { eyebrow: "row.newArrivals.eyebrow", title: "row.newArrivals.title", subtitle: "row.newArrivals.subtitle" },
 } as const
-
-const containerVariants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.06 } },
-}
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" as const } },
-}
 
 interface HomeProductRowProps {
   eyebrow?: string
@@ -39,13 +29,13 @@ interface HomeProductRowProps {
 function RowBadge({ kind, index }: { kind: "rank" | "new"; index: number }) {
   if (kind === "rank") {
     return (
-      <div className="absolute -top-2 -left-2 z-10 w-8 h-8 bg-[#1a1c1c] rounded-full flex items-center justify-center shadow-md">
-        <span className="text-[#fcd020] text-xs font-black">#{index + 1}</span>
+      <div className="absolute -top-2 -left-2 z-10 w-8 h-8 bg-[#111827] rounded-full flex items-center justify-center shadow-md">
+        <span className="text-[#FACC15] text-xs font-black">#{index + 1}</span>
       </div>
     )
   }
   return (
-    <span className="absolute -top-2 -right-2 z-10 bg-green-500 text-white text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full shadow">
+    <span className="absolute -top-2 -right-2 z-10 bg-[#FACC15] text-[#111827] text-[10px] font-bold uppercase px-2 py-1 rounded-full shadow-sm">
       New
     </span>
   )
@@ -63,34 +53,28 @@ export function HomeProductRow({
   const resolvedHrefLabel = hrefLabel ?? t("common.viewAll")
 
   return (
-    <section className={`py-10 md:py-16 px-4 md:px-20 ${tone === "dark" ? "bg-[#f8f5f0]" : ""}`}>
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-end gap-4 md:gap-8 mb-8">
+    <section className={`px-4 py-8 sm:px-6 md:py-12 lg:px-8 ${tone === "dark" ? "bg-[#ffffff]" : "bg-white"}`}>
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end sm:gap-6 md:mb-7">
           <div>
-            <span className="text-xs font-black uppercase tracking-[0.3em] text-[#1a1c1c]/40 block mb-2">{resolvedEyebrow}</span>
-            <h2 className="text-2xl md:text-4xl font-extrabold tracking-tight text-[#1a1c1c]">{resolvedTitle}</h2>
-            {resolvedSubtitle && <p className="text-[#1a1c1c]/50 text-sm mt-2 max-w-md">{resolvedSubtitle}</p>}
+            <span className="mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-[#111827]">{resolvedEyebrow}</span>
+            <h2 className="text-2xl font-bold tracking-tight text-[#111827] md:text-3xl">{resolvedTitle}</h2>
+            {resolvedSubtitle && <p className="mt-1 max-w-md text-sm leading-5 text-[#4B5563]">{resolvedSubtitle}</p>}
           </div>
-          <Link href={href} className="flex items-center gap-2 text-[#1a1c1c]/50 font-bold text-sm uppercase tracking-widest hover:text-[#1a1c1c] transition-colors group whitespace-nowrap">
+          <Link href={href} className="group inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-[#4B5563] transition-colors hover:text-[#111827]">
             {resolvedHrefLabel}
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
 
-        <motion.div
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-4 items-stretch"
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-        >
+        <div className="grid grid-cols-2 items-stretch gap-2.5 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5">
           {products.map((product, i) => (
-            <motion.div key={product.id} variants={itemVariants} className="relative h-full">
+            <div key={product.id} className="relative h-full">
               {badge && <RowBadge kind={badge} index={i} />}
               <ProductCard product={product} cornerBadge={badge} />
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
       </div>
     </section>
   )

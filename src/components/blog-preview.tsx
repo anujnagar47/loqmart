@@ -8,9 +8,20 @@ import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useLanguage } from "@/lib/i18n/LanguageContext"
 
+interface BlogPreviewPost {
+  id: string
+  slug: string
+  title: string
+  excerpt: string | null
+  featured_image: string | null
+  state_code: string | null
+  reading_time: string | null
+  published_at: string | null
+}
+
 export function BlogPreview() {
   const { t } = useLanguage()
-  const [posts,   setPosts]   = useState<any[]>([])
+  const [posts,   setPosts]   = useState<BlogPreviewPost[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -29,30 +40,30 @@ export function BlogPreview() {
   }, [])
 
   return (
-    <section className="py-10 md:py-20 px-4 md:px-20 bg-[#f8f5f0]">
+    <section className="bg-white px-4 py-8 sm:px-6 md:py-12 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-end gap-4 md:gap-8 mb-8 md:mb-12">
+        <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end sm:gap-6 md:mb-8">
           <div>
-            <span className="text-xs font-black uppercase tracking-[0.3em] text-[#1a1c1c]/40 block mb-3 flex items-center gap-2">
-              <BookOpen className="w-3.5 h-3.5" /> {t("blog.eyebrow")}
+            <span className="mb-1 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-[#111827]">
+              <BookOpen className="h-3.5 w-3.5" /> {t("blog.eyebrow")}
             </span>
-            <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-[#1a1c1c]">
-              {t("blog.titleLine1")}<br />{t("blog.titleLine2")}
+            <h2 className="text-2xl font-bold tracking-tight text-[#111827] md:text-3xl">
+              {t("blog.titleLine1")} {t("blog.titleLine2")}
             </h2>
-            <p className="text-[#1a1c1c]/50 mt-2 text-sm max-w-md">
+            <p className="mt-1 max-w-md text-sm leading-5 text-[#4B5563]">
               {t("blog.subtitle")}
             </p>
           </div>
           <Link href="/blog"
-            className="text-[#1a1c1c]/50 font-bold text-sm uppercase tracking-widest hover:text-[#1a1c1c] flex items-center gap-2 whitespace-nowrap group transition-colors">
+            className="group inline-flex min-h-10 shrink-0 items-center gap-2 text-sm font-semibold text-[#4B5563] transition-colors hover:text-[#111827]">
             {t("blog.allStories")} <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-12"><Loader2 className="w-7 h-7 animate-spin text-[#1a1c1c]/30" /></div>
+          <div className="flex justify-center py-12"><Loader2 className="w-7 h-7 animate-spin text-[#111827]/30" /></div>
         ) : posts.length === 0 ? (
-          <p className="text-center text-[#1a1c1c]/40 py-12 font-medium">{t("blog.comingSoon")}</p>
+          <div className="border-y border-[#e8e4da] py-5 text-sm text-[#4B5563]">{t("blog.comingSoon")}</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {posts.map((post, i) => (
@@ -63,33 +74,33 @@ export function BlogPreview() {
                 transition={{ delay: i * 0.1, duration: 0.5 }}
                 whileHover={{ y: -4 }}>
                 <Link href={`/blog/${post.slug}`}>
-                  <article className="group bg-white rounded-[4px] overflow-hidden hover:shadow-[0_2px_10px_rgba(26,28,28,0.12)] transition-shadow duration-200 border border-[#1a1c1c]/10">
+                  <article className="group bg-white rounded-[4px] overflow-hidden hover:shadow-[0_2px_10px_rgba(17,24,39,0.12)] transition-shadow duration-200 border border-[#111827]/10">
                     <div className="relative h-48 overflow-hidden">
                       {post.featured_image ? (
                         <Image src={post.featured_image} alt={post.title} fill
                           sizes="(max-width: 768px) 100vw, 33vw"
                           className="object-cover group-hover:scale-105 transition-transform duration-700" />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-[#fcd020]/30 to-[#fcd020]/10 flex items-center justify-center">
-                          <BookOpen className="w-12 h-12 text-[#fcd020]/40" />
+                        <div className="w-full h-full bg-gradient-to-br from-[#FACC15]/30 to-[#FACC15]/10 flex items-center justify-center">
+                          <BookOpen className="w-12 h-12 text-[#FACC15]/40" />
                         </div>
                       )}
                       {post.state_code && (
                         <div className="absolute top-3 left-3">
-                          <span className="inline-flex items-center gap-1 bg-white/90 text-[#1a1c1c] text-xs font-bold px-2 py-0.5 rounded-full backdrop-blur-sm">
+                          <span className="inline-flex items-center gap-1 bg-white/90 text-[#111827] text-xs font-bold px-2 py-0.5 rounded-full backdrop-blur-sm">
                             <MapPin className="w-3 h-3" />{post.state_code}
                           </span>
                         </div>
                       )}
                     </div>
                     <div className="p-5">
-                      <h3 className="font-extrabold text-[#1a1c1c] leading-tight mb-2 group-hover:text-[#725c00] transition-colors line-clamp-2">
+                      <h3 className="font-extrabold text-[#111827] leading-tight mb-2 group-hover:text-[#111827] transition-colors line-clamp-2">
                         {post.title}
                       </h3>
                       {post.excerpt && (
-                        <p className="text-sm text-[#1a1c1c]/50 line-clamp-2 mb-3">{post.excerpt}</p>
+                        <p className="text-sm text-[#111827]/50 line-clamp-2 mb-3">{post.excerpt}</p>
                       )}
-                      <div className="flex items-center justify-between text-xs text-[#1a1c1c]/40">
+                      <div className="flex items-center justify-between text-xs text-[#111827]/40">
                         {post.reading_time && (
                           <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{post.reading_time} {t("blog.minRead")}</span>
                         )}

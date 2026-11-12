@@ -5,12 +5,12 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation"
 
 export interface ProductFilters {
   mode: "handmade" | "machine_made" | null
+  giCertified: boolean
+  handloom: boolean
+  cluster: string[]
   category: string[]
   state: string[]
-  minPrice: number | null
-  maxPrice: number | null
   rating: number | null
-  discount: number | null
   inStock: boolean
   seller: string
   sort: string
@@ -22,14 +22,16 @@ const DEFAULT_SORT = "featured"
 
 function parseFilters(searchParams: URLSearchParams): ProductFilters {
   const modeParam = searchParams.get("mode")
+  const craftType = searchParams.get("craft_type")
   return {
-    mode: modeParam === "handmade" || modeParam === "machine_made" ? modeParam : null,
+    mode: craftType === "handcrafted" ? "handmade" : craftType === "contemporary" ? "machine_made"
+      : modeParam === "handmade" || modeParam === "machine_made" ? modeParam : null,
+    giCertified: searchParams.get("gi_certified") === "1",
+    handloom: searchParams.get("handloom") === "1",
+    cluster: searchParams.get("cluster")?.split(",").filter(Boolean) || [],
     category: searchParams.get("category")?.split(",").filter(Boolean) || [],
     state: searchParams.get("state")?.split(",").filter(Boolean) || [],
-    minPrice: searchParams.get("minPrice") ? Number(searchParams.get("minPrice")) : null,
-    maxPrice: searchParams.get("maxPrice") ? Number(searchParams.get("maxPrice")) : null,
     rating: searchParams.get("rating") ? Number(searchParams.get("rating")) : null,
-    discount: searchParams.get("discount") ? Number(searchParams.get("discount")) : null,
     inStock: searchParams.get("inStock") === "1",
     seller: searchParams.get("seller") || "",
     sort: searchParams.get("sort") || DEFAULT_SORT,
@@ -60,13 +62,14 @@ export function useProductFilters() {
     if (!("page" in patch)) next.page = 1
 
     const params = new URLSearchParams()
-    if (next.mode) params.set("mode", next.mode)
+    if (next.mode === "handmade") params.set("craft_type", "handcrafted")
+    if (next.mode === "machine_made") params.set("craft_type", "contemporary")
+    if (next.giCertified) params.set("gi_certified", "1")
+    if (next.handloom) params.set("handloom", "1")
+    if (next.cluster.length) params.set("cluster", next.cluster.join(","))
     if (next.category.length) params.set("category", next.category.join(","))
     if (next.state.length) params.set("state", next.state.join(","))
-    if (next.minPrice != null) params.set("minPrice", String(next.minPrice))
-    if (next.maxPrice != null) params.set("maxPrice", String(next.maxPrice))
     if (next.rating != null) params.set("rating", String(next.rating))
-    if (next.discount != null) params.set("discount", String(next.discount))
     if (next.inStock) params.set("inStock", "1")
     if (next.seller) params.set("seller", next.seller)
     if (next.sort && next.sort !== DEFAULT_SORT) params.set("sort", next.sort)
@@ -79,16 +82,16 @@ export function useProductFilters() {
 
   const resetFilters = useCallback(() => {
     update({
-      category: [], state: [], minPrice: null, maxPrice: null,
-      rating: null, discount: null, inStock: false, seller: "",
+      category: [], state: [], rating: null, inStock: false, seller: "",
+      mode: null, giCertified: false, handloom: false, cluster: [],
     })
   }, [update])
 
   const hasActiveFilters =
     filters.category.length > 0 || filters.state.length > 0 ||
-    filters.minPrice != null || filters.maxPrice != null ||
-    filters.rating != null || filters.discount != null ||
-    filters.inStock || !!filters.seller
+    filters.rating != null ||
+    filters.inStock || !!filters.seller || filters.mode !== null || filters.giCertified ||
+    filters.handloom || filters.cluster.length > 0
 
   return { filters, update, resetFilters, hasActiveFilters }
 }

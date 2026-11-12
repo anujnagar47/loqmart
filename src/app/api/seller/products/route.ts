@@ -78,7 +78,8 @@ export async function POST(request: Request) {
         unit,
         mode,
         images: images || [],
-        tags: tags || [],
+        // Certification markers are reserved for the admin review flow.
+        tags: Array.isArray(tags) ? tags.filter((tag: unknown) => !["gi-certified", "handloom-certified"].includes(String(tag).trim().toLowerCase())) : [],
         specifications: specifications || {},
         state_code: state_code || seller.state_code,
         approval_status: "pending", // Requires admin approval before going live

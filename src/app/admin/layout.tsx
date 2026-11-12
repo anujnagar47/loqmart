@@ -9,7 +9,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const supabase = await createClient()
   // Use getUser() (server-validated JWT) — getSession() reads client cookies and can be spoofed
   const { data: { user: authUser }, error } = await supabase.auth.getUser()
-  if (error || !authUser) redirect("/auth")
+  if (error || !authUser) redirect("/login")
 
   const db = createServiceClient()
   const { data: user } = await db
@@ -17,15 +17,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (user?.role !== "admin" && user?.role !== "sub_admin") redirect("/")
 
   return (
-    <div className="fixed inset-0 flex z-50" style={{
-      background: "#eeece8",
-      backgroundImage: `
-        radial-gradient(ellipse at 75% 10%, rgba(252,208,32,0.055) 0%, transparent 45%),
-        radial-gradient(ellipse at 15% 85%, rgba(252,208,32,0.04) 0%, transparent 40%),
-        radial-gradient(1.2px 1.2px at 1.2px 1.2px, rgba(26,28,28,0.055) 0%, transparent 0)
-      `,
-      backgroundSize: "auto, auto, 22px 22px",
-    }}>
+    <div className="fixed inset-0 flex z-50 bg-[#FBF9F5]">
       <AdminSidebar
         adminName={user?.full_name || "Admin"}
         adminEmail={user?.email || ""}

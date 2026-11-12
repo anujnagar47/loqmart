@@ -169,10 +169,10 @@ export function StatePageClient() {
 
   if (data.isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#eeece8" }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#FBF9F5" }}>
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-[#1a1c1c]/30" />
-          <p className="text-[#1a1c1c]/40 text-[13px]">Loading {stateName}...</p>
+          <Loader2 className="w-8 h-8 animate-spin text-[#111827]/30" />
+          <p className="text-[#111827]/40 text-[13px]">Loading {stateName}...</p>
         </div>
       </div>
     )
@@ -185,7 +185,7 @@ export function StatePageClient() {
   const bgImage = STATE_BG_IMAGES[stateCode] || STATE_BG_IMAGES.DEFAULT
 
   return (
-    <div className="min-h-screen" style={{ background: "#eeece8" }}>
+    <div className="min-h-screen" style={{ background: "#FBF9F5" }}>
       {/* Hero */}
       <div className="relative h-[50vh] min-h-[400px]">
         <div className="absolute inset-0 bg-cover bg-center opacity-35"
@@ -198,8 +198,8 @@ export function StatePageClient() {
               <ChevronLeft className="w-4 h-4" /> Back to India Map
             </Link>
             <div className="mb-4">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-black text-[#231b00]"
-                style={{ background: "#fcd020" }}>
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-black text-[#111827]"
+                style={{ background: "#FACC15" }}>
                 +{state.loqcoin_bonus}% LoqCoin Bonus
               </span>
             </div>
@@ -222,23 +222,23 @@ export function StatePageClient() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-12">
             <section>
-              <h2 className="text-[22px] font-extrabold text-[#1a1c1c] mb-4">About {state.name}</h2>
-              <p className="text-[#1a1c1c]/55 leading-relaxed">{state.description}</p>
+              <h2 className="text-[22px] font-extrabold text-[#111827] mb-4">About {state.name}</h2>
+              <p className="text-[#111827]/55 leading-relaxed">{state.description}</p>
             </section>
 
             <section>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-[22px] font-extrabold text-[#1a1c1c]">Featured Products</h2>
+                <h2 className="text-[22px] font-extrabold text-[#111827]">Featured Products</h2>
                 <div className="flex gap-2">
                   {(["handmade", "machine_made"] as const).map((m) => (
                     <button key={m} onClick={() => setSelectedMode(m)}
                       className="px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all"
                       style={{
-                        background: selectedMode === m ? "#fcd020" : "white",
-                        color:      selectedMode === m ? "#1a1c1c" : "rgba(26,28,28,0.5)",
-                        border:     selectedMode === m ? "none" : "1px solid rgba(26,28,28,0.12)",
+                        background: selectedMode === m ? "#FACC15" : "white",
+                        color:      selectedMode === m ? "#111827" : "rgba(17,24,39,0.5)",
+                        border:     selectedMode === m ? "none" : "1px solid rgba(17,24,39,0.12)",
                       }}>
-                      {m === "handmade" ? "Handmade" : "Machine-Made"}
+                      {m === "handmade" ? "Handcrafted" : "Contemporary Crafted"}
                     </button>
                   ))}
                 </div>
@@ -255,10 +255,10 @@ export function StatePageClient() {
                   ))}
                 </div>
               ) : (
-                <div className="bg-white rounded-2xl p-12 text-center" style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
-                  <Package className="w-10 h-10 mx-auto mb-4 text-[#1a1c1c]/15" />
-                  <p className="text-[#1a1c1c]/40 text-[14px] mb-3">No products from {state.name} yet</p>
-                  <Link href="/category" className="text-[13px] font-bold hover:underline" style={{ color: "#725c00" }}>
+                <div className="bg-white rounded-2xl p-12 text-center" style={{ border: "1px solid rgba(17,24,39,0.07)" }}>
+                  <Package className="w-10 h-10 mx-auto mb-4 text-[#111827]/15" />
+                  <p className="text-[#111827]/40 text-[14px] mb-3">No products from {state.name} yet</p>
+                  <Link href="/category" className="text-[13px] font-bold hover:underline" style={{ color: "#111827" }}>
                     Explore all categories
                   </Link>
                 </div>
@@ -267,7 +267,7 @@ export function StatePageClient() {
 
             {data.featured_artisans.length > 0 && (
               <section>
-                <h2 className="text-[22px] font-extrabold text-[#1a1c1c] mb-6">Top Artisans</h2>
+                <h2 className="text-[22px] font-extrabold text-[#111827] mb-6">Top Artisans</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                   {data.featured_artisans.slice(0, 6).map((artisan, i) => (
                     <motion.div key={artisan.id}
@@ -275,15 +275,15 @@ export function StatePageClient() {
                       transition={{ delay: i * 0.08 }}
                       className="text-center">
                       <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden flex items-center justify-center"
-                        style={{ border: "3px solid #fcd020", background: "#eeece8" }}>
+                        style={{ border: "3px solid #FACC15", background: "#FBF9F5" }}>
                         {artisan.logo_url ? (
                           <img src={artisan.logo_url} alt={artisan.business_name} className="w-full h-full object-cover" />
                         ) : (
-                          <Users className="w-8 h-8 text-[#1a1c1c]/25" />
+                          <Users className="w-8 h-8 text-[#111827]/25" />
                         )}
                       </div>
-                      <h3 className="font-bold text-[#1a1c1c] text-[13px]">{artisan.business_name}</h3>
-                      <p className="text-[11px] text-[#1a1c1c]/45">{artisan.owner_name}</p>
+                      <h3 className="font-bold text-[#111827] text-[13px]">{artisan.business_name}</h3>
+                      <p className="text-[11px] text-[#111827]/45">{artisan.owner_name}</p>
                     </motion.div>
                   ))}
                 </div>
@@ -294,29 +294,29 @@ export function StatePageClient() {
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="sticky top-24 lg:top-28 space-y-5">
-              <div className="bg-white rounded-2xl p-6" style={{ border: "1px solid rgba(26,28,28,0.07)" }}>
-                <h3 className="font-bold text-[#1a1c1c] mb-4 text-[13px] uppercase tracking-wider">State Highlights</h3>
+              <div className="bg-white rounded-2xl p-6" style={{ border: "1px solid rgba(17,24,39,0.07)" }}>
+                <h3 className="font-bold text-[#111827] mb-4 text-[13px] uppercase tracking-wider">State Highlights</h3>
                 <div className="space-y-3">
                   {[
                     ["Artisans",      (state.artisan_count ?? 0).toLocaleString() ],
                     ["Products",      (state.product_count ?? 0).toLocaleString() ],
                   ].map(([label, value]) => (
                     <div key={label} className="flex items-center justify-between">
-                      <span className="text-[12px] text-[#1a1c1c]/50">{label}</span>
-                      <span className="font-bold text-[#725c00] text-[14px]">{value}</span>
+                      <span className="text-[12px] text-[#111827]/50">{label}</span>
+                      <span className="font-bold text-[#111827] text-[14px]">{value}</span>
                     </div>
                   ))}
                   <div className="flex items-center justify-between">
-                    <span className="text-[12px] text-[#1a1c1c]/50">LoqCoin Bonus</span>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-black text-[#231b00]"
-                      style={{ background: "#fcd020" }}>+{state.loqcoin_bonus}%</span>
+                    <span className="text-[12px] text-[#111827]/50">LoqCoin Bonus</span>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-black text-[#111827]"
+                      style={{ background: "#FACC15" }}>+{state.loqcoin_bonus}%</span>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-2xl p-6" style={{ background: "#231b00" }}>
+              <div className="rounded-2xl p-6" style={{ background: "#111827" }}>
                 <div className="flex items-center gap-2 mb-3">
-                  <Award className="w-6 h-6" style={{ color: "#fcd020" }} />
+                  <Award className="w-6 h-6" style={{ color: "#FACC15" }} />
                   <h3 className="font-bold text-white text-[13px]">Swadeshi Rank</h3>
                 </div>
                 <p className="text-[12px] text-white/60 mb-4 leading-relaxed">
@@ -326,8 +326,8 @@ export function StatePageClient() {
 
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
                 <Link href={`/category?state=${stateCode}`}
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-[13px] font-black text-[#1a1c1c]"
-                  style={{ background: "#fcd020" }}>
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-[13px] font-black text-[#111827]"
+                  style={{ background: "#FACC15" }}>
                   Explore All {state.name} Products <ArrowRight size={14} />
                 </Link>
               </motion.div>

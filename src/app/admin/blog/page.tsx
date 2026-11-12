@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Plus, Pencil, Trash2, Eye, EyeOff, RefreshCw, Check } from "lucide-react"
+import { FileUploadZone } from "@/components/ui/file-upload-zone"
 
 interface BlogPost {
   id: string; title: string; slug: string; excerpt: string | null
@@ -82,8 +83,8 @@ export default function BlogPage() {
     <div className="p-7">
       {toast && (
         <div className="fixed top-6 right-6 z-50 ag-toast">
-          <div className="flex items-center gap-3 bg-[#1a1c1c] text-white text-sm font-semibold px-4 py-3 rounded-2xl shadow-2xl" style={{ borderLeft: "3px solid #fcd020" }}>
-            <Check size={14} className="text-[#fcd020]" /> {toast}
+          <div className="flex items-center gap-3 bg-[#111827] text-white text-sm font-semibold px-4 py-3 rounded-2xl shadow-2xl" style={{ borderLeft: "3px solid #FACC15" }}>
+            <Check size={14} className="text-[#FACC15]" /> {toast}
           </div>
         </div>
       )}
@@ -91,11 +92,11 @@ export default function BlogPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 ag-slide-up">
         <div>
-          <h1 className="text-[22px] font-black text-[#1a1c1c] tracking-tight">Blog</h1>
-          <p className="text-[12px] text-[#1a1c1c]/40 mt-1">{posts.length} articles · artisan stories, state highlights, product guides</p>
+          <h1 className="text-[22px] font-black text-[#111827] tracking-tight">Blog</h1>
+          <p className="text-[12px] text-[#111827]/40 mt-1">{posts.length} articles · artisan stories, state highlights, product guides</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={load} className="w-9 h-9 rounded-xl ag-card flex items-center justify-center text-[#1a1c1c]/40 hover:text-[#1a1c1c] ag-btn">
+          <button onClick={load} className="w-9 h-9 rounded-xl ag-card flex items-center justify-center text-[#111827]/40 hover:text-[#111827] ag-btn">
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           </button>
           <button onClick={() => { setShowForm(v => !v); setEditId(null); setForm(EMPTY_FORM) }}
@@ -107,58 +108,58 @@ export default function BlogPage() {
 
       {/* Form */}
       {showForm && (
-        <div className="ag-card rounded-2xl p-5 mb-5 ag-slide-up" style={{ border: "1px solid rgba(252,208,32,0.3)" }}>
-          <h2 className="text-[12px] font-black text-[#1a1c1c] mb-4">{editId ? "Edit Post" : "New Post"}</h2>
+        <div className="ag-card rounded-2xl p-5 mb-5 ag-slide-up" style={{ border: "1px solid rgba(250,204,21,0.3)" }}>
+          <h2 className="text-[12px] font-black text-[#111827] mb-4">{editId ? "Edit Post" : "New Post"}</h2>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#1a1c1c]/40 block mb-1.5">Title *</label>
+              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#111827]/40 block mb-1.5">Title *</label>
               <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value, slug: editId ? f.slug : autoSlug(e.target.value) }))}
-                className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+                className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
                 style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }} placeholder="Article title..." />
             </div>
             <div>
-              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#1a1c1c]/40 block mb-1.5">Slug</label>
+              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#111827]/40 block mb-1.5">Slug</label>
               <input value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))}
-                className="w-full px-3 py-2 rounded-xl text-[13px] font-mono focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+                className="w-full px-3 py-2 rounded-xl text-[13px] font-mono focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
                 style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }} placeholder="auto-generated" />
             </div>
             <div>
-              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#1a1c1c]/40 block mb-1.5">Author</label>
+              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#111827]/40 block mb-1.5">Author</label>
               <input value={form.author} onChange={e => setForm(f => ({ ...f, author: e.target.value }))}
-                className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+                className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
                 style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }} />
             </div>
             <div>
-              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#1a1c1c]/40 block mb-1.5">Category</label>
+              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#111827]/40 block mb-1.5">Category</label>
               <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+                className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
                 style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }}>
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#1a1c1c]/40 block mb-1.5">Read Time</label>
+              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#111827]/40 block mb-1.5">Read Time</label>
               <input value={form.read_time} onChange={e => setForm(f => ({ ...f, read_time: e.target.value }))}
-                className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+                className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
                 style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }} placeholder="5 min" />
             </div>
             <div>
-              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#1a1c1c]/40 block mb-1.5">Cover Image URL</label>
-              <input value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))}
-                className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
-                style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }} placeholder="https://..." />
+              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#111827]/40 block mb-1.5">Cover Image</label>
+              <FileUploadZone value={form.image_url ? [form.image_url] : []}
+                onChange={images => setForm(current => ({ ...current, image_url: images[0] || "" }))}
+                purpose="blog-image" maxFiles={1} aspectRatio="16:9" label="Upload cover image" />
             </div>
           </div>
           <div className="mb-4">
-            <label className="text-[9.5px] font-black uppercase tracking-wide text-[#1a1c1c]/40 block mb-1.5">Excerpt</label>
+            <label className="text-[9.5px] font-black uppercase tracking-wide text-[#111827]/40 block mb-1.5">Excerpt</label>
             <textarea value={form.excerpt} onChange={e => setForm(f => ({ ...f, excerpt: e.target.value }))} rows={2}
-              className="w-full px-3 py-2 rounded-xl text-[13px] resize-none focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+              className="w-full px-3 py-2 rounded-xl text-[13px] resize-none focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
               style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }} placeholder="Short description..." />
           </div>
           <div className="mb-5">
-            <label className="text-[9.5px] font-black uppercase tracking-wide text-[#1a1c1c]/40 block mb-1.5">Content (Markdown)</label>
+            <label className="text-[9.5px] font-black uppercase tracking-wide text-[#111827]/40 block mb-1.5">Content (Markdown)</label>
             <textarea value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))} rows={8}
-              className="w-full px-3 py-2 rounded-xl text-[13px] font-mono resize-none focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+              className="w-full px-3 py-2 rounded-xl text-[13px] font-mono resize-none focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
               style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }} placeholder="# Heading..." />
           </div>
           <div className="flex gap-2">
@@ -166,7 +167,7 @@ export default function BlogPage() {
               className="flex items-center gap-2 px-5 py-2 ag-btn-primary text-[12px] font-black rounded-xl ag-btn disabled:opacity-60">
               <Check size={13} /> {saving ? "Saving..." : editId ? "Save" : "Create"}
             </button>
-            <button onClick={cancelForm} className="px-5 py-2 text-[12px] font-semibold text-[#1a1c1c]/45 hover:bg-black/5 rounded-xl ag-btn transition-colors">Cancel</button>
+            <button onClick={cancelForm} className="px-5 py-2 text-[12px] font-semibold text-[#111827]/45 hover:bg-black/5 rounded-xl ag-btn transition-colors">Cancel</button>
           </div>
         </div>
       )}
@@ -179,14 +180,14 @@ export default function BlogPage() {
           </div>
         ) : posts.length === 0 ? (
           <div className="p-16 text-center">
-            <p className="text-[12px] text-[#1a1c1c]/25">No blog posts yet. Create your first article above.</p>
+            <p className="text-[12px] text-[#111827]/25">No blog posts yet. Create your first article above.</p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
                 {["Title","Category","Author","Views","Status","Date","Actions"].map(h => (
-                  <th key={h} className="text-left px-5 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#1a1c1c]/28">{h}</th>
+                  <th key={h} className="text-left px-5 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#111827]/28">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -194,8 +195,8 @@ export default function BlogPage() {
               {posts.map((p, i) => (
                 <tr key={p.id} className="ag-table-row ag-row-in" style={{ borderBottom: "1px solid rgba(0,0,0,0.03)", animationDelay: `${i * 30}ms` }}>
                   <td className="px-5 py-3">
-                    <p className="font-bold text-[#1a1c1c] text-[12px] truncate max-w-[180px]">{p.title}</p>
-                    <p className="font-mono text-[9.5px] text-[#1a1c1c]/28 truncate">{p.slug}</p>
+                    <p className="font-bold text-[#111827] text-[12px] truncate max-w-[180px]">{p.title}</p>
+                    <p className="font-mono text-[9.5px] text-[#111827]/28 truncate">{p.slug}</p>
                   </td>
                   <td className="px-5 py-3">
                     <span className="text-[9.5px] font-black uppercase px-2 py-0.5 rounded-full"
@@ -203,8 +204,8 @@ export default function BlogPage() {
                       {p.category || "general"}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-[11px] text-[#1a1c1c]/45">{p.author || "-"}</td>
-                  <td className="px-5 py-3 text-[12px] font-bold text-[#1a1c1c]/50">{p.view_count || 0}</td>
+                  <td className="px-5 py-3 text-[11px] text-[#111827]/45">{p.author || "-"}</td>
+                  <td className="px-5 py-3 text-[12px] font-bold text-[#111827]/50">{p.view_count || 0}</td>
                   <td className="px-5 py-3">
                     <span className="text-[9.5px] font-black uppercase px-2 py-0.5 rounded-full"
                       style={p.is_published
@@ -213,7 +214,7 @@ export default function BlogPage() {
                       {p.is_published ? "Published" : "Draft"}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-[11px] text-[#1a1c1c]/30">{new Date(p.created_at).toLocaleDateString("en-IN")}</td>
+                  <td className="px-5 py-3 text-[11px] text-[#111827]/30">{new Date(p.created_at).toLocaleDateString("en-IN")}</td>
                   <td className="px-5 py-3">
                     <div className="flex gap-1">
                       <button onClick={() => togglePublish(p.id, p.is_published)}
@@ -225,7 +226,7 @@ export default function BlogPage() {
                       </button>
                       <button onClick={() => openEdit(p)}
                         className="w-7 h-7 rounded-lg flex items-center justify-center ag-btn transition-colors"
-                        style={{ background: "rgba(252,208,32,0.12)", color: "#725c00" }}>
+                        style={{ background: "rgba(250,204,21,0.12)", color: "#111827" }}>
                         <Pencil size={11} />
                       </button>
                       <button onClick={() => deletePost(p.id, p.title)}
@@ -243,7 +244,7 @@ export default function BlogPage() {
           </table>
         )}
         {posts.length > 0 && (
-          <div className="px-5 py-3 text-[10.5px] text-[#1a1c1c]/25 font-medium" style={{ borderTop: "1px solid rgba(0,0,0,0.04)" }}>
+          <div className="px-5 py-3 text-[10.5px] text-[#111827]/25 font-medium" style={{ borderTop: "1px solid rgba(0,0,0,0.04)" }}>
             {posts.length} posts
           </div>
         )}

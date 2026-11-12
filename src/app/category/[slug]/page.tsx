@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { createServiceClient } from "@/lib/supabase/admin"
 import { fetchProductsList, parseProductListSearchParams } from "@/lib/products"
 import { ProductListingClient } from "@/components/product-listing/ProductListingClient"
+import { displayCategoryName } from "@/lib/craft-taxonomy"
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 
@@ -16,12 +17,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params
   const category = await getCategory(slug)
   if (!category) return { title: "Category — LoqMart" }
+  const categoryName = displayCategoryName({ name: category.name, slug })
 
   const description = category.description
-    || `Browse verified handmade and machine-made ${category.name} on LoqMart, India's Swadeshi marketplace.`
+    || `Explore ${categoryName} and regional craft from sellers across India on LoqMart.`
 
   return {
-    title: `${category.name} — LoqMart`,
+    title: `${categoryName} — LoqMart`,
     description,
     openGraph: { title: `${category.name} — LoqMart`, description, type: "website" },
   }
@@ -39,6 +41,7 @@ export default async function CategorySlugPage({
   const sp = await searchParams
   const category = await getCategory(slug)
   if (!category) notFound()
+  const categoryName = displayCategoryName({ name: category.name, slug })
 
   const listParams = parseProductListSearchParams(sp)
   listParams.category = category.id
@@ -50,7 +53,7 @@ export default async function CategorySlugPage({
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: BASE_URL },
       { "@type": "ListItem", position: 2, name: "Categories", item: `${BASE_URL}/category` },
-      { "@type": "ListItem", position: 3, name: category.name, item: `${BASE_URL}/category/${slug}` },
+      { "@type": "ListItem", position: 3, name: categoryName, item: `${BASE_URL}/category/${slug}` },
     ],
   }
 
@@ -59,11 +62,12 @@ export default async function CategorySlugPage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <ProductListingClient
         key={JSON.stringify(sp)}
-        title={category.name}
+        title={categoryName}
         subtitle={category.description || undefined}
         anchorCategory={{ id: category.id, name: category.name }}
         initialProducts={result.products}
         initialTotal={result.total}
+        initialError={Boolean(result.error)}
       />
     </>
   )

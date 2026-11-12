@@ -2,13 +2,11 @@ import type { Metadata } from "next"
 import { createServiceClient } from "@/lib/supabase/admin"
 import { ProductPageClient } from "./ProductPageClient"
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-
 async function getProduct(slug: string) {
   const supabase = createServiceClient()
   const { data } = await supabase
     .from("products")
-    .select("name, description, price, mrp, images, stock, rating, review_count, sellers(business_name)")
+    .select("name, description, images, stock, rating, review_count, sellers(business_name)")
     .eq("slug", slug)
     .eq("approval_status", "approved")
     .maybeSingle()
@@ -23,7 +21,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const sellerName = (product as unknown as { sellers: { business_name: string } | null }).sellers?.business_name
   const description = product.description
     ? product.description.slice(0, 155)
-    : `Buy ${product.name}${sellerName ? ` from ${sellerName}` : ""} on LoqMart — India's Swadeshi marketplace.`
+    : `Explore ${product.name}${sellerName ? ` from ${sellerName}` : ""} on LoqMart — India's regional craft marketplace.`
 
   return {
     title: `${product.name} — LoqMart`,
@@ -57,13 +55,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         reviewCount: product.review_count || 1,
       },
     } : {}),
-    offers: {
-      "@type": "Offer",
-      url: `${BASE_URL}/product/${slug}`,
-      priceCurrency: "INR",
-      price: product.price,
-      availability: product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-    },
   } : null
 
   return (

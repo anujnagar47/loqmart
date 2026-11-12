@@ -23,7 +23,7 @@ const ORDER_COLOR: Record<string, string> = {
   shipped:    "#7c3aed",
 }
 
-function Sparkbar({ value, max, color = "#fcd020", delay = 0 }: { value: number; max: number; color?: string; delay?: number }) {
+function Sparkbar({ value, max, color = "#FACC15", delay = 0 }: { value: number; max: number; color?: string; delay?: number }) {
   const [width, setWidth] = useState(0)
   useEffect(() => {
     const t = setTimeout(() => setWidth(max > 0 ? Math.round((value / max) * 100) : 0), delay + 100)
@@ -44,8 +44,8 @@ function KPI({ label, value, trend }: { label: string; value: string | number; t
       <div className="flex items-start justify-between mb-3">
         {trend && <TrendIcon size={14} style={{ color: trendColor }} />}
       </div>
-      <p className="text-[24px] font-black text-[#1a1c1c] leading-none tracking-tight">{value}</p>
-      <p className="text-[10px] font-black uppercase tracking-widest text-[#1a1c1c]/35 mt-2">{label}</p>
+      <p className="text-[24px] font-black text-[#111827] leading-none tracking-tight">{value}</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-[#111827]/35 mt-2">{label}</p>
     </div>
   )
 }
@@ -65,10 +65,10 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 ag-slide-up">
         <div>
-          <h1 className="text-[22px] font-black text-[#1a1c1c] tracking-tight">Analytics</h1>
-          <p className="text-[12px] text-[#1a1c1c]/40 mt-1">Real-time platform metrics</p>
+          <h1 className="text-[22px] font-black text-[#111827] tracking-tight">Analytics</h1>
+          <p className="text-[12px] text-[#111827]/40 mt-1">Real-time platform metrics</p>
         </div>
-        <button onClick={load} className="w-9 h-9 rounded-xl ag-card flex items-center justify-center text-[#1a1c1c]/40 hover:text-[#1a1c1c] ag-btn">
+        <button onClick={load} className="w-9 h-9 rounded-xl ag-card flex items-center justify-center text-[#111827]/40 hover:text-[#111827] ag-btn">
           <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
         </button>
       </div>
@@ -87,20 +87,20 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-2 gap-5 mb-5">
         {/* Revenue by month */}
         <div className="ag-card rounded-2xl p-5 ag-slide-up" style={{ animationDelay: "100ms" }}>
-          <h2 className="text-[11px] font-black uppercase tracking-widest text-[#1a1c1c]/30 mb-5">Revenue — Last 6 Months</h2>
+          <h2 className="text-[11px] font-black uppercase tracking-widest text-[#111827]/30 mb-5">Revenue — Last 6 Months</h2>
           {loading ? [...Array(5)].map((_, i) => <div key={i} className="mb-4"><div className="h-2.5 ag-shimmer rounded mb-1" /><div className="h-2 ag-shimmer rounded" /></div>) :
           data?.monthlyRevenue.map((m, i) => {
             const max = Math.max(...(data.monthlyRevenue.map(x => x.revenue)), 1)
             return (
               <div key={m.month} className="mb-4 last:mb-0">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] font-semibold text-[#1a1c1c]/60">{m.month}</span>
+                  <span className="text-[11px] font-semibold text-[#111827]/60">{m.month}</span>
                   <div className="text-right">
-                    <span className="text-[11px] font-black text-[#1a1c1c]">{formatCurrency(m.revenue)}</span>
-                    <span className="text-[10px] text-[#1a1c1c]/30 ml-2">{m.orders} orders</span>
+                    <span className="text-[11px] font-black text-[#111827]">{formatCurrency(m.revenue)}</span>
+                    <span className="text-[10px] text-[#111827]/30 ml-2">{m.orders} orders</span>
                   </div>
                 </div>
-                <Sparkbar value={m.revenue} max={max} color="#fcd020" delay={i * 80} />
+                <Sparkbar value={m.revenue} max={max} color="#FACC15" delay={i * 80} />
               </div>
             )
           })}
@@ -108,17 +108,17 @@ export default function AnalyticsPage() {
 
         {/* User signups by month */}
         <div className="ag-card rounded-2xl p-5 ag-slide-up" style={{ animationDelay: "140ms" }}>
-          <h2 className="text-[11px] font-black uppercase tracking-widest text-[#1a1c1c]/30 mb-5">User Signups — Last 6 Months</h2>
+          <h2 className="text-[11px] font-black uppercase tracking-widest text-[#111827]/30 mb-5">User Signups — Last 6 Months</h2>
           {loading ? [...Array(5)].map((_, i) => <div key={i} className="mb-4"><div className="h-2.5 ag-shimmer rounded mb-1" /><div className="h-2 ag-shimmer rounded" /></div>) :
           data?.monthlySignups.map((m, i) => {
             const max = Math.max(...(data.monthlySignups.map(x => x.count)), 1)
             return (
               <div key={m.month} className="mb-4 last:mb-0">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] font-semibold text-[#1a1c1c]/60">{m.month}</span>
-                  <span className="text-[11px] font-black text-[#1a1c1c]">{m.count} signups</span>
+                  <span className="text-[11px] font-semibold text-[#111827]/60">{m.month}</span>
+                  <span className="text-[11px] font-black text-[#111827]">{m.count} signups</span>
                 </div>
-                <Sparkbar value={m.count} max={max} color="#1a1c1c" delay={i * 80} />
+                <Sparkbar value={m.count} max={max} color="#111827" delay={i * 80} />
               </div>
             )
           })}
@@ -126,36 +126,36 @@ export default function AnalyticsPage() {
 
         {/* State distribution */}
         <div className="ag-card rounded-2xl p-5 ag-slide-up" style={{ animationDelay: "180ms" }}>
-          <h2 className="text-[11px] font-black uppercase tracking-widest text-[#1a1c1c]/30 mb-5">Top States by Sellers</h2>
+          <h2 className="text-[11px] font-black uppercase tracking-widest text-[#111827]/30 mb-5">Top States by Sellers</h2>
           {loading ? [...Array(6)].map((_, i) => <div key={i} className="mb-4"><div className="h-2.5 ag-shimmer rounded mb-1" /><div className="h-2 ag-shimmer rounded" /></div>) :
           data && data.stateDist.length > 0 ? data.stateDist.slice(0, 8).map((s, i) => {
             const max = Math.max(...data.stateDist.map(x => x.count), 1)
             return (
               <div key={s.state} className="mb-3 last:mb-0">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] font-bold text-[#1a1c1c]/70">{s.state || "Unknown"}</span>
-                  <span className="text-[11px] font-black text-[#1a1c1c]">{s.count}</span>
+                  <span className="text-[11px] font-bold text-[#111827]/70">{s.state || "Unknown"}</span>
+                  <span className="text-[11px] font-black text-[#111827]">{s.count}</span>
                 </div>
-                <Sparkbar value={s.count} max={max} color="#725c00" delay={i * 60} />
+                <Sparkbar value={s.count} max={max} color="#EAB308" delay={i * 60} />
               </div>
             )
-          }) : <p className="text-[12px] text-[#1a1c1c]/30 text-center py-6">No sellers registered yet</p>}
+          }) : <p className="text-[12px] text-[#111827]/30 text-center py-6">No sellers registered yet</p>}
         </div>
 
         {/* Order status breakdown */}
         <div className="ag-card rounded-2xl p-5 ag-slide-up" style={{ animationDelay: "220ms" }}>
-          <h2 className="text-[11px] font-black uppercase tracking-widest text-[#1a1c1c]/30 mb-5">Order Status Breakdown</h2>
+          <h2 className="text-[11px] font-black uppercase tracking-widest text-[#111827]/30 mb-5">Order Status Breakdown</h2>
           {loading ? [...Array(4)].map((_, i) => <div key={i} className="mb-4"><div className="h-2.5 ag-shimmer rounded mb-1" /><div className="h-2 ag-shimmer rounded" /></div>) :
           data && (() => {
             const total = Object.values(data.orderStatusMap).reduce((a, b) => a + b, 0)
-            if (total === 0) return <p className="text-[12px] text-[#1a1c1c]/30 text-center py-6">No orders yet</p>
+            if (total === 0) return <p className="text-[12px] text-[#111827]/30 text-center py-6">No orders yet</p>
             return Object.entries(data.orderStatusMap).map(([status, count], i) => {
               const pct = Math.round((count / total) * 100)
               return (
                 <div key={status} className="mb-3 last:mb-0">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-[11px] font-bold capitalize" style={{ color: ORDER_COLOR[status] || "#94a3b8" }}>{status}</span>
-                    <span className="text-[11px] font-black text-[#1a1c1c]">{count} <span className="text-[#1a1c1c]/35 font-semibold">({pct}%)</span></span>
+                    <span className="text-[11px] font-black text-[#111827]">{count} <span className="text-[#111827]/35 font-semibold">({pct}%)</span></span>
                   </div>
                   <Sparkbar value={count} max={total} color={ORDER_COLOR[status] || "#94a3b8"} delay={i * 60} />
                 </div>
@@ -168,7 +168,7 @@ export default function AnalyticsPage() {
       {/* Bottom: product composition + seller funnel */}
       <div className="grid grid-cols-2 gap-5">
         <div className="ag-card rounded-2xl p-5 ag-slide-up" style={{ animationDelay: "260ms" }}>
-          <h2 className="text-[11px] font-black uppercase tracking-widest text-[#1a1c1c]/30 mb-5">Product Composition</h2>
+          <h2 className="text-[11px] font-black uppercase tracking-widest text-[#111827]/30 mb-5">Product Composition</h2>
           {loading ? <div className="h-20 ag-shimmer rounded" /> : data && (() => {
             const total = data.productSplit.handmade + data.productSplit.machineMade
             const hmPct = total > 0 ? Math.round((data.productSplit.handmade  / total) * 100) : 0
@@ -181,8 +181,8 @@ export default function AnalyticsPage() {
                 ].map(({ label, value, pct, color }, i) => (
                   <div key={label}>
                     <div className="flex justify-between mb-1.5">
-                      <span className="text-[11px] font-bold text-[#1a1c1c]/70">{label}</span>
-                      <span className="text-[11px] font-black text-[#1a1c1c]">{value} <span className="text-[#1a1c1c]/35">({pct}%)</span></span>
+                      <span className="text-[11px] font-bold text-[#111827]/70">{label}</span>
+                      <span className="text-[11px] font-black text-[#111827]">{value} <span className="text-[#111827]/35">({pct}%)</span></span>
                     </div>
                     <Sparkbar value={value} max={total} color={color} delay={i * 100} />
                   </div>
@@ -193,7 +193,7 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="ag-card rounded-2xl p-5 ag-slide-up" style={{ animationDelay: "300ms" }}>
-          <h2 className="text-[11px] font-black uppercase tracking-widest text-[#1a1c1c]/30 mb-5">Seller Approval Funnel</h2>
+          <h2 className="text-[11px] font-black uppercase tracking-widest text-[#111827]/30 mb-5">Seller Approval Funnel</h2>
           {loading ? <div className="h-20 ag-shimmer rounded" /> : data && (() => {
             const total = data.sellerFunnel.approved + data.sellerFunnel.pending + data.sellerFunnel.rejected
             return (
@@ -209,7 +209,7 @@ export default function AnalyticsPage() {
                     <div key={key}>
                       <div className="flex justify-between mb-1.5">
                         <span className="text-[11px] font-bold capitalize" style={{ color }}>{key}</span>
-                        <span className="text-[11px] font-black text-[#1a1c1c]">{val} <span className="text-[#1a1c1c]/35">({pct}%)</span></span>
+                        <span className="text-[11px] font-black text-[#111827]">{val} <span className="text-[#111827]/35">({pct}%)</span></span>
                       </div>
                       <Sparkbar value={val} max={total} color={color} delay={i * 100} />
                     </div>

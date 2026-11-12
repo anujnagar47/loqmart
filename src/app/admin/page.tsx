@@ -22,7 +22,7 @@ const ACTION_COLOR: Record<string, { bg: string; dot: string }> = {
   "product.approve":   { bg: "bg-green-50",  dot: "bg-green-500"  },
   "product.reject":    { bg: "bg-red-50",    dot: "bg-red-500"    },
   "penalty.issue":     { bg: "bg-orange-50", dot: "bg-orange-500" },
-  "return.update":     { bg: "bg-blue-50",   dot: "bg-blue-500"   },
+  "return.update":     { bg: "bg-primary-container/30",   dot: "bg-primary"   },
   "trust.override":    { bg: "bg-purple-50", dot: "bg-purple-500" },
   "commission.update": { bg: "bg-yellow-50", dot: "bg-yellow-500" },
   "settlement.update": { bg: "bg-indigo-50", dot: "bg-indigo-500" },
@@ -53,7 +53,7 @@ function useCounter(target: number, delay = 0) {
   return count
 }
 
-function StatCard({ label, rawValue, displayValue, icon: Icon, badge, color = "#fcd020", delay = 0 }: {
+function StatCard({ label, rawValue, displayValue, icon: Icon, badge, color = "#FACC15", delay = 0 }: {
   label: string; rawValue: number; displayValue?: string
   icon: React.ElementType; badge?: string | null; color?: string; delay?: number
 }) {
@@ -72,12 +72,12 @@ function StatCard({ label, rawValue, displayValue, icon: Icon, badge, color = "#
           </span>
         )}
       </div>
-      <p className="text-[26px] font-black text-[#1a1c1c] leading-none tracking-tight">
+      <p className="text-[26px] font-black text-[#111827] leading-none tracking-tight">
         {displayValue
           ? (isCurrency ? formatCurrency(rawValue === 0 ? 0 : rawValue) : displayValue)
           : count.toLocaleString("en-IN")}
       </p>
-      <p className="text-[10.5px] text-[#1a1c1c]/40 font-semibold mt-1.5 uppercase tracking-wide">{label}</p>
+      <p className="text-[10.5px] text-[#111827]/40 font-semibold mt-1.5 uppercase tracking-wide">{label}</p>
     </div>
   )
 }
@@ -86,8 +86,8 @@ function Toast({ msg, onDone }: { msg: string; onDone: () => void }) {
   useEffect(() => { const t = setTimeout(onDone, 2600); return () => clearTimeout(t) }, [onDone])
   return (
     <div className="fixed top-6 right-6 z-50 ag-toast">
-      <div className="flex items-center gap-3 bg-[#1a1c1c] text-white text-sm font-semibold px-4 py-3 rounded-2xl shadow-2xl" style={{ borderLeft: "3px solid #fcd020" }}>
-        <Check size={14} className="text-[#fcd020]" />
+      <div className="flex items-center gap-3 bg-[#111827] text-white text-sm font-semibold px-4 py-3 rounded-2xl shadow-2xl" style={{ borderLeft: "3px solid #FACC15" }}>
+        <Check size={14} className="text-[#FACC15]" />
         {msg}
       </div>
     </div>
@@ -156,7 +156,7 @@ export default function AdminOverview() {
   const STATUS_COLORS: Record<string, string> = {
     paid: "bg-green-50 text-green-700", pending: "bg-yellow-50 text-yellow-700",
     failed: "bg-red-50 text-red-600", refunded: "bg-gray-100 text-gray-600",
-    delivered: "bg-green-50 text-green-700", processing: "bg-blue-50 text-blue-700",
+    delivered: "bg-green-50 text-green-700", processing: "bg-surface-container text-on-surface-variant",
     shipped: "bg-purple-50 text-purple-700", cancelled: "bg-red-50 text-red-600",
   }
 
@@ -167,8 +167,8 @@ export default function AdminOverview() {
       {/* Header */}
       <div className="flex items-center justify-between mb-7 ag-slide-up">
         <div>
-          <h1 className="text-[22px] font-black text-[#1a1c1c] tracking-tight leading-none">Overview</h1>
-          <p className="text-[12px] text-[#1a1c1c]/40 font-medium mt-1.5">
+          <h1 className="text-[22px] font-black text-[#111827] tracking-tight leading-none">Overview</h1>
+          <p className="text-[12px] text-[#111827]/40 font-medium mt-1.5">
             {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
           </p>
         </div>
@@ -197,7 +197,7 @@ export default function AdminOverview() {
       {/* Quick actions strip */}
       <div className="ag-card rounded-2xl p-4 mb-6 ag-slide-up" style={{ animationDelay: "100ms" }}>
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-[10px] font-black uppercase tracking-widest text-[#1a1c1c]/30 mr-1">Quick</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-[#111827]/30 mr-1">Quick</span>
           {[
             { label: "All Sellers",     href: "/admin/sellers",    icon: Shield },
             { label: "All Products",    href: "/admin/products",   icon: Package },
@@ -209,9 +209,9 @@ export default function AdminOverview() {
           ].map(({ label, href, icon: Icon }) => (
             <Link key={href} href={href}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold ag-btn transition-all"
-              style={{ background: "rgba(26,28,28,0.05)", color: "#1a1c1c" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#fcd020"; (e.currentTarget as HTMLElement).style.color = "#1a1c1c" }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(26,28,28,0.05)"; (e.currentTarget as HTMLElement).style.color = "#1a1c1c" }}
+              style={{ background: "rgba(17,24,39,0.05)", color: "#111827" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#FACC15"; (e.currentTarget as HTMLElement).style.color = "#111827" }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(17,24,39,0.05)"; (e.currentTarget as HTMLElement).style.color = "#111827" }}
             >
               <Icon size={11} />
               {label}
@@ -227,7 +227,7 @@ export default function AdminOverview() {
           <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-orange-400 ag-dot-pending" />
-              <h2 className="font-black text-[#1a1c1c] text-[13px]">Pending Sellers</h2>
+              <h2 className="font-black text-[#111827] text-[13px]">Pending Sellers</h2>
               {pendingSellers.length > 0 && (
                 <span className="text-[9.5px] font-black bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full uppercase tracking-wide">{pendingSellers.length}</span>
               )}
@@ -248,8 +248,8 @@ export default function AdminOverview() {
             )) : pendingSellers.length > 0 ? pendingSellers.slice(0, 6).map((s, i) => (
               <div key={s.id} className="flex items-center justify-between px-5 py-3 ag-row-in" style={{ animationDelay: `${i * 40}ms` }}>
                 <div>
-                  <p className="text-[13px] font-bold text-[#1a1c1c]">{s.business_name}</p>
-                  <p className="text-[11px] text-[#1a1c1c]/40 mt-0.5">{s.owner_name} · {s.state || "India"}</p>
+                  <p className="text-[13px] font-bold text-[#111827]">{s.business_name}</p>
+                  <p className="text-[11px] text-[#111827]/40 mt-0.5">{s.owner_name} · {s.state || "India"}</p>
                 </div>
                 <div className="flex gap-1.5">
                   <button onClick={() => approve("sellers", s.id)}
@@ -267,7 +267,7 @@ export default function AdminOverview() {
                 <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-2">
                   <Check size={14} className="text-green-600" />
                 </div>
-                <p className="text-[11px] text-[#1a1c1c]/35 font-medium">All clear — no pending sellers</p>
+                <p className="text-[11px] text-[#111827]/35 font-medium">All clear — no pending sellers</p>
               </div>
             )}
           </div>
@@ -278,7 +278,7 @@ export default function AdminOverview() {
           <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-orange-400 ag-dot-pending" />
-              <h2 className="font-black text-[#1a1c1c] text-[13px]">Pending Products</h2>
+              <h2 className="font-black text-[#111827] text-[13px]">Pending Products</h2>
               {pendingProducts.length > 0 && (
                 <span className="text-[9.5px] font-black bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full uppercase tracking-wide">{pendingProducts.length}</span>
               )}
@@ -297,8 +297,8 @@ export default function AdminOverview() {
             )) : pendingProducts.length > 0 ? pendingProducts.slice(0, 6).map((p, i) => (
               <div key={p.id} className="flex items-center justify-between px-5 py-3 ag-row-in" style={{ animationDelay: `${i * 40}ms` }}>
                 <div>
-                  <p className="text-[13px] font-bold text-[#1a1c1c] truncate max-w-[200px]">{p.name}</p>
-                  <p className="text-[11px] text-[#1a1c1c]/40 mt-0.5">{formatCurrency(p.price)} · {p.state_code}</p>
+                  <p className="text-[13px] font-bold text-[#111827] truncate max-w-[200px]">{p.name}</p>
+                  <p className="text-[11px] text-[#111827]/40 mt-0.5">{formatCurrency(p.price)} · {p.state_code}</p>
                 </div>
                 <div className="flex gap-1.5">
                   <button onClick={() => approve("products", p.id)}
@@ -316,7 +316,7 @@ export default function AdminOverview() {
                 <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-2">
                   <Check size={14} className="text-green-600" />
                 </div>
-                <p className="text-[11px] text-[#1a1c1c]/35 font-medium">All clear — no pending products</p>
+                <p className="text-[11px] text-[#111827]/35 font-medium">All clear — no pending products</p>
               </div>
             )}
           </div>
@@ -328,8 +328,8 @@ export default function AdminOverview() {
         {/* Recent orders */}
         <div className="ag-card rounded-2xl overflow-hidden ag-slide-up" style={{ animationDelay: "250ms" }}>
           <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-            <h2 className="font-black text-[#1a1c1c] text-[13px]">Recent Orders</h2>
-            <Link href="/admin/orders" className="text-[10px] font-bold text-[#1a1c1c]/35 hover:text-[#1a1c1c] transition-colors uppercase tracking-wide">
+            <h2 className="font-black text-[#111827] text-[13px]">Recent Orders</h2>
+            <Link href="/admin/orders" className="text-[10px] font-bold text-[#111827]/35 hover:text-[#111827] transition-colors uppercase tracking-wide">
               View all
             </Link>
           </div>
@@ -338,7 +338,7 @@ export default function AdminOverview() {
               <thead>
                 <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
                   {["Order #", "Amount", "Payment", "Status", "Date"].map(h => (
-                    <th key={h} className="text-left px-5 py-2.5 text-[9.5px] font-black uppercase tracking-widest text-[#1a1c1c]/30">{h}</th>
+                    <th key={h} className="text-left px-5 py-2.5 text-[9.5px] font-black uppercase tracking-widest text-[#111827]/30">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -349,7 +349,7 @@ export default function AdminOverview() {
                   </tr>
                 )) : recentOrders.length > 0 ? recentOrders.map((o, i) => (
                   <tr key={o.id} className="ag-table-row ag-row-in" style={{ borderBottom: "1px solid rgba(0,0,0,0.03)", animationDelay: `${i * 30}ms` }}>
-                    <td className="px-5 py-3 font-bold text-[#1a1c1c] text-[12px]">{o.order_number}</td>
+                    <td className="px-5 py-3 font-bold text-[#111827] text-[12px]">{o.order_number}</td>
                     <td className="px-5 py-3 font-bold text-[12px]">{formatCurrency(o.total)}</td>
                     <td className="px-5 py-3">
                       <span className={`text-[9.5px] font-black uppercase px-2 py-0.5 rounded-full ${STATUS_COLORS[o.payment_status] || "bg-gray-100 text-gray-600"}`}>{o.payment_status}</span>
@@ -357,10 +357,10 @@ export default function AdminOverview() {
                     <td className="px-5 py-3">
                       <span className={`text-[9.5px] font-black uppercase px-2 py-0.5 rounded-full ${STATUS_COLORS[o.order_status] || "bg-gray-100 text-gray-600"}`}>{o.order_status}</span>
                     </td>
-                    <td className="px-5 py-3 text-[11px] text-[#1a1c1c]/35">{new Date(o.created_at).toLocaleDateString("en-IN")}</td>
+                    <td className="px-5 py-3 text-[11px] text-[#111827]/35">{new Date(o.created_at).toLocaleDateString("en-IN")}</td>
                   </tr>
                 )) : (
-                  <tr><td colSpan={5} className="px-5 py-10 text-center text-[11px] text-[#1a1c1c]/30">No orders yet</td></tr>
+                  <tr><td colSpan={5} className="px-5 py-10 text-center text-[11px] text-[#111827]/30">No orders yet</td></tr>
                 )}
               </tbody>
             </table>
@@ -370,9 +370,9 @@ export default function AdminOverview() {
         {/* Activity feed */}
         <div className="ag-card rounded-2xl overflow-hidden ag-slide-up" style={{ animationDelay: "300ms" }}>
           <div className="flex items-center gap-2 px-4 py-3.5" style={{ borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-            <Bell size={12} className="text-[#1a1c1c]/40" />
-            <h2 className="font-black text-[#1a1c1c] text-[13px]">Activity</h2>
-            <span className="ml-auto text-[9px] font-bold uppercase tracking-wide text-[#1a1c1c]/25">Live</span>
+            <Bell size={12} className="text-[#111827]/40" />
+            <h2 className="font-black text-[#111827] text-[13px]">Activity</h2>
+            <span className="ml-auto text-[9px] font-bold uppercase tracking-wide text-[#111827]/25">Live</span>
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 ag-dot-pending" />
           </div>
           <div className="divide-y overflow-y-auto ag-scroll" style={{ borderColor: "rgba(0,0,0,0.04)", maxHeight: "380px" }}>
@@ -382,18 +382,18 @@ export default function AdminOverview() {
                 <div className="flex-1 space-y-1.5"><div className="h-2.5 ag-shimmer rounded" /><div className="h-2 w-16 ag-shimmer rounded" /></div>
               </div>
             )) : logs.length === 0 ? (
-              <div className="px-4 py-10 text-center text-[11px] text-[#1a1c1c]/30">No activity yet</div>
+              <div className="px-4 py-10 text-center text-[11px] text-[#111827]/30">No activity yet</div>
             ) : logs.map((l, i) => {
               const colors = ACTION_COLOR[l.action] || { bg: "bg-gray-50", dot: "bg-gray-400" }
               return (
                 <div key={l.id} className={`px-4 py-3 flex gap-3 ag-row-in ${colors.bg}`} style={{ animationDelay: `${i * 35}ms` }}>
                   <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${colors.dot}`} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-bold text-[#1a1c1c] leading-tight">
+                    <p className="text-[11px] font-bold text-[#111827] leading-tight">
                       {l.users?.full_name || "System"}
                     </p>
-                    <p className="text-[10px] text-[#1a1c1c]/45 mt-0.5 font-mono">{l.action}</p>
-                    <p className="text-[9.5px] text-[#1a1c1c]/28 mt-0.5">{timeAgo(l.created_at)}</p>
+                    <p className="text-[10px] text-[#111827]/45 mt-0.5 font-mono">{l.action}</p>
+                    <p className="text-[9.5px] text-[#111827]/28 mt-0.5">{timeAgo(l.created_at)}</p>
                   </div>
                 </div>
               )
@@ -401,7 +401,7 @@ export default function AdminOverview() {
           </div>
           {logs.length > 0 && (
             <div className="px-4 py-2.5" style={{ borderTop: "1px solid rgba(0,0,0,0.04)" }}>
-              <Link href="/admin/logs" className="text-[10px] font-bold text-[#1a1c1c]/35 hover:text-[#1a1c1c] transition-colors">
+              <Link href="/admin/logs" className="text-[10px] font-bold text-[#111827]/35 hover:text-[#111827] transition-colors">
                 View full audit log
               </Link>
             </div>

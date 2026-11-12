@@ -69,8 +69,8 @@ export default function ReturnsPage() {
     <div className="p-7">
       {toast && (
         <div className="fixed top-6 right-6 z-50 ag-toast">
-          <div className="flex items-center gap-3 bg-[#1a1c1c] text-white text-sm font-semibold px-4 py-3 rounded-2xl shadow-2xl" style={{ borderLeft: "3px solid #fcd020" }}>
-            <Check size={14} className="text-[#fcd020]" /> {toast}
+          <div className="flex items-center gap-3 bg-[#111827] text-white text-sm font-semibold px-4 py-3 rounded-2xl shadow-2xl" style={{ borderLeft: "3px solid #FACC15" }}>
+            <Check size={14} className="text-[#FACC15]" /> {toast}
           </div>
         </div>
       )}
@@ -78,10 +78,10 @@ export default function ReturnsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 ag-slide-up">
         <div>
-          <h1 className="text-[22px] font-black text-[#1a1c1c] tracking-tight">Returns & Disputes</h1>
-          <p className="text-[12px] text-[#1a1c1c]/40 mt-1">{returns.length} total requests</p>
+          <h1 className="text-[22px] font-black text-[#111827] tracking-tight">Returns & Disputes</h1>
+          <p className="text-[12px] text-[#111827]/40 mt-1">{returns.length} total requests</p>
         </div>
-        <button onClick={load} className="w-9 h-9 rounded-xl ag-card flex items-center justify-center text-[#1a1c1c]/40 hover:text-[#1a1c1c] ag-btn">
+        <button onClick={load} className="w-9 h-9 rounded-xl ag-card flex items-center justify-center text-[#111827]/40 hover:text-[#111827] ag-btn">
           <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
         </button>
       </div>
@@ -90,9 +90,9 @@ export default function ReturnsPage() {
       <div className="grid grid-cols-4 gap-3 mb-5 ag-slide-up" style={{ animationDelay: "60ms" }}>
         {["pending","seller_disputed","admin_review","resolved_buyer"].map(s => (
           <button key={s} onClick={() => setFilter(s)} className="ag-card-stat rounded-xl p-3 text-left ag-btn transition-all"
-            style={filter === s ? { boxShadow: "0 0 0 2px #fcd020, 0 4px 16px rgba(252,208,32,0.25)" } : {}}>
-            <p className="text-[24px] font-black text-[#1a1c1c] leading-none">{loading ? "—" : counts[s] || 0}</p>
-            <p className="text-[9px] font-black uppercase tracking-widest text-[#1a1c1c]/35 mt-1.5 leading-tight">{s.replace(/_/g, " ")}</p>
+            style={filter === s ? { boxShadow: "0 0 0 2px #FACC15, 0 4px 16px rgba(250,204,21,0.25)" } : {}}>
+            <p className="text-[24px] font-black text-[#111827] leading-none">{loading ? "—" : counts[s] || 0}</p>
+            <p className="text-[9px] font-black uppercase tracking-widest text-[#111827]/35 mt-1.5 leading-tight">{s.replace(/_/g, " ")}</p>
           </button>
         ))}
       </div>
@@ -102,8 +102,8 @@ export default function ReturnsPage() {
         {STATUSES.map(s => (
           <button key={s} onClick={() => setFilter(s)} className="px-2.5 py-1 rounded-full text-[9.5px] font-black uppercase tracking-wide ag-btn transition-all"
             style={filter === s
-              ? { background: "#1a1c1c", color: "#fff" }
-              : { background: "rgba(255,255,255,0.7)", color: "rgba(26,28,28,0.40)" }}>
+              ? { background: "#FFFFFF", color: "#111827", border: "1px solid #E5E7EB", boxShadow: "0 1px 2px rgba(17,24,39,0.08)" }
+              : { background: "transparent", color: "#4B5563", border: "1px solid transparent" }}>
             {s.replace(/_/g, " ")} {counts[s] != null ? `(${counts[s]})` : ""}
           </button>
         ))}
@@ -111,9 +111,9 @@ export default function ReturnsPage() {
 
       {/* Search */}
       <div className="relative mb-5 ag-slide-up" style={{ animationDelay: "90ms" }}>
-        <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#1a1c1c]/30 pointer-events-none" />
+        <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#111827]/30 pointer-events-none" />
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by order #, customer, seller..."
-          className="w-full pl-9 pr-4 py-2.5 rounded-xl text-[13px] text-[#1a1c1c] placeholder:text-[#1a1c1c]/30 focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+          className="w-full pl-9 pr-4 py-2.5 rounded-xl text-[13px] text-[#111827] placeholder:text-[#111827]/30 focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
           style={{ background: "rgba(255,255,255,0.75)", border: "1px solid rgba(0,0,0,0.07)" }} />
       </div>
 
@@ -121,7 +121,7 @@ export default function ReturnsPage() {
       <div className="space-y-2 ag-slide-up" style={{ animationDelay: "110ms" }}>
         {loading ? [...Array(4)].map((_, i) => <div key={i} className="rounded-2xl h-16 ag-shimmer" />) :
         filtered.length === 0 ? (
-          <div className="ag-card rounded-2xl p-12 text-center text-[12px] text-[#1a1c1c]/30">
+          <div className="ag-card rounded-2xl p-12 text-center text-[12px] text-[#111827]/30">
             No return requests found. Run missing-tables.sql to create the return_requests table.
           </div>
         ) : filtered.map((r, i) => (
@@ -130,14 +130,14 @@ export default function ReturnsPage() {
               onClick={() => setExpanded(e => e === r.id ? null : r.id)}>
               <div className="flex items-center gap-4">
                 <div>
-                  <p className="font-bold text-[#1a1c1c] text-[13px]">{r.orders?.order_number || "Unknown"}</p>
-                  <p className="text-[10px] text-[#1a1c1c]/40 mt-0.5">{r.users?.email} · {r.sellers?.business_name}</p>
+                  <p className="font-bold text-[#111827] text-[13px]">{r.orders?.order_number || "Unknown"}</p>
+                  <p className="text-[10px] text-[#111827]/40 mt-0.5">{r.users?.email} · {r.sellers?.business_name}</p>
                 </div>
                 <span className="text-[9.5px] font-black uppercase px-2 py-0.5 rounded-full"
                   style={STATUS_PILL[r.status] || { background: "rgba(100,116,139,0.09)", color: "#475569" }}>
                   {r.status.replace(/_/g, " ")}
                 </span>
-                <span className="text-[10px] font-semibold text-[#1a1c1c]/40">
+                <span className="text-[10px] font-semibold text-[#111827]/40">
                   {REASON_LABELS[r.reason] || r.reason}
                 </span>
               </div>
@@ -145,14 +145,14 @@ export default function ReturnsPage() {
                 {r.refund_amount && (
                   <span className="text-[13px] font-black text-green-700">Rs {r.refund_amount}</span>
                 )}
-                <span className="text-[11px] text-[#1a1c1c]/30">{new Date(r.created_at).toLocaleDateString("en-IN")}</span>
-                <ChevronDown size={13} className="text-[#1a1c1c]/25 transition-transform"
+                <span className="text-[11px] text-[#111827]/30">{new Date(r.created_at).toLocaleDateString("en-IN")}</span>
+                <ChevronDown size={13} className="text-[#111827]/25 transition-transform"
                   style={{ transform: expanded === r.id ? "rotate(180deg)" : "" }} />
               </div>
             </div>
             {expanded === r.id && (
               <div className="px-5 pb-4" style={{ borderTop: "1px solid rgba(0,0,0,0.05)" }}>
-                <p className="text-[12px] text-[#1a1c1c]/55 mt-3 mb-4 leading-relaxed">{r.description || "No description provided"}</p>
+                <p className="text-[12px] text-[#111827]/55 mt-3 mb-4 leading-relaxed">{r.description || "No description provided"}</p>
                 <div className="flex flex-wrap gap-2">
                   {r.status === "pending" && <>
                     <button onClick={() => update(r.id, "admin_review")}

@@ -18,6 +18,19 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ sel
     return NextResponse.json({ error: "Forbidden — seller outside your assigned state" }, { status: 403 })
   }
 
+  const { data: approval } = await db.from("seller_approvals")
+    .select("documents")
+    .eq("seller_id", sellerId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const documents = await Promise.all((Array.isArray(approval?.documents) ? approval.documents : []).map(async (document: { doc_type?: string; file_url?: string }) => {
+    const path = document?.file_url
+    if (!seller?.user_id || typeof path !== "string" || !path.startsWith(`${seller.user_id}/kyc/`) || path.includes("..")) return null
+    const { data: signedFile } = await db.storage.from("seller-documents").createSignedUrl(path, 15 * 60)
+    return signedFile?.signedUrl ? { doc_type: document.doc_type || "seller_document", url: signedFile.signedUrl, name: path.split("/").pop() || "Seller document" } : null
+  }))
+
   const totalRevenue = orders?.filter(o => o.payment_status === "paid").reduce((s, o) => s + (o.total || 0), 0) || 0
   const activeProducts = products?.filter(p => p.approval_status === "approved").length || 0
 
@@ -25,7 +38,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ sel
     seller,
     stats: { totalRevenue, totalOrders: orders?.length || 0, activeProducts, totalProducts: products?.length || 0 },
     products: products?.slice(0, 10) || [],
-    commission: commission || null
+    commission: commission || null,
+    documents: documents.filter(Boolean),
   })
 }
 

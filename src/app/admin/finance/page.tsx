@@ -71,8 +71,8 @@ export default function FinancePage() {
     <div className="p-7">
       {toast && (
         <div className="fixed top-6 right-6 z-50 ag-toast">
-          <div className="flex items-center gap-3 bg-[#1a1c1c] text-white text-sm font-semibold px-4 py-3 rounded-2xl shadow-2xl" style={{ borderLeft: "3px solid #fcd020" }}>
-            <Check size={14} className="text-[#fcd020]" /> {toast}
+          <div className="flex items-center gap-3 bg-[#111827] text-white text-sm font-semibold px-4 py-3 rounded-2xl shadow-2xl" style={{ borderLeft: "3px solid #FACC15" }}>
+            <Check size={14} className="text-[#FACC15]" /> {toast}
           </div>
         </div>
       )}
@@ -80,10 +80,10 @@ export default function FinancePage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 ag-slide-up">
         <div>
-          <h1 className="text-[22px] font-black text-[#1a1c1c] tracking-tight">Finance</h1>
-          <p className="text-[12px] text-[#1a1c1c]/40 mt-1">Settlements, payouts, and revenue tracking</p>
+          <h1 className="text-[22px] font-black text-[#111827] tracking-tight">Finance</h1>
+          <p className="text-[12px] text-[#111827]/40 mt-1">Settlements, payouts, and revenue tracking</p>
         </div>
-        <button onClick={load} className="w-9 h-9 rounded-xl ag-card flex items-center justify-center text-[#1a1c1c]/40 hover:text-[#1a1c1c] ag-btn">
+        <button onClick={load} className="w-9 h-9 rounded-xl ag-card flex items-center justify-center text-[#111827]/40 hover:text-[#111827] ag-btn">
           <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
         </button>
       </div>
@@ -93,10 +93,10 @@ export default function FinancePage() {
         {loading ? [...Array(4)].map((_, i) => <div key={i} className="rounded-2xl h-28 ag-shimmer" />) :
         KPI_CARDS.map((k, i) => (
           <div key={k.label} className="ag-card-stat rounded-2xl p-5" style={{ animationDelay: `${i * 60}ms` }}>
-            <k.icon size={15} className="text-[#1a1c1c]/30 mb-3" />
-            <p className="text-[22px] font-black text-[#1a1c1c] leading-none">{k.value}</p>
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#1a1c1c]/35 mt-1.5">{k.label}</p>
-            {k.sub && <p className="text-[10px] text-[#1a1c1c]/28 mt-0.5">{k.sub}</p>}
+            <k.icon size={15} className="text-[#111827]/30 mb-3" />
+            <p className="text-[22px] font-black text-[#111827] leading-none">{k.value}</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[#111827]/35 mt-1.5">{k.label}</p>
+            {k.sub && <p className="text-[10px] text-[#111827]/28 mt-0.5">{k.sub}</p>}
           </div>
         ))}
       </div>
@@ -105,7 +105,7 @@ export default function FinancePage() {
       <div className="flex gap-2 mb-5 ag-slide-up" style={{ animationDelay: "80ms" }}>
         {(["overview","settlements","sellers"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className="px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wide ag-btn transition-all capitalize"
-            style={tab === t ? { background: "#1a1c1c", color: "#fff" } : { background: "rgba(255,255,255,0.7)", color: "rgba(26,28,28,0.45)" }}>
+            style={tab === t ? { background: "#FFFFFF", color: "#111827", border: "1px solid #E5E7EB", boxShadow: "0 1px 2px rgba(17,24,39,0.08)" } : { background: "transparent", color: "#4B5563", border: "1px solid transparent" }}>
             {t}
           </button>
         ))}
@@ -121,7 +121,7 @@ export default function FinancePage() {
           ].map(s => (
             <div key={s.label} className="ag-card rounded-2xl p-6">
               <p className="text-[32px] font-black leading-none" style={{ color: s.color }}>{s.value}</p>
-              <p className="text-[10px] font-black uppercase tracking-widest text-[#1a1c1c]/35 mt-2">{s.label}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[#111827]/35 mt-2">{s.label}</p>
             </div>
           ))}
         </div>
@@ -135,7 +135,7 @@ export default function FinancePage() {
               <thead>
                 <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
                   {["Seller","State","Gross","Platform Fee","Net Payable","Status","Bank Ref","Mark Paid"].map(h => (
-                    <th key={h} className="text-left px-5 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#1a1c1c]/28 whitespace-nowrap">{h}</th>
+                    <th key={h} className="text-left px-5 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#111827]/28 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -145,22 +145,22 @@ export default function FinancePage() {
                     <td colSpan={8} className="px-5 py-3"><div className="h-3.5 ag-shimmer rounded" /></td>
                   </tr>
                 )) : settlements.length === 0 ? (
-                  <tr><td colSpan={8} className="px-5 py-12 text-center text-[12px] text-[#1a1c1c]/30">No settlements yet. Run missing-tables.sql to create the settlements table.</td></tr>
+                  <tr><td colSpan={8} className="px-5 py-12 text-center text-[12px] text-[#111827]/30">No settlements yet. Run missing-tables.sql to create the settlements table.</td></tr>
                 ) : settlements.map((s, i) => (
                   <tr key={s.id} className="ag-table-row ag-row-in" style={{ borderBottom: "1px solid rgba(0,0,0,0.03)", animationDelay: `${i * 30}ms` }}>
                     <td className="px-5 py-3 font-bold text-[13px]">{s.sellers?.business_name || "-"}</td>
-                    <td className="px-5 py-3 text-[11px] text-[#1a1c1c]/45">{s.sellers?.state || "-"}</td>
+                    <td className="px-5 py-3 text-[11px] text-[#111827]/45">{s.sellers?.state || "-"}</td>
                     <td className="px-5 py-3 font-bold text-[12px]">{formatCurrency(s.gross_amount)}</td>
                     <td className="px-5 py-3 text-[12px] text-red-600">{formatCurrency(s.platform_fee)}</td>
                     <td className="px-5 py-3 font-bold text-[12px] text-green-700">{formatCurrency(s.net_payable)}</td>
                     <td className="px-5 py-3">
                       <select value={s.status} onChange={e => updateSettlement(s.id, e.target.value)}
-                        className="text-[9.5px] font-black uppercase px-2 py-0.5 rounded-full focus:outline-none focus:ring-1 focus:ring-[#fcd020] cursor-pointer border-0 ag-btn"
+                        className="text-[9.5px] font-black uppercase px-2 py-0.5 rounded-full focus:outline-none focus:ring-1 focus:ring-[#FACC15] cursor-pointer border-0 ag-btn"
                         style={STATUS_PILL[s.status] || { background: "rgba(100,116,139,0.09)", color: "#475569" }}>
                         {["pending","processing","paid","held","disputed"].map(st => <option key={st} value={st}>{st}</option>)}
                       </select>
                     </td>
-                    <td className="px-5 py-3 text-[10px] font-mono text-[#1a1c1c]/35">{s.bank_reference || "—"}</td>
+                    <td className="px-5 py-3 text-[10px] font-mono text-[#111827]/35">{s.bank_reference || "—"}</td>
                     <td className="px-5 py-3">
                       {s.status === "pending" && (
                         <button onClick={() => updateSettlement(s.id, "paid")}
@@ -185,7 +185,7 @@ export default function FinancePage() {
               <thead>
                 <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
                   {["#","Seller","State","GMV","Platform Fee","Net Payable"].map(h => (
-                    <th key={h} className="text-left px-5 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#1a1c1c]/28">{h}</th>
+                    <th key={h} className="text-left px-5 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#111827]/28">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -195,12 +195,12 @@ export default function FinancePage() {
                     <td colSpan={6} className="px-5 py-3"><div className="h-3.5 ag-shimmer rounded" /></td>
                   </tr>
                 )) : sellers.length === 0 ? (
-                  <tr><td colSpan={6} className="px-5 py-12 text-center text-[12px] text-[#1a1c1c]/30">No paid orders yet</td></tr>
+                  <tr><td colSpan={6} className="px-5 py-12 text-center text-[12px] text-[#111827]/30">No paid orders yet</td></tr>
                 ) : sellers.map((s, i) => (
                   <tr key={s.id} className="ag-table-row ag-row-in" style={{ borderBottom: "1px solid rgba(0,0,0,0.03)", animationDelay: `${i * 30}ms` }}>
-                    <td className="px-5 py-3 text-[11px] text-[#1a1c1c]/28 font-black">{i + 1}</td>
+                    <td className="px-5 py-3 text-[11px] text-[#111827]/28 font-black">{i + 1}</td>
                     <td className="px-5 py-3 font-bold text-[13px]">{s.business_name}</td>
-                    <td className="px-5 py-3 text-[11px] text-[#1a1c1c]/45">{s.state}</td>
+                    <td className="px-5 py-3 text-[11px] text-[#111827]/45">{s.state}</td>
                     <td className="px-5 py-3 font-bold text-[12px]">{formatCurrency(s.gmv)}</td>
                     <td className="px-5 py-3 text-[12px] text-red-600">{formatCurrency(s.fee)}</td>
                     <td className="px-5 py-3 font-bold text-[12px] text-green-700">{formatCurrency(s.net)}</td>

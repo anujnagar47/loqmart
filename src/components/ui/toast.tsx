@@ -14,11 +14,11 @@ export function Toast({ message, type = "success", onDone }: { message: string; 
       <div
         className="flex items-center gap-3 text-white text-[13px] font-semibold px-4 py-3 rounded-2xl shadow-2xl max-w-sm"
         style={{
-          background: type === "error" ? "#b91c1c" : "#1a1c1c",
-          borderLeft: `3px solid ${type === "error" ? "#fecaca" : "#fcd020"}`,
+          background: type === "error" ? "#b91c1c" : "#111827",
+          borderLeft: `3px solid ${type === "error" ? "#fecaca" : "#FACC15"}`,
         }}
       >
-        {type === "error" ? <AlertCircle size={14} className="shrink-0" /> : <Check size={13} className="text-[#fcd020] shrink-0" />}
+        {type === "error" ? <AlertCircle size={14} className="shrink-0" /> : <Check size={13} className="text-[#FACC15] shrink-0" />}
         {message}
       </div>
     </div>

@@ -1,16 +1,18 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
-import { ShoppingCart, User, Menu, X, LogOut, ChevronDown, Package, Wallet, Heart, MapPin } from "lucide-react"
+import { ClipboardList, User, Menu, X, LogOut, ChevronDown, Package, Wallet, Heart, MapPin } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
-import { useCartStore } from "@/lib/store"
+import { useInquiryStore } from "@/lib/store"
 import { createClient } from "@/lib/supabase/client"
 import { CategoryMegaMenu } from "@/components/category-mega-menu"
 import { SearchBar } from "@/components/search-bar"
 import { useLanguage } from "@/lib/i18n/LanguageContext"
+import { CRAFT_CATEGORIES, craftSearchHref } from "@/lib/craft-taxonomy"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 export function Header() {
@@ -19,8 +21,8 @@ export function Header() {
   const { locale, setLocale, t } = useLanguage()
 
   const NAV = [
-    { name: t("nav.handmade"),     href: "/category?mode=handmade"     },
-    { name: t("nav.machineMade"), href: "/category?mode=machine_made" },
+    { name: t("nav.handmade"),     href: "/category?craft_type=handcrafted" },
+    { name: t("nav.machineMade"), href: "/category?craft_type=contemporary" },
     { name: t("nav.new"),          href: "/new"                        },
     { name: t("nav.bestSellers"), href: "/best-sellers"               },
     { name: t("nav.deals"),        href: "/deals"                      },
@@ -34,8 +36,8 @@ export function Header() {
   const [authUser,  setAuthUser]  = useState<SupabaseUser | null>(null)
   const [authReady, setAuthReady] = useState(false)
 
-  const cartItems = useCartStore((state) => state.items)
-  const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
+  const itemCount = useInquiryStore((state) => state.items.length)
+  const openInquiry = useInquiryStore((state) => state.openDrawer)
 
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -69,6 +71,15 @@ export function Header() {
     return () => document.removeEventListener("mousedown", handleClick)
   }, [])
 
+  // Keep the page behind the mobile drawer still while its single scroll area
+  // remains usable. Restoring the prior value preserves other layout behavior.
+  useEffect(() => {
+    if (!mobileOpen) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => { document.body.style.overflow = previousOverflow }
+  }, [mobileOpen])
+
   async function handleSignOut() {
     const supabase = createClient()
     await supabase.auth.signOut()
@@ -79,7 +90,7 @@ export function Header() {
   }
 
   const isActive = (href: string) => {
-    // Query-based nav items (Handmade/Machine-Made) can't be distinguished by
+    // Query-based craft-method nav items can't be distinguished by
     // pathname alone; avoid reading window/search-params during render since
     // that would mismatch between server and first client render.
     if (href.startsWith("/category?")) return false
@@ -90,15 +101,27 @@ export function Header() {
 
   return (
     <header className="fixed top-0 w-full z-50" style={{ fontFamily: "Inter, sans-serif" }}>
-      {/* Bar 1 — logo, search, account, cart */}
-      <div className="bg-[#fcd020] text-[#1a1c1c]">
-        <div className="flex items-center h-14 px-3 sm:px-4 lg:px-6 gap-2 sm:gap-3 lg:gap-5">
-          <Link href="/" className="text-xl sm:text-2xl font-black tracking-tighter shrink-0">
-            LoqMart
+      {/* Bar 1 — logo, search, account, inquiry list */}
+      <div className="relative bg-[#FACC15] text-[#111827]">
+        <div className="mx-auto flex h-14 max-w-7xl items-center gap-2 px-3 sm:gap-3 sm:px-4 lg:gap-5 lg:px-6">
+          <Link
+            href="/"
+            aria-label="LoqMart home"
+            className="flex h-11 shrink-0 items-center rounded-[4px] bg-white px-2.5 shadow-sm"
+          >
+            <Image
+              src="/loqmart-logo.png"
+              alt=""
+              width={1700}
+              height={500}
+              sizes="(max-width: 640px) 124px, 136px"
+              className="h-auto w-[124px] sm:w-[136px]"
+              priority
+            />
           </Link>
 
           <Link href="/india-map"
-            className="hidden md:flex flex-col leading-tight shrink-0 px-2 py-1 rounded-[4px] hover:bg-[#1a1c1c]/8 transition-colors">
+            className="hidden md:flex flex-col leading-tight shrink-0 px-2 py-1 rounded-[4px] hover:bg-[#111827]/8 transition-colors">
             <span className="text-[10px] opacity-60">{t("header.exploreBy")}</span>
             <span className="text-[13px] font-bold flex items-center gap-1"><MapPin className="w-3 h-3" />{t("header.state")}</span>
           </Link>
@@ -108,7 +131,7 @@ export function Header() {
           </div>
 
           <button
-            className="lg:hidden ml-auto p-2 rounded-[4px] hover:bg-[#1a1c1c]/10 transition-colors"
+            className="lg:hidden ml-auto p-2 rounded-[4px] hover:bg-[#111827]/10 transition-colors"
             onClick={() => setSearchOpen(o => !o)}
             aria-label="Search"
           >
@@ -118,25 +141,25 @@ export function Header() {
           <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
             <button
               onClick={() => setLocale(locale === "en" ? "hi" : "en")}
-              className="hidden sm:flex items-center bg-[#1a1c1c]/10 rounded-[4px] p-0.5 text-[11px] font-black shrink-0"
+              className="hidden sm:flex items-center bg-[#111827]/10 rounded-[4px] p-0.5 text-[11px] font-black shrink-0"
               aria-label={t("header.language")}
             >
-              <span className={cn("px-2 py-1 rounded-[3px] transition-colors", locale === "en" ? "bg-white text-[#1a1c1c]" : "text-[#1a1c1c]/50")}>EN</span>
-              <span className={cn("px-2 py-1 rounded-[3px] transition-colors", locale === "hi" ? "bg-white text-[#1a1c1c]" : "text-[#1a1c1c]/50")}>हिं</span>
+              <span className={cn("px-2 py-1 rounded-[3px] transition-colors", locale === "en" ? "bg-white text-[#111827]" : "text-[#111827]/50")}>EN</span>
+              <span className={cn("px-2 py-1 rounded-[3px] transition-colors", locale === "hi" ? "bg-white text-[#111827]" : "text-[#111827]/50")}>हिं</span>
             </button>
 
-            <Link href="/account?tab=wishlist" className="hidden sm:flex p-2 rounded-[4px] hover:bg-[#1a1c1c]/10 transition-colors" aria-label={t("header.wishlist")}>
+            <Link href="/account?tab=wishlist" className="hidden sm:flex p-2 rounded-[4px] hover:bg-[#111827]/10 transition-colors" aria-label={t("header.wishlist")}>
               <Heart className="w-5 h-5" />
             </Link>
 
             {/* Account — Amazon-style two-line block */}
             <div className="relative" ref={dropdownRef}>
               {!authReady ? (
-                <div className="w-24 h-9 rounded-[4px] bg-[#1a1c1c]/10 animate-pulse" />
+                <div className="w-24 h-9 rounded-[4px] bg-[#111827]/10 animate-pulse" />
               ) : (
                 <button
-                  onClick={() => authUser ? setUserOpen(o => !o) : router.push("/auth")}
-                  className="flex flex-col items-start leading-tight px-2 py-1 rounded-[4px] hover:bg-[#1a1c1c]/10 transition-colors"
+                  onClick={() => authUser ? setUserOpen(o => !o) : router.push("/login")}
+                  className="flex flex-col items-start leading-tight px-2 py-1 rounded-[4px] hover:bg-[#111827]/10 transition-colors"
                   aria-label={t("header.account")}
                 >
                   <span className="text-[10px] opacity-60 hidden sm:block">{t("header.hello")} {authUser ? firstName : t("header.signIn")}</span>
@@ -155,10 +178,10 @@ export function Header() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -8, scale: 0.96 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-full mt-2 w-56 bg-white rounded-[4px] shadow-xl border border-[#1a1c1c]/10 py-1 z-50">
-                    <div className="px-4 py-3 border-b border-[#1a1c1c]/8">
-                      <p className="text-xs font-black text-[#1a1c1c]/50 uppercase tracking-wider">{t("header.signedInAs")}</p>
-                      <p className="text-sm font-bold text-[#1a1c1c] mt-0.5 truncate">{authUser.email}</p>
+                    className="absolute right-0 top-full mt-2 w-56 bg-white rounded-[4px] shadow-xl border border-[#111827]/10 py-1 z-50">
+                    <div className="px-4 py-3 border-b border-[#111827]/8">
+                      <p className="text-xs font-black text-[#111827]/50 uppercase tracking-wider">{t("header.signedInAs")}</p>
+                      <p className="text-sm font-bold text-[#111827] mt-0.5 truncate">{authUser.email}</p>
                     </div>
                     {[
                       { href: "/account",             icon: User,    label: t("header.myAccount") },
@@ -170,13 +193,13 @@ export function Header() {
                         key={href}
                         href={href}
                         onClick={() => setUserOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#1a1c1c] hover:bg-[#fcd020]/20 transition-colors"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#111827] hover:bg-[#FACC15]/20 transition-colors"
                       >
-                        <Icon className="w-4 h-4 text-[#1a1c1c]/50" />
+                        <Icon className="w-4 h-4 text-[#111827]/50" />
                         {label}
                       </Link>
                     ))}
-                    <div className="border-t border-[#1a1c1c]/8 mt-1 pt-1">
+                    <div className="border-t border-[#111827]/8 mt-1 pt-1">
                       <button
                         onClick={handleSignOut}
                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left"
@@ -190,9 +213,9 @@ export function Header() {
               </AnimatePresence>
             </div>
 
-            <Link href="/cart" className="relative flex items-center gap-1.5 p-2 rounded-[4px] hover:bg-[#1a1c1c]/10 transition-colors" aria-label={t("header.cart")}>
+            <button type="button" onClick={openInquiry} className="relative flex items-center gap-1.5 p-2 rounded-[4px] hover:bg-[#111827]/10 transition-colors" aria-label="Open inquiry list">
               <motion.div whileTap={{ scale: 0.88 }} className="relative">
-                <ShoppingCart className="w-5 h-5" />
+                <ClipboardList className="w-5 h-5" />
                 <AnimatePresence>
                   {itemCount > 0 && (
                     <motion.span
@@ -208,11 +231,11 @@ export function Header() {
                   )}
                 </AnimatePresence>
               </motion.div>
-              <span className="text-[13px] font-bold hidden sm:inline">{t("header.cart")}</span>
-            </Link>
+              <span className="text-[13px] font-bold hidden sm:inline">Inquiry</span>
+            </button>
 
             <button
-              className="lg:hidden p-2 rounded-[4px] hover:bg-[#1a1c1c]/10 transition-colors"
+              className="lg:hidden p-2 rounded-[4px] hover:bg-[#111827]/10 transition-colors"
               onClick={() => setMobileOpen(o => !o)}
               aria-label="Menu"
             >
@@ -223,15 +246,15 @@ export function Header() {
 
         {/* Mobile search row */}
         {searchOpen && (
-          <div className="lg:hidden px-3 pb-3">
+          <div className="absolute left-0 right-0 top-full z-50 bg-[#FACC15] px-3 pb-3 shadow-md lg:hidden">
             <SearchBar variant="mobile" autoFocus onNavigate={() => setSearchOpen(false)} />
           </div>
         )}
       </div>
 
       {/* Bar 2 — category + nav links, dark, desktop only */}
-      <div className="hidden lg:block bg-[#1a1c1c]">
-        <div className="flex items-center h-10 px-6 gap-5">
+      <div className="hidden lg:block bg-[#111827]">
+        <div className="mx-auto flex h-10 max-w-7xl items-center gap-5 px-6">
           <CategoryMegaMenu dark active={path === "/category"} />
           {NAV.map((item) => (
             <Link
@@ -250,47 +273,72 @@ export function Header() {
 
       {/* Mobile menu drawer */}
       {mobileOpen && (
-        <div className="lg:hidden bg-[#fcd020] border-t border-[#1a1c1c]/10">
-          <nav className="flex flex-col px-6 py-4 gap-1">
+        <div className="fixed inset-x-0 top-14 bottom-16 z-40 touch-pan-y overflow-y-auto overscroll-contain border-t border-[#111827]/10 bg-[#FACC15] lg:hidden" style={{ WebkitOverflowScrolling: "touch" }}>
+          <nav className="flex min-h-full flex-col gap-1 px-6 py-4">
             <Link href="/category" onClick={() => setMobileOpen(false)}
-              className="py-2.5 text-sm font-black border-b border-[#1a1c1c]/8">
+              className="py-2.5 text-sm font-black border-b border-[#111827]/8">
               {t("header.allCategories")}
             </Link>
 
+            <div className="border-b border-[#111827]/10 py-2">
+              <p className="pb-1 text-[10px] font-black uppercase tracking-widest text-[#111827]/50">Shop by craft</p>
+              <div>
+                {CRAFT_CATEGORIES.map(category => (
+                  <details key={category.slug} className="border-b border-[#111827]/10 last:border-0">
+                    <summary className="cursor-pointer py-2.5 text-sm font-semibold text-[#111827]">
+                      {category.name}
+                    </summary>
+                    <div className="grid grid-cols-2 gap-x-2 pb-2 pl-2">
+                      <Link href={craftSearchHref(category.searchTerms)} onClick={() => setMobileOpen(false)}
+                        className="col-span-2 px-2 py-1.5 text-xs font-semibold text-[#111827]">
+                        Browse {category.name}
+                      </Link>
+                      {category.subcategories.map(subcategory => (
+                        <Link key={subcategory} href={craftSearchHref(subcategory)} onClick={() => setMobileOpen(false)}
+                          className="px-2 py-1.5 text-xs text-[#111827]/70">
+                          {subcategory}
+                        </Link>
+                      ))}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </div>
+
             <button
               onClick={() => setLocale(locale === "en" ? "hi" : "en")}
-              className="flex items-center gap-2 py-2.5 text-sm font-semibold text-[#1a1c1c]/70 border-b border-[#1a1c1c]/8"
+              className="flex items-center gap-2 py-2.5 text-sm font-semibold text-[#111827]/70 border-b border-[#111827]/8"
             >
-              <span className={locale === "en" ? "font-black text-[#1a1c1c]" : ""}>EN</span>
+              <span className={locale === "en" ? "font-black text-[#111827]" : ""}>EN</span>
               <span>/</span>
-              <span className={locale === "hi" ? "font-black text-[#1a1c1c]" : ""}>हिंदी</span>
+              <span className={locale === "hi" ? "font-black text-[#111827]" : ""}>हिंदी</span>
             </button>
             {NAV.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "py-2.5 text-sm font-semibold border-b border-[#1a1c1c]/8 last:border-0",
-                  isActive(item.href) ? "text-[#1a1c1c] font-black" : "text-[#1a1c1c]/70"
+                  "py-2.5 text-sm font-semibold border-b border-[#111827]/8 last:border-0",
+                  isActive(item.href) ? "text-[#111827] font-black" : "text-[#111827]/70"
                 )}
                 onClick={() => setMobileOpen(false)}
               >
                 {item.name}
               </Link>
             ))}
-            <div className="pt-3 mt-2 border-t border-[#1a1c1c]/15 flex flex-col gap-1">
+            <div className="pt-3 mt-2 border-t border-[#111827]/15 flex flex-col gap-1">
               {authUser ? (
                 <>
                   <Link href="/account" onClick={() => setMobileOpen(false)}
-                    className="py-2.5 text-sm font-semibold text-[#1a1c1c]/70">
+                    className="py-2.5 text-sm font-semibold text-[#111827]/70">
                     {t("header.myAccount")}
                   </Link>
                   <Link href="/account?tab=wishlist" onClick={() => setMobileOpen(false)}
-                    className="py-2.5 text-sm font-semibold text-[#1a1c1c]/70">
+                    className="py-2.5 text-sm font-semibold text-[#111827]/70">
                     {t("header.wishlist")}
                   </Link>
                   <Link href="/account?tab=orders" onClick={() => setMobileOpen(false)}
-                    className="py-2.5 text-sm font-semibold text-[#1a1c1c]/70">
+                    className="py-2.5 text-sm font-semibold text-[#111827]/70">
                     {t("header.myOrders")}
                   </Link>
                   <button onClick={() => { handleSignOut(); setMobileOpen(false) }}
@@ -299,13 +347,13 @@ export function Header() {
                   </button>
                 </>
               ) : (
-                <Link href="/auth" onClick={() => setMobileOpen(false)}
-                  className="py-2.5 text-sm font-bold text-[#1a1c1c]">
+                <Link href="/login" onClick={() => setMobileOpen(false)}
+                  className="py-2.5 text-sm font-bold text-[#111827]">
                   {t("header.signInRegister")}
                 </Link>
               )}
               <Link href="/seller/register" onClick={() => setMobileOpen(false)}
-                className="py-2.5 text-sm font-semibold text-[#1a1c1c]/70">
+                className="py-2.5 text-sm font-semibold text-[#111827]/70">
                 {t("header.becomeSeller")}
               </Link>
             </div>

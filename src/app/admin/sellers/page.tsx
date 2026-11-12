@@ -24,6 +24,7 @@ interface SellerDetail {
   stats: { totalRevenue: number; totalOrders: number; activeProducts: number; totalProducts: number }
   products: Array<{ id: string; name: string; approval_status: string; price: number; stock: number; sold_count: number }>
   commission?: CommissionSetting | null
+  documents?: Array<{ doc_type: string; url: string; name: string }>
 }
 
 const STATUS_BG: Record<string, { bg: string; text: string }> = {
@@ -234,8 +235,8 @@ export default function SellersPage() {
     <div className="p-7">
       {toast && (
         <div className="fixed top-6 right-6 z-50 ag-toast">
-          <div className="flex items-center gap-3 bg-[#1a1c1c] text-white text-sm font-semibold px-4 py-3 rounded-2xl shadow-2xl" style={{ borderLeft: "3px solid #fcd020" }}>
-            <Check size={14} className="text-[#fcd020]" /> {toast}
+          <div className="flex items-center gap-3 bg-[#111827] text-white text-sm font-semibold px-4 py-3 rounded-2xl shadow-2xl" style={{ borderLeft: "3px solid #FACC15" }}>
+            <Check size={14} className="text-[#FACC15]" /> {toast}
           </div>
         </div>
       )}
@@ -243,10 +244,10 @@ export default function SellersPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 ag-slide-up">
         <div>
-          <h1 className="text-[22px] font-black text-[#1a1c1c] tracking-tight">Sellers</h1>
-          <p className="text-[12px] text-[#1a1c1c]/40 mt-1">{sellers.length} total · {counts.pending} pending · {counts.approved} approved</p>
+          <h1 className="text-[22px] font-black text-[#111827] tracking-tight">Sellers</h1>
+          <p className="text-[12px] text-[#111827]/40 mt-1">{sellers.length} total · {counts.pending} pending · {counts.approved} approved</p>
         </div>
-        <button onClick={load} className="w-9 h-9 rounded-xl ag-card flex items-center justify-center text-[#1a1c1c]/40 hover:text-[#1a1c1c] ag-btn">
+        <button onClick={load} className="w-9 h-9 rounded-xl ag-card flex items-center justify-center text-[#111827]/40 hover:text-[#111827] ag-btn">
           <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
         </button>
       </div>
@@ -256,8 +257,8 @@ export default function SellersPage() {
         {(["all", "approved", "pending", "rejected"] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)} className="px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wide ag-btn transition-all"
             style={filter === f
-              ? { background: "#1a1c1c", color: "#fff" }
-              : { background: "rgba(255,255,255,0.7)", color: "rgba(26,28,28,0.45)" }}>
+              ? { background: "#FFFFFF", color: "#111827", border: "1px solid #E5E7EB", boxShadow: "0 1px 2px rgba(17,24,39,0.08)" }
+              : { background: "transparent", color: "#4B5563", border: "1px solid transparent" }}>
             {f} ({counts[f]})
           </button>
         ))}
@@ -265,9 +266,9 @@ export default function SellersPage() {
 
       {/* Search */}
       <div className="relative mb-5 ag-slide-up" style={{ animationDelay: "80ms" }}>
-        <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#1a1c1c]/30 pointer-events-none" />
+        <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#111827]/30 pointer-events-none" />
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search business name, owner, or state..."
-          className="w-full pl-9 pr-4 py-2.5 rounded-xl text-[13px] text-[#1a1c1c] placeholder:text-[#1a1c1c]/30 focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+          className="w-full pl-9 pr-4 py-2.5 rounded-xl text-[13px] text-[#111827] placeholder:text-[#111827]/30 focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
           style={{ background: "rgba(255,255,255,0.75)", border: "1px solid rgba(0,0,0,0.07)" }} />
       </div>
 
@@ -278,7 +279,7 @@ export default function SellersPage() {
             <thead>
               <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
                 {["","Business","Owner","State","GSTIN","Swadeshi Rank","Status","Joined","Actions"].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#1a1c1c]/28 whitespace-nowrap">{h}</th>
+                  <th key={h} className="text-left px-4 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#111827]/28 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -288,23 +289,23 @@ export default function SellersPage() {
                   <td colSpan={9} className="px-5 py-3"><div className="h-3.5 ag-shimmer rounded" /></td>
                 </tr>
               )) : filtered.length === 0 ? (
-                <tr><td colSpan={9} className="px-5 py-12 text-center text-[12px] text-[#1a1c1c]/30">No sellers found</td></tr>
+                <tr><td colSpan={9} className="px-5 py-12 text-center text-[12px] text-[#111827]/30">No sellers found</td></tr>
               ) : filtered.map((s, i) => (
                 <React.Fragment key={s.id}>
                   <tr className="ag-table-row ag-row-in cursor-pointer"
                     style={{ borderBottom: expanded === s.id ? "none" : "1px solid rgba(0,0,0,0.03)", animationDelay: `${i * 35}ms` }}
                     onClick={() => toggleExpand(s.id)}>
                     <td className="px-4 py-3">
-                      <ChevronDown size={12} className="text-[#1a1c1c]/25 transition-transform"
+                      <ChevronDown size={12} className="text-[#111827]/25 transition-transform"
                         style={{ transform: expanded === s.id ? "rotate(180deg)" : "" }} />
                     </td>
-                    <td className="px-4 py-3 font-bold text-[#1a1c1c] text-[13px]">{s.business_name}</td>
-                    <td className="px-4 py-3 text-[12px] text-[#1a1c1c]/55">{s.owner_name}</td>
-                    <td className="px-4 py-3 text-[12px] text-[#1a1c1c]/50">{s.state || "-"}</td>
-                    <td className="px-4 py-3 font-mono text-[11px] text-[#1a1c1c]/40">{s.gstin || "-"}</td>
+                    <td className="px-4 py-3 font-bold text-[#111827] text-[13px]">{s.business_name}</td>
+                    <td className="px-4 py-3 text-[12px] text-[#111827]/55">{s.owner_name}</td>
+                    <td className="px-4 py-3 text-[12px] text-[#111827]/50">{s.state || "-"}</td>
+                    <td className="px-4 py-3 font-mono text-[11px] text-[#111827]/40">{s.gstin || "-"}</td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <select value={s.swadeshi_rank ?? ""} onChange={e => updateRank(s.id, e.target.value === "" ? null : Number(e.target.value))}
-                        className="text-[11px] font-bold rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#fcd020] ag-btn"
+                        className="text-[11px] font-bold rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#FACC15] ag-btn"
                         style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }}>
                         <option value="">None</option>
                         {[1,2,3,4,5].map(r => <option key={r} value={r}>Rank {r}</option>)}
@@ -316,9 +317,9 @@ export default function SellersPage() {
                           style={{ background: STATUS_BG[s.approval_status].bg, color: STATUS_BG[s.approval_status].text }}>
                           {s.approval_status}
                         </span>
-                      ) : <span className="text-[9.5px] text-[#1a1c1c]/40">{s.approval_status}</span>}
+                      ) : <span className="text-[9.5px] text-[#111827]/40">{s.approval_status}</span>}
                     </td>
-                    <td className="px-4 py-3 text-[11px] text-[#1a1c1c]/35">{new Date(s.created_at).toLocaleDateString("en-IN")}</td>
+                    <td className="px-4 py-3 text-[11px] text-[#111827]/35">{new Date(s.created_at).toLocaleDateString("en-IN")}</td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <div className="flex gap-1">
                         {s.approval_status !== "approved" && (
@@ -339,7 +340,7 @@ export default function SellersPage() {
 
                   {expanded === s.id && (
                     <tr key={`${s.id}-detail`}>
-                      <td colSpan={9} style={{ borderBottom: "1px solid rgba(0,0,0,0.05)", background: "rgba(252,208,32,0.025)" }}>
+                      <td colSpan={9} style={{ borderBottom: "1px solid rgba(0,0,0,0.05)", background: "rgba(250,204,21,0.025)" }}>
                         {loadingDetail === s.id ? (
                           <div className="px-8 py-5 space-y-2">
                             {[...Array(2)].map((_, i) => <div key={i} className="h-3 ag-shimmer rounded" />)}
@@ -358,8 +359,8 @@ export default function SellersPage() {
                                   { label: "Total Products",   value: stats.totalProducts },
                                 ].map(st => (
                                   <div key={st.label} className="p-3 rounded-xl" style={{ background: "rgba(0,0,0,0.04)" }}>
-                                    <p className="text-[16px] font-black text-[#1a1c1c]">{st.value}</p>
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-[#1a1c1c]/35 mt-1">{st.label}</p>
+                                    <p className="text-[16px] font-black text-[#111827]">{st.value}</p>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-[#111827]/35 mt-1">{st.label}</p>
                                   </div>
                                 ))}
                               </div>
@@ -367,50 +368,50 @@ export default function SellersPage() {
                               {/* Details grid */}
                               <div className="grid grid-cols-4 gap-6 mb-5">
                                 <div>
-                                  <p className="text-[9px] font-black uppercase tracking-widest text-[#1a1c1c]/28 mb-2">Contact</p>
-                                  <p className="text-[12px] text-[#1a1c1c]/70">{sd.phone || "Not provided"}</p>
-                                  {sd.address && <p className="text-[11px] text-[#1a1c1c]/45 mt-0.5">{sd.address}</p>}
-                                  {sd.city && <p className="text-[11px] text-[#1a1c1c]/45">{sd.city}, {sd.pincode}</p>}
+                                  <p className="text-[9px] font-black uppercase tracking-widest text-[#111827]/28 mb-2">Contact</p>
+                                  <p className="text-[12px] text-[#111827]/70">{sd.phone || "Not provided"}</p>
+                                  {sd.address && <p className="text-[11px] text-[#111827]/45 mt-0.5">{sd.address}</p>}
+                                  {sd.city && <p className="text-[11px] text-[#111827]/45">{sd.city}, {sd.pincode}</p>}
                                 </div>
                                 <div>
-                                  <p className="text-[9px] font-black uppercase tracking-widest text-[#1a1c1c]/28 mb-2">Business Details</p>
-                                  <p className="text-[11px] text-[#1a1c1c]/50">PAN: <span className="font-mono">{sd.pan || "—"}</span></p>
-                                  <p className="text-[11px] text-[#1a1c1c]/50">GSTIN: <span className="font-mono">{sd.gstin || "—"}</span></p>
-                                  <p className="text-[11px] text-[#1a1c1c]/50">Trust Score: {sd.trust_score ?? "—"}</p>
-                                  <p className="text-[11px] text-[#1a1c1c]/50">Swadeshi Score: {sd.swadeshi_score ?? "—"}</p>
+                                  <p className="text-[9px] font-black uppercase tracking-widest text-[#111827]/28 mb-2">Business Details</p>
+                                  <p className="text-[11px] text-[#111827]/50">PAN: <span className="font-mono">{sd.pan || "—"}</span></p>
+                                  <p className="text-[11px] text-[#111827]/50">GSTIN: <span className="font-mono">{sd.gstin || "—"}</span></p>
+                                  <p className="text-[11px] text-[#111827]/50">Trust Score: {sd.trust_score ?? "—"}</p>
+                                  <p className="text-[11px] text-[#111827]/50">Swadeshi Score: {sd.swadeshi_score ?? "—"}</p>
                                 </div>
                                 <div>
-                                  <p className="text-[9px] font-black uppercase tracking-widest text-[#1a1c1c]/28 mb-2">Bank</p>
-                                  <p className="text-[11px] text-[#1a1c1c]/50">A/C: {sd.bank_account_number ? "••••" + sd.bank_account_number.slice(-4) : "Not provided"}</p>
-                                  <p className="text-[11px] text-[#1a1c1c]/50">IFSC: <span className="font-mono">{sd.bank_ifsc || "—"}</span></p>
+                                  <p className="text-[9px] font-black uppercase tracking-widest text-[#111827]/28 mb-2">Bank</p>
+                                  <p className="text-[11px] text-[#111827]/50">A/C: {sd.bank_account_number ? "••••" + sd.bank_account_number.slice(-4) : "Not provided"}</p>
+                                  <p className="text-[11px] text-[#111827]/50">IFSC: <span className="font-mono">{sd.bank_ifsc || "—"}</span></p>
                                 </div>
                                 <div>
-                                  <p className="text-[9px] font-black uppercase tracking-widest text-[#1a1c1c]/28 mb-2">Commission Settings</p>
+                                  <p className="text-[9px] font-black uppercase tracking-widest text-[#111827]/28 mb-2">Commission Settings</p>
                                   {editingCommissionSellerId === sd.id ? (
                                     <div className="space-y-2 mt-1">
                                       <div className="flex gap-2">
                                         <div className="w-1/2">
-                                          <label className="text-[8px] font-black uppercase text-[#1a1c1c]/40 block mb-0.5">Platform %</label>
+                                          <label className="text-[8px] font-black uppercase text-[#111827]/40 block mb-0.5">Platform %</label>
                                           <input type="number" min="0" max="30" step="0.5" value={editRate} onChange={e => setEditRate(e.target.value)}
-                                            className="w-full px-2 py-1 rounded text-[11px] font-bold focus:outline-none focus:ring-1 focus:ring-[#fcd020]"
+                                            className="w-full px-2 py-1 rounded text-[11px] font-bold focus:outline-none focus:ring-1 focus:ring-[#FACC15]"
                                             style={{ border: "1px solid rgba(0,0,0,0.1)", background: "white" }} />
                                         </div>
                                         <div className="w-1/2">
-                                          <label className="text-[8px] font-black uppercase text-[#1a1c1c]/40 block mb-0.5">Gateway %</label>
+                                          <label className="text-[8px] font-black uppercase text-[#111827]/40 block mb-0.5">Gateway %</label>
                                           <input type="number" min="0" max="10" step="0.1" value={editGatewayRate} onChange={e => setEditGatewayRate(e.target.value)}
-                                            className="w-full px-2 py-1 rounded text-[11px] font-bold focus:outline-none focus:ring-1 focus:ring-[#fcd020]"
+                                            className="w-full px-2 py-1 rounded text-[11px] font-bold focus:outline-none focus:ring-1 focus:ring-[#FACC15]"
                                             style={{ border: "1px solid rgba(0,0,0,0.1)", background: "white" }} />
                                         </div>
                                       </div>
                                       <div>
-                                        <label className="text-[8px] font-black uppercase text-[#1a1c1c]/40 block mb-0.5">Notes</label>
+                                        <label className="text-[8px] font-black uppercase text-[#111827]/40 block mb-0.5">Notes</label>
                                         <input type="text" placeholder="Reason..." value={editNotes} onChange={e => setEditNotes(e.target.value)}
-                                          className="w-full px-2 py-1 rounded text-[11px] focus:outline-none focus:ring-1 focus:ring-[#fcd020]"
+                                          className="w-full px-2 py-1 rounded text-[11px] focus:outline-none focus:ring-1 focus:ring-[#FACC15]"
                                           style={{ border: "1px solid rgba(0,0,0,0.1)", background: "white" }} />
                                       </div>
                                       <div className="flex gap-2 pt-1">
                                         <button onClick={() => updateCommission(sd.id)} disabled={savingCommission}
-                                          className="px-2.5 py-1 text-[10px] font-black rounded bg-[#1a1c1c] text-white hover:bg-black disabled:opacity-50 cursor-pointer">
+                                          className="px-2.5 py-1 text-[10px] font-black rounded bg-[#111827] text-white hover:bg-black disabled:opacity-50 cursor-pointer">
                                           {savingCommission ? "Saving..." : "Save"}
                                         </button>
                                         <button onClick={cancelEditingCommission}
@@ -422,22 +423,22 @@ export default function SellersPage() {
                                   ) : d.commission ? (
                                     <div className="space-y-1">
                                       <div className="flex items-baseline gap-2">
-                                        <span className="text-[14px] font-black text-[#1a1c1c]">{d.commission.rate}%</span>
-                                        <span className="text-[11px] text-[#1a1c1c]/55">Platform Fee</span>
+                                        <span className="text-[14px] font-black text-[#111827]">{d.commission.rate}%</span>
+                                        <span className="text-[11px] text-[#111827]/55">Platform Fee</span>
                                       </div>
                                       <div className="flex items-baseline gap-2">
-                                        <span className="text-[12px] font-bold text-[#1a1c1c]/55">{d.commission.gateway_rate}%</span>
-                                        <span className="text-[10px] text-[#1a1c1c]/40">Gateway Fee</span>
+                                        <span className="text-[12px] font-bold text-[#111827]/55">{d.commission.gateway_rate}%</span>
+                                        <span className="text-[10px] text-[#111827]/40">Gateway Fee</span>
                                       </div>
                                       <div className="text-[11px] text-green-700 font-bold">
                                         Net: {(100 - d.commission.rate - d.commission.gateway_rate).toFixed(1)}% to seller
                                       </div>
                                       {d.commission.notes && (
-                                        <p className="text-[10.5px] text-[#1a1c1c]/40 mt-1 italic font-medium">Note: {d.commission.notes}</p>
+                                        <p className="text-[10.5px] text-[#111827]/40 mt-1 italic font-medium">Note: {d.commission.notes}</p>
                                       )}
                                       <div className="flex gap-2 mt-2">
                                         <button onClick={() => startEditingCommission(sd.id, d.commission)}
-                                          className="text-[10px] font-bold text-blue-600 hover:underline cursor-pointer">
+                                          className="text-[10px] font-bold text-primary hover:underline cursor-pointer">
                                           Edit Override
                                         </button>
                                         <span className="text-gray-300">|</span>
@@ -449,9 +450,9 @@ export default function SellersPage() {
                                     </div>
                                   ) : (
                                     <div>
-                                      <p className="text-[11px] text-[#1a1c1c]/40">Using default/global commission rates.</p>
+                                      <p className="text-[11px] text-[#111827]/40">Using default/global commission rates.</p>
                                       <button onClick={() => startEditingCommission(sd.id, null)}
-                                        className="text-[10px] font-bold text-blue-600 hover:underline mt-2 cursor-pointer">
+                                        className="text-[10px] font-bold text-primary hover:underline mt-2 cursor-pointer">
                                         Set Custom Override
                                       </button>
                                     </div>
@@ -459,11 +460,26 @@ export default function SellersPage() {
                                 </div>
                               </div>
 
+                              {Boolean(d.documents && d.documents.length > 0) && (
+                                <section className="mb-5">
+                                  <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-[#111827]/45">KYC documents</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {d.documents?.map((document: { doc_type: string; url: string; name: string }) => (
+                                      <a key={`${document.doc_type}-${document.name}`} href={document.url} target="_blank" rel="noreferrer"
+                                        className="inline-flex items-center gap-2 rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-xs font-semibold text-[#111827] hover:bg-[#FBF9F5]">
+                                        <span>{document.doc_type.replace(/_/g, " ")}</span>
+                                        <span className="text-[#4B5563]">View</span>
+                                      </a>
+                                    ))}
+                                  </div>
+                                </section>
+                              )}
+
                               {/* Description */}
                               {sd.description && (
                                 <div className="mb-5">
-                                  <p className="text-[9px] font-black uppercase tracking-widest text-[#1a1c1c]/28 mb-1">Store Description</p>
-                                  <p className="text-[12px] text-[#1a1c1c]/60 leading-relaxed">{sd.description}</p>
+                                  <p className="text-[9px] font-black uppercase tracking-widest text-[#111827]/28 mb-1">Store Description</p>
+                                  <p className="text-[12px] text-[#111827]/60 leading-relaxed">{sd.description}</p>
                                 </div>
                               )}
 
@@ -478,19 +494,19 @@ export default function SellersPage() {
                               {/* Top products */}
                               {products.length > 0 && (
                                 <div>
-                                  <p className="text-[9px] font-black uppercase tracking-widest text-[#1a1c1c]/28 mb-2">Top Products</p>
+                                  <p className="text-[9px] font-black uppercase tracking-widest text-[#111827]/28 mb-2">Top Products</p>
                                   <div className="flex flex-wrap gap-2">
                                     {products.slice(0, 8).map(p => (
                                       <div key={p.id} className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
                                         style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.06)" }}>
-                                        <span className="text-[11px] font-semibold text-[#1a1c1c]/70 max-w-[150px] truncate">{p.name}</span>
+                                        <span className="text-[11px] font-semibold text-[#111827]/70 max-w-[150px] truncate">{p.name}</span>
                                         <span className="text-[9.5px] font-black px-1.5 py-0.5 rounded-full"
                                           style={STATUS_BG[p.approval_status]
                                             ? { background: STATUS_BG[p.approval_status].bg, color: STATUS_BG[p.approval_status].text }
                                             : { background: "rgba(100,116,139,0.09)", color: "#475569" }}>
                                           {p.approval_status}
                                         </span>
-                                        <span className="text-[9.5px] text-[#1a1c1c]/35">{formatCurrency(p.price)}</span>
+                                        <span className="text-[9.5px] text-[#111827]/35">{formatCurrency(p.price)}</span>
                                       </div>
                                     ))}
                                   </div>
@@ -499,7 +515,7 @@ export default function SellersPage() {
                             </div>
                           )
                         })() : (
-                          <div className="px-8 py-5 text-[11px] text-[#1a1c1c]/30">Failed to load seller details</div>
+                          <div className="px-8 py-5 text-[11px] text-[#111827]/30">Failed to load seller details</div>
                         )}
                       </td>
                     </tr>
@@ -510,7 +526,7 @@ export default function SellersPage() {
           </table>
         </div>
         {filtered.length > 0 && (
-          <div className="px-5 py-3 text-[10.5px] text-[#1a1c1c]/28 font-medium" style={{ borderTop: "1px solid rgba(0,0,0,0.04)" }}>
+          <div className="px-5 py-3 text-[10.5px] text-[#111827]/28 font-medium" style={{ borderTop: "1px solid rgba(0,0,0,0.04)" }}>
             {filtered.length} of {sellers.length} sellers · Click a row to expand details
           </div>
         )}
@@ -520,28 +536,28 @@ export default function SellersPage() {
       {approvingSellerId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-gray-100 ag-slide-up">
-            <h3 className="text-[16px] font-black text-[#1a1c1c] mb-1">Approve Seller Account</h3>
-            <p className="text-[12px] text-[#1a1c1c]/50 mb-5 font-semibold">Set the platform and gateway commissions for this seller.</p>
+            <h3 className="text-[16px] font-black text-[#111827] mb-1">Approve Seller Account</h3>
+            <p className="text-[12px] text-[#111827]/50 mb-5 font-semibold">Set the platform and gateway commissions for this seller.</p>
             
             <div className="space-y-4 mb-6">
               <div className="flex gap-4">
                 <div className="w-1/2">
-                  <label className="text-[9.5px] font-black uppercase tracking-wide text-[#1a1c1c]/40 block mb-1.5">Platform Fee %</label>
+                  <label className="text-[9.5px] font-black uppercase tracking-wide text-[#111827]/40 block mb-1.5">Platform Fee %</label>
                   <input type="number" min="0" max="30" step="0.5" value={approveRate} onChange={e => setApproveRate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl text-[13px] font-bold focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+                    className="w-full px-3 py-2 rounded-xl text-[13px] font-bold focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
                     style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }} />
                 </div>
                 <div className="w-1/2">
-                  <label className="text-[9.5px] font-black uppercase tracking-wide text-[#1a1c1c]/40 block mb-1.5">Gateway Fee %</label>
+                  <label className="text-[9.5px] font-black uppercase tracking-wide text-[#111827]/40 block mb-1.5">Gateway Fee %</label>
                   <input type="number" min="0" max="10" step="0.1" value={approveGatewayRate} onChange={e => setApproveGatewayRate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl text-[13px] font-bold focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+                    className="w-full px-3 py-2 rounded-xl text-[13px] font-bold focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
                     style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }} />
                 </div>
               </div>
               <div>
-                <label className="text-[9.5px] font-black uppercase tracking-wide text-[#1a1c1c]/40 block mb-1.5">Commission Notes</label>
+                <label className="text-[9.5px] font-black uppercase tracking-wide text-[#111827]/40 block mb-1.5">Commission Notes</label>
                 <input type="text" placeholder="e.g., Initial rate set during approval" value={approveNotes} onChange={e => setApproveNotes(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+                  className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
                   style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }} />
               </div>
             </div>
@@ -552,11 +568,11 @@ export default function SellersPage() {
                 {savingApproval ? "Processing..." : "Approve with Custom Rate"}
               </button>
               <button onClick={() => submitApproval(false)} disabled={savingApproval}
-                className="w-full py-2.5 rounded-xl bg-[#eeeeee] hover:bg-black/5 text-[#1a1c1c] text-[12px] font-black ag-btn disabled:opacity-60 cursor-pointer">
+                className="w-full py-2.5 rounded-xl bg-[#eeeeee] hover:bg-black/5 text-[#111827] text-[12px] font-black ag-btn disabled:opacity-60 cursor-pointer">
                 Approve with Default Rates (No Override)
               </button>
               <button onClick={() => setApprovingSellerId(null)} disabled={savingApproval}
-                className="w-full py-2 text-[12px] font-semibold text-[#1a1c1c]/45 hover:bg-black/5 rounded-xl ag-btn transition-colors cursor-pointer">
+                className="w-full py-2 text-[12px] font-semibold text-[#111827]/45 hover:bg-black/5 rounded-xl ag-btn transition-colors cursor-pointer">
                 Cancel
               </button>
             </div>

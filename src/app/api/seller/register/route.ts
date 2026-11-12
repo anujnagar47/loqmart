@@ -27,6 +27,8 @@ export async function POST(request: Request) {
       intended_categories,
       gstin,
       pan,
+      documents,
+      craft_profile,
       address,
       city,
       state,
@@ -44,6 +46,22 @@ export async function POST(request: Request) {
       !bank_account_name || !bank_account_number || !bank_ifsc
     ) {
       return NextResponse.json({ error: "Required fields missing" }, { status: 400 })
+    }
+
+    const requiredDocumentTypes = ["owner_id", "pan_card"]
+    const acceptedDocumentTypes = [...requiredDocumentTypes, "business_mou", "cancelled_cheque", "portfolio_image"]
+    const submittedDocuments = Array.isArray(documents) ? documents : []
+    const validDocuments = submittedDocuments.filter((doc: { doc_type?: string; file_url?: unknown }) =>
+      acceptedDocumentTypes.includes(doc?.doc_type || "") && typeof doc.file_url === "string" &&
+      (doc.doc_type === "portfolio_image" ? doc.file_url.startsWith(`${user.id}/portfolio/`) : doc.file_url.startsWith(`${user.id}/kyc/`))
+    )
+    const portfolioCount = validDocuments.filter((doc: { doc_type?: string }) => doc.doc_type === "portfolio_image").length
+    if (validDocuments.length !== submittedDocuments.length || requiredDocumentTypes.some(docType => !validDocuments.some((doc: { doc_type?: string }) => doc.doc_type === docType)) ||
+      !validDocuments.some((doc: { doc_type?: string }) => doc.doc_type === "cancelled_cheque") || portfolioCount < 3 || portfolioCount > 5) {
+      return NextResponse.json({ error: "Upload your ID, PAN, cancelled cheque, and 3 to 5 portfolio images before submitting." }, { status: 400 })
+    }
+    if (!craft_profile || typeof craft_profile.cluster !== "string" || !craft_profile.cluster.trim() || typeof craft_profile.craft_type !== "string" || !craft_profile.craft_type || typeof craft_profile.craft_tier !== "string" || !craft_profile.craft_tier) {
+      return NextResponse.json({ error: "Complete your craft cluster, craft type, and craft tier." }, { status: 400 })
     }
 
     // Map state name to state code
@@ -128,15 +146,41 @@ export async function POST(request: Request) {
       .single()
 
     if (sellerError || !seller) {
-      console.error("Seller creation error:", sellerError)
-      return NextResponse.json({ error: "Failed to create seller account" }, { status: 500 })
+      // Supabase/PostgREST errors are Error-like objects whose useful fields
+      // are non-enumerable, so logging the object directly produces `{}`.
+      // Keep the structured details in server logs while returning a safe,
+      // actionable message for the common unapplied-schema case.
+      console.error("Seller creation error:", sellerError ? {
+        code: sellerError.code,
+        message: sellerError.message,
+        details: sellerError.details,
+        hint: sellerError.hint,
+      } : "Seller insert returned no row")
+
+      if (sellerError?.code === "23505") {
+        return NextResponse.json({ error: "A seller application already exists for this account." }, { status: 409 })
+      }
+
+      const missingRegistrationField = sellerError?.code === "PGRST204" || sellerError?.code === "42703"
+      return NextResponse.json({
+        error: missingRegistrationField
+          ? "Seller registration needs a database update. Apply supabase/fix-phaseG-seller-registration-fields.sql to the LoqMart Supabase project, then try again."
+          : "We couldn’t create your seller account. Please try again or contact support if the problem continues.",
+      }, { status: 500 })
     }
 
     // Create seller approval record
-    await supabase.from("seller_approvals").insert({
+    const { error: approvalError } = await supabase.from("seller_approvals").insert({
       seller_id: seller.id,
       status: "pending",
+      documents: [...validDocuments, { doc_type: "seller_craft_profile", data: {
+        application_status: "pending_review",
+        cluster: craft_profile.cluster.trim(), craft_type: craft_profile.craft_type, craft_tier: craft_profile.craft_tier,
+        udyam_number: typeof craft_profile.udyam_number === "string" ? craft_profile.udyam_number : null,
+        artisan_pehchan_number: typeof craft_profile.artisan_pehchan_number === "string" ? craft_profile.artisan_pehchan_number : null,
+      } }],
     })
+    if (approvalError) console.error("Seller approval dossier save failed:", approvalError.message)
 
     // Update user phone
     await supabase
@@ -163,7 +207,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({
-      message: "Application submitted successfully. You will be notified within 2-3 business days.",
+      message: "Your seller dossier has been received. Our verification desk will review your credentials and craft provenance before public launch.",
+      application_status: "pending_review",
       seller_id: seller.id,
     })
   } catch (error) {

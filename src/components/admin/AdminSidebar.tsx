@@ -76,7 +76,7 @@ export function AdminSidebar({ adminName, adminEmail, stateScope }: Props) {
   const handleLogout = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push("/auth")
+    router.push("/login")
   }
 
   const isActive = (href: string, exact?: boolean) =>
@@ -98,18 +98,18 @@ export function AdminSidebar({ adminName, adminEmail, stateScope }: Props) {
       {/* Subtle yellow orb at top */}
       <div
         className="absolute top-0 left-0 w-full h-32 pointer-events-none"
-        style={{ background: "radial-gradient(ellipse at 50% -10%, rgba(252,208,32,0.07) 0%, transparent 70%)" }}
+        style={{ background: "radial-gradient(ellipse at 50% -10%, rgba(250,204,21,0.07) 0%, transparent 70%)" }}
       />
 
       {/* Logo */}
       <div className="relative px-5 pt-5 pb-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <Link href="/" className="block group">
           <span className="text-lg font-black tracking-tighter text-white uppercase leading-none">
-            Loq<span className="text-[#fcd020]">Mart</span>
+            Loq<span className="text-[#FACC15]">Mart</span>
           </span>
-          <div className="h-[2px] w-0 group-hover:w-full bg-[#fcd020] transition-all duration-300 mt-0.5 rounded-full" />
+          <div className="h-[2px] w-0 group-hover:w-full bg-[#FACC15] transition-all duration-300 mt-0.5 rounded-full" />
         </Link>
-        <p className="text-[8.5px] font-black uppercase tracking-[0.18em] mt-1.5" style={{ color: "rgba(252,208,32,0.55)" }}>
+        <p className="text-[8.5px] font-black uppercase tracking-[0.18em] mt-1.5" style={{ color: "rgba(250,204,21,0.55)" }}>
           {stateScope ? `${stateScope} Sub-Admin` : "Admin Console"}
         </p>
       </div>
@@ -152,14 +152,14 @@ export function AdminSidebar({ adminName, adminEmail, stateScope }: Props) {
                         active ? "" : "ag-slide-up",
                         active ? "" : `ag-d${Math.min(idx * 50, 300)}`,
                         active
-                          ? "ag-active-glow text-[#1a1c1c] font-black"
+                          ? "ag-active-glow text-[#111827] font-black"
                           : "hover:text-white",
                       ].join(" ")}
                       style={
                         active
                           ? {
-                              background: "linear-gradient(135deg, #fcd020 0%, #edc204 100%)",
-                              color: "#1a1c1c",
+                              background: "linear-gradient(135deg, #FACC15 0%, #CA8A04 100%)",
+                              color: "#111827",
                             }
                           : {
                               color: "rgba(255,255,255,0.45)",
@@ -183,7 +183,7 @@ export function AdminSidebar({ adminName, adminEmail, stateScope }: Props) {
                       <span>{label}</span>
                       {active && (
                         <span
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-[#1a1c1c]/40"
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-[#111827]/40"
                         />
                       )}
                     </Link>
@@ -203,12 +203,12 @@ export function AdminSidebar({ adminName, adminEmail, stateScope }: Props) {
         <div className="flex items-center gap-2.5 px-1 mb-2">
           {/* Avatar with ring for admin */}
           <div className="relative shrink-0">
-            <div className="w-7 h-7 rounded-full bg-[#fcd020] flex items-center justify-center text-[#1a1c1c] text-[10px] font-black">
+            <div className="w-7 h-7 rounded-full bg-[#FACC15] flex items-center justify-center text-[#111827] text-[10px] font-black">
               {initials}
             </div>
             {!stateScope && mounted && (
               <span
-                className="absolute inset-[-2px] rounded-full border border-[#fcd020]/30 ag-pulse"
+                className="absolute inset-[-2px] rounded-full border border-[#FACC15]/30 ag-pulse"
                 style={{ pointerEvents: "none" }}
               />
             )}
@@ -223,8 +223,8 @@ export function AdminSidebar({ adminName, adminEmail, stateScope }: Props) {
 
         {stateScope && (
           <div className="flex items-center gap-1.5 px-1 mb-2">
-            <MapPin size={9} className="text-[#fcd020] shrink-0" />
-            <span className="text-[9px] text-[#fcd020] font-bold">{stateScope} scope only</span>
+            <MapPin size={9} className="text-[#FACC15] shrink-0" />
+            <span className="text-[9px] text-[#FACC15] font-bold">{stateScope} scope only</span>
           </div>
         )}
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useCallback, useContext, useState } from "react"
+import { createContext, useCallback, useContext, useEffect, useState } from "react"
 import { translations, type Locale, type TranslationKey } from "./translations"
 
 const STORAGE_KEY = "loqmart-lang"
@@ -21,7 +21,11 @@ function readStoredLocale(): Locale {
 }
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(readStoredLocale)
+  const [locale, setLocaleState] = useState<Locale>("en")
+
+  useEffect(() => {
+    setLocaleState(readStoredLocale())
+  }, [])
 
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next)

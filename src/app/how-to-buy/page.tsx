@@ -1,73 +1,33 @@
 import Link from "next/link"
-import { Search, ShoppingCart, MapPin, CreditCard, PackageCheck, Coins } from "lucide-react"
+import { Search, MessageSquareText, MapPin, Mail, PackageCheck } from "lucide-react"
 
 export const metadata = {
-  title: "How to Buy | LoqMart",
-  description: "A step-by-step guide to finding, buying and tracking products on LoqMart, India's Swadeshi marketplace.",
+  title: "How Inquiries Work | LoqMart",
+  description: "Browse regional crafts, save pieces to your inquiry list, and ask our team to confirm availability.",
 }
 
 const steps = [
-  {
-    icon: Search,
-    title: "1. Find a Product",
-    desc: "Browse Handmade or Machine-Made collections, filter by state or price, or search directly. Every listing shows the seller's state of origin and Swadeshi Rank.",
-  },
-  {
-    icon: ShoppingCart,
-    title: "2. Add to Cart",
-    desc: "Add items from one or more sellers to your cart. You can adjust quantities and review pricing before checkout.",
-  },
-  {
-    icon: MapPin,
-    title: "3. Add a Delivery Address",
-    desc: "Save a delivery address from your Account page, or add one during checkout. You can store multiple addresses and set a default.",
-  },
-  {
-    icon: CreditCard,
-    title: "4. Pay Securely",
-    desc: "Checkout is powered by Razorpay, supporting UPI, cards, netbanking, IMPS and NEFT. You can also redeem LoqCoins or a promo code at checkout.",
-  },
-  {
-    icon: PackageCheck,
-    title: "5. Track Your Order",
-    desc: "Track order status - confirmed, processing, shipped, delivered - from the Orders tab in your Account page.",
-  },
-  {
-    icon: Coins,
-    title: "6. Earn LoqCoins",
-    desc: "Earn LoqCoins on eligible purchases and redeem them against future orders. See the LoqCoins Program page for details.",
-  },
+  { icon: Search, title: "1. Explore the collection", desc: "Browse products by craft, category, or seller location. You can explore without signing in." },
+  { icon: MessageSquareText, title: "2. Save pieces to your inquiry list", desc: "Choose Add to Inquiry on any piece. Your list stays saved on this device while you browse." },
+  { icon: MapPin, title: "3. Tell us where to reach you", desc: "Share your name, email, phone or WhatsApp number, and city or state so we can check availability with the seller." },
+  { icon: Mail, title: "4. Our curation team follows up", desc: "We will review the selected pieces and contact you with availability and product details. No payment is taken through an inquiry." },
+  { icon: PackageCheck, title: "5. Decide what comes next", desc: "Once we confirm details, you can decide whether you would like to continue with the seller." },
 ]
 
 export default function HowToBuyPage() {
   return (
-    <div className="min-h-screen bg-surface">
-      <div className="bg-surface-container py-16 px-6 text-center">
-        <span className="text-xs font-bold text-primary uppercase tracking-[0.3em] block mb-3">Buyer Guide</span>
-        <h1 className="text-4xl font-extrabold tracking-tight text-on-surface mb-3">How to Buy on LoqMart</h1>
-        <p className="text-on-surface-variant max-w-xl mx-auto">
-          Six steps from discovery to delivery.
-        </p>
+    <div className="min-h-screen bg-white">
+      <div className="bg-[#f3f3f3] px-6 py-16 text-center">
+        <span className="mb-3 block text-xs font-semibold uppercase tracking-[0.2em] text-[#725c00]">Buyer guide</span>
+        <h1 className="mb-3 text-3xl font-semibold tracking-tight text-[#1a1c1c] sm:text-4xl">How inquiries work</h1>
+        <p className="mx-auto max-w-xl text-[#4d4632]">Browse freely, save what catches your eye, and ask us to check availability.</p>
       </div>
-
-      <div className="max-w-4xl mx-auto px-6 py-16 space-y-6">
-        {steps.map((s) => (
-          <div key={s.title} className="flex gap-5 bg-surface-container-lowest rounded-xl p-6">
-            <div className="w-12 h-12 bg-primary-container rounded-xl flex items-center justify-center shrink-0">
-              <s.icon className="w-6 h-6 text-on-primary-fixed" />
-            </div>
-            <div>
-              <h2 className="font-extrabold text-on-surface mb-1">{s.title}</h2>
-              <p className="text-sm text-on-surface-variant leading-relaxed">{s.desc}</p>
-            </div>
-          </div>
-        ))}
-
-        <div className="text-center pt-6">
-          <Link href="/category" className="inline-flex items-center justify-center bg-primary-container text-on-primary-fixed font-bold px-8 py-3 rounded-lg hover:brightness-95 transition-all">
-            Start Browsing
-          </Link>
-        </div>
+      <div className="mx-auto max-w-4xl space-y-5 px-6 py-12">
+        {steps.map(step => <section key={step.title} className="flex gap-5 rounded-md border border-[#E5E7EB] bg-white p-5 sm:p-6">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-[#fcd020]"><step.icon className="h-5 w-5 text-[#231b00]" /></div>
+          <div><h2 className="mb-1 font-semibold text-[#1a1c1c]">{step.title}</h2><p className="text-sm leading-6 text-[#4d4632]">{step.desc}</p></div>
+        </section>)}
+        <div className="pt-5 text-center"><Link href="/category" className="inline-flex items-center justify-center rounded-md bg-[#fcd020] px-7 py-3 font-semibold text-[#231b00] hover:bg-[#eab308]">Explore collections</Link></div>
       </div>
     </div>
   )

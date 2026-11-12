@@ -5,10 +5,13 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
-import { MapPin, Heart, ShoppingCart, Star, ChevronDown, Loader2 } from "lucide-react"
-import { formatCurrency } from "@/lib/utils"
-import { useCartStore } from "@/lib/store"
+import { MapPin, Heart, MessageSquarePlus, Star, ChevronDown, Loader2 } from "lucide-react"
+import { useInquiryStore } from "@/lib/store"
 import { useWishlist } from "@/hooks/useWishlist"
+import type { Product } from "@/types/database"
+import { IndiaMapPreview } from "@/components/map/IndiaMapPreview"
+
+type StateFeedProduct = Product & { seller?: { business_name: string } | null }
 
 const STATE_NAMES: Record<string, string> = {
   RJ:"Rajasthan", UP:"Uttar Pradesh", MH:"Maharashtra", WB:"West Bengal",
@@ -17,21 +20,17 @@ const STATE_NAMES: Record<string, string> = {
   MP:"Madhya Pradesh", PB:"Punjab", HR:"Haryana", DL:"Delhi",
 }
 
-function FeedItem({ item, index }: { item: any; index: number }) {
+function FeedItem({ item, index }: { item: StateFeedProduct; index: number }) {
   const router = useRouter()
-  const { addItem } = useCartStore()
+  const addInquiry = useInquiryStore(s => s.addItem)
   const { toggleWishlist } = useWishlist()
   const [liked, setLiked] = useState(false)
-  const [added, setAdded] = useState(false)
-
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault()
-    addItem(item)
-    setAdded(true)
-    setTimeout(() => setAdded(false), 1200)
+    addInquiry(item)
   }
 
-  const stateName = STATE_NAMES[item.state_code] || item.state_code || "India"
+  const stateName = (item.state_code && STATE_NAMES[item.state_code]) || item.state_code || "India"
   const image     = item.images?.[0]
 
   return (
@@ -41,14 +40,14 @@ function FeedItem({ item, index }: { item: any; index: number }) {
       viewport={{ once: true, margin: "-60px" }}
       transition={{ delay: index * 0.06, duration: 0.5 }}
       whileHover={{ y: -4 }}
-      className="bg-white rounded-[4px] overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-[#1a1c1c]/5">
+      className="bg-white rounded-[4px] overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-[#111827]/5">
       <Link href={`/product/${item.slug}`}>
         <div className="relative aspect-[4/5] overflow-hidden group">
           {image ? (
             <Image src={image} alt={item.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover group-hover:scale-105 transition-transform duration-700" />
           ) : (
-            <div className="w-full h-full bg-[#f8f5f0] flex items-center justify-center">
-              <ShoppingCart className="w-10 h-10 text-[#1a1c1c]/20" />
+            <div className="w-full h-full bg-[#ffffff] flex items-center justify-center">
+              <MessageSquarePlus className="w-10 h-10 text-[#111827]/20" />
             </div>
           )}
           <div className="absolute top-3 left-3">
@@ -62,15 +61,15 @@ function FeedItem({ item, index }: { item: any; index: number }) {
               tabIndex={0}
               onClick={e => { e.preventDefault(); e.stopPropagation(); router.push(`/state/${item.state_code?.toLowerCase()}`) }}
               onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); router.push(`/state/${item.state_code?.toLowerCase()}`) } }}
-              className="bg-[#fcd020] text-[#231b00] text-[10px] font-black uppercase px-2.5 py-1 rounded-full flex items-center gap-1 shadow hover:brightness-90 transition-all cursor-pointer"
+              className="bg-[#FACC15] text-[#111827] text-[10px] font-black uppercase px-2.5 py-1 rounded-full flex items-center gap-1 shadow hover:brightness-90 transition-all cursor-pointer"
             >
               <MapPin className="w-3 h-3" />{stateName}
             </span>
           </div>
           <span className={`absolute top-3 right-3 text-[9px] font-black uppercase px-2 py-1 rounded-full ${
-            item.mode === "handmade" ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"
+            item.mode === "handmade" ? "bg-primary-container text-on-primary-fixed" : "bg-on-surface text-white"
           }`}>
-            {item.mode === "handmade" ? "Handmade" : "Machine Made"}
+            {item.mode === "handmade" ? "Handcrafted" : "Contemporary Crafted"}
           </span>
         </div>
       </Link>
@@ -78,49 +77,40 @@ function FeedItem({ item, index }: { item: any; index: number }) {
       <div className="p-4">
         {item.seller && (
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-[#725c00] truncate">{item.seller.business_name}</span>
+            <span className="text-xs font-bold text-[#111827] truncate">{item.seller.business_name}</span>
             {item.rating > 0 && (
-              <div className="flex items-center gap-1 text-xs text-[#1a1c1c]/50 shrink-0">
-                <Star className="w-3 h-3 fill-[#fcd020] text-[#fcd020]" />
-                <span className="font-bold text-[#1a1c1c]">{item.rating.toFixed(1)}</span>
+              <div className="flex items-center gap-1 text-xs text-[#111827]/50 shrink-0">
+                <Star className="w-3 h-3 fill-[#FACC15] text-[#FACC15]" />
+                <span className="font-bold text-[#111827]">{item.rating.toFixed(1)}</span>
               </div>
             )}
           </div>
         )}
 
         <Link href={`/product/${item.slug}`}>
-          <h3 className="font-bold text-[#1a1c1c] text-sm leading-tight mb-2 hover:text-[#725c00] transition-colors line-clamp-2">
+          <h3 className="font-bold text-[#111827] text-sm leading-tight mb-2 hover:text-[#111827] transition-colors line-clamp-2">
             {item.name}
           </h3>
         </Link>
 
         {item.description && (
-          <p className="text-xs text-[#1a1c1c]/50 italic leading-relaxed mb-3 border-l-2 border-[#fcd020]/60 pl-2.5 line-clamp-2">
+          <p className="text-xs text-[#111827]/50 italic leading-relaxed mb-3 border-l-2 border-[#FACC15]/60 pl-2.5 line-clamp-2">
             {item.description}
           </p>
         )}
 
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="font-extrabold text-[#1a1c1c] text-base">{formatCurrency(item.price)}</span>
-            {item.mrp && item.mrp > item.price && (
-              <span className="ml-1.5 text-xs text-[#1a1c1c]/40 line-through">{formatCurrency(item.mrp)}</span>
-            )}
-          </div>
+        <div className="flex items-center justify-between gap-2">
           <div className="flex gap-2">
             <motion.button whileTap={{ scale: 0.85 }}
               onClick={async (e) => { e.preventDefault(); const result = await toggleWishlist(item.id, liked); if (result !== null) setLiked(result) }}
               className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all ${
-                liked ? "bg-red-50 border-red-200" : "border-[#1a1c1c]/15 hover:bg-[#f8f5f0]"
+                liked ? "bg-red-50 border-red-200" : "border-[#111827]/15 hover:bg-[#ffffff]"
               }`}>
-              <Heart className={`w-4 h-4 ${liked ? "fill-red-500 text-red-500" : "text-[#1a1c1c]/50"}`} />
+              <Heart className={`w-4 h-4 ${liked ? "fill-red-500 text-red-500" : "text-[#111827]/50"}`} />
             </motion.button>
             <motion.button whileTap={{ scale: 0.9 }} onClick={handleAdd}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-[4px] text-xs font-black uppercase tracking-wider transition-all ${
-                added ? "bg-green-500 text-white" : "bg-[#fcd020] text-[#1a1c1c] hover:brightness-95"
-              }`}>
-              <ShoppingCart className="w-3 h-3" />
-              {added ? "Added!" : "Add"}
+              className="flex items-center gap-1.5 rounded-[4px] bg-[#FACC15] px-3 py-2 text-xs font-bold text-[#111827] transition-colors hover:bg-[#EAB308]">
+              <MessageSquarePlus className="h-3.5 w-3.5" /> Add to inquiry
             </motion.button>
           </div>
         </div>
@@ -130,15 +120,16 @@ function FeedItem({ item, index }: { item: any; index: number }) {
 }
 
 export function StateFeed() {
-  const [items,   setItems]   = useState<any[]>([])
+  const [items,   setItems]   = useState<StateFeedProduct[]>([])
   const [loading, setLoading] = useState(true)
   const [showAll, setShowAll] = useState(false)
 
   useEffect(() => {
-    fetch("/api/products?mode=handmade&sort=rating_desc&limit=8")
+    fetch("/api/products?craft_type=handcrafted&sort=rating_desc&limit=8")
       .then(r => r.json())
       .then(d => {
-        const withState = (d.products || []).filter((p: any) => p.state_code)
+        const products = (d.products || []) as StateFeedProduct[]
+        const withState = products.filter((product) => product.state_code)
         setItems(withState)
         setLoading(false)
       })
@@ -148,25 +139,34 @@ export function StateFeed() {
   const visible = showAll ? items : items.slice(0, 4)
 
   return (
-    <section className="py-10 md:py-20 px-4 md:px-20 bg-[#f3f3f3]">
+    <section className="bg-[#ffffff] px-4 py-8 sm:px-6 md:py-12 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-12">
+        <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end sm:gap-6 md:mb-8">
           <div>
-            <span className="text-xs font-black uppercase tracking-[0.3em] text-[#1a1c1c]/40 block mb-3">State by State</span>
-            <h2 className="text-4xl font-extrabold tracking-tight text-[#1a1c1c]">From Every Corner of India</h2>
-            <p className="text-[#1a1c1c]/50 mt-2 text-sm max-w-md">
-              Products tagged by their state of origin. Every maker verified. Every craft documented.
+            <span className="mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-[#111827]">State by state</span>
+            <h2 className="text-2xl font-bold tracking-tight text-[#111827] md:text-3xl">From every corner of India</h2>
+            <p className="mt-1 max-w-md text-sm leading-5 text-[#4B5563]">
+              Browse products by the state their sellers call home.
             </p>
           </div>
-          <Link href="/india-map" className="text-[#1a1c1c]/50 font-bold text-sm uppercase tracking-widest hover:text-[#1a1c1c] transition-colors whitespace-nowrap">
-            Explore India Map →
+          <Link href="/india-map" className="inline-flex min-h-10 shrink-0 items-center gap-2 text-sm font-semibold text-[#4B5563] transition-colors hover:text-[#111827] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#EAB308]">
+            Explore the India map <MapPin className="h-4 w-4" />
           </Link>
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-12"><Loader2 className="w-7 h-7 animate-spin text-[#1a1c1c]/30" /></div>
+          <div className="flex justify-center py-12"><Loader2 className="w-7 h-7 animate-spin text-[#111827]/30" /></div>
         ) : items.length === 0 ? (
-          <p className="text-center text-[#1a1c1c]/40 py-12 font-medium">Products loading soon from our sellers.</p>
+          <div className="grid min-h-[320px] overflow-hidden border border-[#E5E7EB] bg-white lg:grid-cols-[0.8fr_1.2fr]">
+            <div className="flex flex-col justify-center border-b border-[#e8e4da] p-5 sm:p-7 lg:border-b-0 lg:border-r">
+              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#111827]">Browse by location</span>
+              <h3 className="mt-2 text-xl font-bold tracking-tight text-[#111827] sm:text-2xl">Choose a state to explore</h3>
+              <p className="mt-2 max-w-sm text-sm leading-5 text-[#4B5563]">Select a region on the map to see its sellers and products.</p>
+            </div>
+            <div className="flex min-h-[260px] items-center justify-center px-2 py-4 sm:px-6 lg:min-h-[320px]">
+              <IndiaMapPreview />
+            </div>
+          </div>
         ) : (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
@@ -178,7 +178,7 @@ export function StateFeed() {
             {!showAll && items.length > 4 && (
               <div className="text-center mt-10">
                 <motion.button whileTap={{ scale: 0.97 }} onClick={() => setShowAll(true)}
-                  className="inline-flex items-center gap-2 bg-white border border-[#1a1c1c]/15 text-[#1a1c1c]/60 px-8 py-3 rounded-full text-sm font-bold uppercase tracking-wider hover:border-[#fcd020] hover:text-[#1a1c1c] transition-all">
+                  className="inline-flex items-center gap-2 bg-white border border-[#111827]/15 text-[#111827]/60 px-8 py-3 rounded-full text-sm font-bold uppercase tracking-wider hover:border-[#FACC15] hover:text-[#111827] transition-all">
                   <ChevronDown className="w-4 h-4" /> Load More from India
                 </motion.button>
               </div>

@@ -98,69 +98,69 @@ export function VariantManager({ productId, productName, onClose }: VariantManag
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(26,28,28,0.5)" }} onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(17,24,39,0.5)" }} onClick={onClose}>
       <div className="bg-white rounded-2xl w-full max-w-xl max-h-[85vh] overflow-y-auto p-5" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-[14px] font-black text-[#1a1c1c]">Manage Variants</h2>
-            <p className="text-[11px] text-[#1a1c1c]/45 mt-0.5 truncate max-w-[300px]">{productName}</p>
+            <h2 className="text-[14px] font-black text-[#111827]">Manage Variants</h2>
+            <p className="text-[11px] text-[#111827]/45 mt-0.5 truncate max-w-[300px]">{productName}</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#1a1c1c]/5">
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#111827]/5">
             <X size={16} />
           </button>
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-[#1a1c1c]/30" /></div>
+          <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-[#111827]/30" /></div>
         ) : (
           <>
             {variants.length === 0 ? (
-              <p className="text-[12px] text-[#1a1c1c]/40 mb-4">
+              <p className="text-[12px] text-[#111827]/40 mb-4">
                 No variants yet — this product sells as a single option using its base price and stock.
               </p>
             ) : (
               <div className="space-y-2 mb-4">
                 {variants.map(v => (
-                  <div key={v.id} className="rounded-xl p-3" style={{ border: "1px solid rgba(26,28,28,0.08)" }}>
+                  <div key={v.id} className="rounded-xl p-3" style={{ border: "1px solid rgba(17,24,39,0.08)" }}>
                     {editingId === v.id ? (
                       <div className="space-y-2">
                         <div className="grid grid-cols-2 gap-2">
                           <input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
-                            placeholder="Name" className="px-2.5 py-1.5 rounded-lg text-[12px]" style={{ border: "1px solid rgba(26,28,28,0.15)" }} />
+                            placeholder="Name" className="px-2.5 py-1.5 rounded-lg text-[12px]" style={{ border: "1px solid rgba(17,24,39,0.15)" }} />
                           <input value={editForm.sku} onChange={e => setEditForm(f => ({ ...f, sku: e.target.value }))}
-                            placeholder="SKU (optional)" className="px-2.5 py-1.5 rounded-lg text-[12px]" style={{ border: "1px solid rgba(26,28,28,0.15)" }} />
+                            placeholder="SKU (optional)" className="px-2.5 py-1.5 rounded-lg text-[12px]" style={{ border: "1px solid rgba(17,24,39,0.15)" }} />
                           <input type="number" value={editForm.price} onChange={e => setEditForm(f => ({ ...f, price: e.target.value }))}
-                            placeholder="Price override" className="px-2.5 py-1.5 rounded-lg text-[12px]" style={{ border: "1px solid rgba(26,28,28,0.15)" }} />
+                            placeholder="Price override" className="px-2.5 py-1.5 rounded-lg text-[12px]" style={{ border: "1px solid rgba(17,24,39,0.15)" }} />
                           <input type="number" value={editForm.mrp} onChange={e => setEditForm(f => ({ ...f, mrp: e.target.value }))}
-                            placeholder="MRP override" className="px-2.5 py-1.5 rounded-lg text-[12px]" style={{ border: "1px solid rgba(26,28,28,0.15)" }} />
+                            placeholder="MRP override" className="px-2.5 py-1.5 rounded-lg text-[12px]" style={{ border: "1px solid rgba(17,24,39,0.15)" }} />
                           <input type="number" min="0" value={editForm.stock} onChange={e => setEditForm(f => ({ ...f, stock: e.target.value }))}
-                            placeholder="Stock" className="px-2.5 py-1.5 rounded-lg text-[12px]" style={{ border: "1px solid rgba(26,28,28,0.15)" }} />
-                          <label className="flex items-center gap-1.5 text-[11px] text-[#1a1c1c]/60 font-semibold">
+                            placeholder="Stock" className="px-2.5 py-1.5 rounded-lg text-[12px]" style={{ border: "1px solid rgba(17,24,39,0.15)" }} />
+                          <label className="flex items-center gap-1.5 text-[11px] text-[#111827]/60 font-semibold">
                             <input type="checkbox" checked={editForm.is_default} onChange={e => setEditForm(f => ({ ...f, is_default: e.target.checked }))} />
                             Default selection
                           </label>
                         </div>
                         <div className="flex gap-2">
                           <button onClick={() => saveEdit(v.id)} disabled={saving}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-black text-[#1a1c1c]" style={{ background: "#fcd020" }}>
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-black text-[#111827]" style={{ background: "#FACC15" }}>
                             <Check size={11} /> Save
                           </button>
-                          <button onClick={() => setEditingId(null)} className="px-3 py-1.5 rounded-lg text-[11px] font-semibold text-[#1a1c1c]/50">Cancel</button>
+                          <button onClick={() => setEditingId(null)} className="px-3 py-1.5 rounded-lg text-[11px] font-semibold text-[#111827]/50">Cancel</button>
                         </div>
                       </div>
                     ) : (
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="text-[12.5px] font-bold text-[#1a1c1c] truncate">
-                            {v.name} {v.is_default && <span className="text-[9px] font-black uppercase text-[#725c00] ml-1">Default</span>}
+                          <p className="text-[12.5px] font-bold text-[#111827] truncate">
+                            {v.name} {v.is_default && <span className="text-[9px] font-black uppercase text-[#111827] ml-1">Default</span>}
                           </p>
-                          <p className="text-[11px] text-[#1a1c1c]/45 mt-0.5">
+                          <p className="text-[11px] text-[#111827]/45 mt-0.5">
                             {v.price != null ? formatCurrency(v.price) : "Base price"} · Stock: {v.stock}
                             {v.sku && <> · SKU: {v.sku}</>}
                           </p>
                         </div>
                         <div className="flex gap-1 shrink-0">
-                          <button onClick={() => startEdit(v)} className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "rgba(252,208,32,0.12)", color: "#725c00" }}>
+                          <button onClick={() => startEdit(v)} className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "rgba(250,204,21,0.12)", color: "#111827" }}>
                             <Edit2 size={11} />
                           </button>
                           <button onClick={() => deleteVariant(v.id)} className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "rgba(220,38,38,0.06)", color: "#ef4444" }}>
@@ -174,27 +174,27 @@ export function VariantManager({ productId, productName, onClose }: VariantManag
               </div>
             )}
 
-            <div className="pt-3" style={{ borderTop: "1px solid rgba(26,28,28,0.06)" }}>
-              <p className="text-[11px] font-black uppercase tracking-wider text-[#1a1c1c]/40 mb-2">Add Variant</p>
+            <div className="pt-3" style={{ borderTop: "1px solid rgba(17,24,39,0.06)" }}>
+              <p className="text-[11px] font-black uppercase tracking-wider text-[#111827]/40 mb-2">Add Variant</p>
               <div className="grid grid-cols-2 gap-2 mb-2">
                 <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="Name (e.g. Large)" className="px-2.5 py-2 rounded-lg text-[12px]" style={{ border: "1px solid rgba(26,28,28,0.15)" }} />
+                  placeholder="Name (e.g. Large)" className="px-2.5 py-2 rounded-lg text-[12px]" style={{ border: "1px solid rgba(17,24,39,0.15)" }} />
                 <input value={form.sku} onChange={e => setForm(f => ({ ...f, sku: e.target.value }))}
-                  placeholder="SKU (optional)" className="px-2.5 py-2 rounded-lg text-[12px]" style={{ border: "1px solid rgba(26,28,28,0.15)" }} />
+                  placeholder="SKU (optional)" className="px-2.5 py-2 rounded-lg text-[12px]" style={{ border: "1px solid rgba(17,24,39,0.15)" }} />
                 <input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
-                  placeholder="Price override (optional)" className="px-2.5 py-2 rounded-lg text-[12px]" style={{ border: "1px solid rgba(26,28,28,0.15)" }} />
+                  placeholder="Price override (optional)" className="px-2.5 py-2 rounded-lg text-[12px]" style={{ border: "1px solid rgba(17,24,39,0.15)" }} />
                 <input type="number" value={form.mrp} onChange={e => setForm(f => ({ ...f, mrp: e.target.value }))}
-                  placeholder="MRP override (optional)" className="px-2.5 py-2 rounded-lg text-[12px]" style={{ border: "1px solid rgba(26,28,28,0.15)" }} />
+                  placeholder="MRP override (optional)" className="px-2.5 py-2 rounded-lg text-[12px]" style={{ border: "1px solid rgba(17,24,39,0.15)" }} />
                 <input type="number" min="0" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))}
-                  placeholder="Stock *" className="px-2.5 py-2 rounded-lg text-[12px]" style={{ border: "1px solid rgba(26,28,28,0.15)" }} />
-                <label className="flex items-center gap-1.5 text-[11px] text-[#1a1c1c]/60 font-semibold">
+                  placeholder="Stock *" className="px-2.5 py-2 rounded-lg text-[12px]" style={{ border: "1px solid rgba(17,24,39,0.15)" }} />
+                <label className="flex items-center gap-1.5 text-[11px] text-[#111827]/60 font-semibold">
                   <input type="checkbox" checked={form.is_default} onChange={e => setForm(f => ({ ...f, is_default: e.target.checked }))} />
                   Default selection
                 </label>
               </div>
               {error && <p className="text-[11px] text-red-600 font-semibold mb-2">{error}</p>}
               <button onClick={addVariant} disabled={saving}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-black text-[#1a1c1c] disabled:opacity-50" style={{ background: "#fcd020" }}>
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-black text-[#111827] disabled:opacity-50" style={{ background: "#FACC15" }}>
                 {saving ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Add Variant
               </button>
             </div>

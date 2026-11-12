@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Check, ChevronRight, Store, FileText, CreditCard, MapPin, Award, Loader2, IdCard, Tag } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { Toast, useToast } from "@/components/ui/toast"
+import { FileUploadZone } from "@/components/ui/file-upload-zone"
 
 const steps = [
   { id: 1, name: "Business Type",   icon: Store     },
@@ -44,14 +45,14 @@ const ID_PROOF_TYPES = [
 ]
 
 const inputCls = "w-full h-11 px-4 rounded-xl text-[13px] outline-none transition-all"
-const inputStyle = { border: "1px solid rgba(26,28,28,0.14)", background: "white", color: "#1a1c1c" }
-const inputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => { e.currentTarget.style.borderColor = "#fcd020"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(252,208,32,0.1)" }
-const inputBlur  = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => { e.currentTarget.style.borderColor = "rgba(26,28,28,0.14)"; e.currentTarget.style.boxShadow = "none" }
+const inputStyle = { border: "1px solid rgba(17,24,39,0.14)", background: "white", color: "#111827" }
+const inputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => { e.currentTarget.style.borderColor = "#FACC15"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(250,204,21,0.1)" }
+const inputBlur  = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => { e.currentTarget.style.borderColor = "rgba(17,24,39,0.14)"; e.currentTarget.style.boxShadow = "none" }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-[10.5px] font-black uppercase tracking-wider text-[#1a1c1c]/45 mb-1.5">{label}</label>
+      <label className="block text-[10.5px] font-black uppercase tracking-wider text-[#111827]/45 mb-1.5">{label}</label>
       {children}
     </div>
   )
@@ -69,8 +70,9 @@ export default function SellerRegistrationPage() {
   const [formData, setFormData] = useState({
     businessType: "",
     businessName: "", ownerName: "", dateOfBirth: "", email: "", phone: "",
-    idProofType: "", idProofNumber: "", gstin: "", pan: "",
+    idProofType: "", idProofNumber: "", idProofDocument: "", panDocument: "", businessDocument: "", cancelledCheque: "", gstin: "", pan: "", udyamNumber: "", artisanPehchanNumber: "",
     storeName: "", description: "", intendedCategories: [] as string[],
+    craftCluster: "", craftType: "", craftTier: "", portfolioImages: [] as string[],
     address: "", city: "", state: "", pincode: "",
     bankAccountName: "", bankAccount: "", ifsc: "", acceptTerms: false,
   })
@@ -80,7 +82,7 @@ export default function SellerRegistrationPage() {
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) {
-        router.push("/auth?redirect=/seller/register")
+        router.push("/seller/login?redirect=/seller/register")
         return
       }
       setFormData(p => ({ ...p, email: session.user.email || p.email }))
@@ -113,17 +115,17 @@ export default function SellerRegistrationPage() {
     if (currentStep === 2 && (!formData.businessName || !formData.ownerName || !formData.dateOfBirth || !formData.phone)) {
       showError("Please fill in Legal Name, Owner Name, Date of Birth and Phone."); return
     }
-    if (currentStep === 3 && (!formData.idProofType || !formData.idProofNumber || !formData.pan)) {
-      showError("ID proof and PAN are required."); return
+    if (currentStep === 3 && (!formData.idProofType || !formData.idProofNumber || !formData.pan || !formData.idProofDocument || !formData.panDocument)) {
+      showError("Enter your ID and PAN details and upload both documents."); return
     }
-    if (currentStep === 4 && (!formData.storeName || formData.intendedCategories.length === 0)) {
-      showError("Please enter a store name and pick at least one category."); return
+    if (currentStep === 4 && (!formData.storeName || formData.intendedCategories.length === 0 || !formData.craftCluster || !formData.craftType || !formData.craftTier || formData.portfolioImages.length < 3)) {
+      showError("Complete your craft profile and upload at least three sample product images."); return
     }
     if (currentStep === 5 && (!formData.address || !formData.city || !formData.state || !formData.pincode)) {
       showError("Please fill in all address fields."); return
     }
-    if (currentStep === 6 && (!formData.bankAccountName || !formData.bankAccount || !formData.ifsc)) {
-      showError("Please fill in all bank details."); return
+    if (currentStep === 6 && (!formData.bankAccountName || !formData.bankAccount || !formData.ifsc || !formData.cancelledCheque)) {
+      showError("Please complete the bank details and upload a cancelled cheque."); return
     }
     if (currentStep < 7) setCurrentStep(s => s + 1)
   }
@@ -145,6 +147,14 @@ export default function SellerRegistrationPage() {
           phone: formData.phone,
           id_proof_type: formData.idProofType,
           id_proof_number: formData.idProofNumber,
+          documents: [
+            { doc_type: "owner_id", file_url: formData.idProofDocument },
+            { doc_type: "pan_card", file_url: formData.panDocument },
+            ...(formData.businessDocument ? [{ doc_type: "business_mou", file_url: formData.businessDocument }] : []),
+            { doc_type: "cancelled_cheque", file_url: formData.cancelledCheque },
+            ...formData.portfolioImages.map(file_url => ({ doc_type: "portfolio_image", file_url })),
+          ],
+          craft_profile: { cluster: formData.craftCluster, craft_type: formData.craftType, craft_tier: formData.craftTier, udyam_number: formData.udyamNumber || null, artisan_pehchan_number: formData.artisanPehchanNumber || null },
           gstin: formData.gstin || null,
           pan: formData.pan,
           store_name: formData.storeName,
@@ -163,7 +173,7 @@ export default function SellerRegistrationPage() {
       if (!res.ok) {
         setSubmitError(data.error || "Failed to submit application. Please try again.")
       } else {
-        router.push("/seller/dashboard")
+        router.push("/seller/application-submitted")
       }
     } catch {
       setSubmitError("Something went wrong. Please try again.")
@@ -175,16 +185,16 @@ export default function SellerRegistrationPage() {
   const businessNameLabel = formData.businessType === "individual" ? "Full Name (as on PAN) *" : "Registered Business Name *"
 
   return (
-    <div className="min-h-screen py-12" style={{ background: "#eeece8" }}>
+    <div className="min-h-screen py-12" style={{ background: "#FBF9F5" }}>
       {toastProps && <Toast {...toastProps} />}
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
         {/* Header */}
         <motion.div className="text-center mb-10"
           initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
-          <h1 className="text-[32px] font-extrabold text-[#1a1c1c] tracking-tight mb-2">
+          <h1 className="text-[32px] font-extrabold text-[#111827] tracking-tight mb-2">
             Become a Seller on LoqMart
           </h1>
-          <p className="text-[14px] text-[#1a1c1c]/45 max-w-xl mx-auto">
+          <p className="text-[14px] text-[#111827]/45 max-w-xl mx-auto">
             Join thousands of artisans and manufacturers selling quality products to millions of customers across India.
           </p>
         </motion.div>
@@ -197,19 +207,19 @@ export default function SellerRegistrationPage() {
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
                 <div className="w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-all"
                   style={{
-                    background: currentStep > step.id ? "#22c55e" : currentStep === step.id ? "#fcd020" : "rgba(26,28,28,0.08)",
-                    color: currentStep > step.id ? "white" : currentStep === step.id ? "#1a1c1c" : "rgba(26,28,28,0.35)",
+                    background: currentStep > step.id ? "#22c55e" : currentStep === step.id ? "#FACC15" : "rgba(17,24,39,0.08)",
+                    color: currentStep > step.id ? "white" : currentStep === step.id ? "#111827" : "rgba(17,24,39,0.35)",
                   }}>
                   {currentStep > step.id ? <Check size={15} /> : <step.icon size={15} />}
                 </div>
                 <span className="text-[9px] font-bold mt-1.5 whitespace-nowrap"
-                  style={{ color: currentStep >= step.id ? "#1a1c1c" : "rgba(26,28,28,0.35)" }}>
+                  style={{ color: currentStep >= step.id ? "#111827" : "rgba(17,24,39,0.35)" }}>
                   {step.name}
                 </span>
               </motion.div>
               {index < steps.length - 1 && (
                 <div className="w-6 sm:w-10 h-0.5 mx-1 mt-[-10px] shrink-0 transition-colors"
-                  style={{ background: currentStep > step.id ? "#22c55e" : "rgba(26,28,28,0.12)" }} />
+                  style={{ background: currentStep > step.id ? "#22c55e" : "rgba(17,24,39,0.12)" }} />
               )}
             </div>
           ))}
@@ -217,22 +227,22 @@ export default function SellerRegistrationPage() {
 
         {/* Form panel */}
         <div className="bg-white rounded-2xl p-6 sm:p-8"
-          style={{ border: "1px solid rgba(26,28,28,0.07)", boxShadow: "0 2px 12px rgba(26,28,28,0.05)" }}>
+          style={{ border: "1px solid rgba(17,24,39,0.07)", boxShadow: "0 2px 12px rgba(17,24,39,0.05)" }}>
           <AnimatePresence mode="wait">
             {currentStep === 1 && (
               <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
-                <h2 className="text-[16px] font-black text-[#1a1c1c] mb-1">What type of business is this?</h2>
-                <p className="text-[12px] text-[#1a1c1c]/45 mb-5">This determines what identity and tax documents we&apos;ll ask for next.</p>
+                <h2 className="text-[16px] font-black text-[#111827] mb-1">What type of business is this?</h2>
+                <p className="text-[12px] text-[#111827]/45 mb-5">This determines what identity and tax documents we&apos;ll ask for next.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {BUSINESS_TYPES.map(bt => (
                     <button key={bt.value} type="button" onClick={() => set("businessType", bt.value)}
                       className="text-left p-4 rounded-xl transition-all"
                       style={{
-                        border: formData.businessType === bt.value ? "2px solid #fcd020" : "1px solid rgba(26,28,28,0.14)",
-                        background: formData.businessType === bt.value ? "rgba(252,208,32,0.08)" : "white",
+                        border: formData.businessType === bt.value ? "2px solid #FACC15" : "1px solid rgba(17,24,39,0.14)",
+                        background: formData.businessType === bt.value ? "rgba(250,204,21,0.08)" : "white",
                       }}>
-                      <p className="text-[13px] font-bold text-[#1a1c1c]">{bt.label}</p>
-                      <p className="text-[11px] text-[#1a1c1c]/45 mt-0.5">{bt.hint}</p>
+                      <p className="text-[13px] font-bold text-[#111827]">{bt.label}</p>
+                      <p className="text-[11px] text-[#111827]/45 mt-0.5">{bt.hint}</p>
                     </button>
                   ))}
                 </div>
@@ -241,7 +251,7 @@ export default function SellerRegistrationPage() {
 
             {currentStep === 2 && (
               <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
-                <h2 className="text-[16px] font-black text-[#1a1c1c] mb-5">Business & Contact Details</h2>
+                <h2 className="text-[16px] font-black text-[#111827] mb-5">Business & Contact Details</h2>
                 <div className="space-y-4">
                   <Field label={businessNameLabel}>
                     <input className={inputCls} style={inputStyle} placeholder="As it appears on your PAN / registration certificate"
@@ -262,7 +272,7 @@ export default function SellerRegistrationPage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Field label="Email">
-                      <input type="email" disabled className={inputCls} style={{ ...inputStyle, background: "#f3f3f3", color: "#1a1c1c99" }}
+                      <input type="email" disabled className={inputCls} style={{ ...inputStyle, background: "#ffffff", color: "#11182799" }}
                         value={formData.email} />
                     </Field>
                     <Field label="Phone *">
@@ -277,7 +287,7 @@ export default function SellerRegistrationPage() {
 
             {currentStep === 3 && (
               <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
-                <h2 className="text-[16px] font-black text-[#1a1c1c] mb-5">Identity & Tax Details</h2>
+                <h2 className="text-[16px] font-black text-[#111827] mb-5">Identity & Tax Details</h2>
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Field label="ID Proof Type *">
@@ -299,11 +309,30 @@ export default function SellerRegistrationPage() {
                       value={formData.pan} onChange={e => set("pan", e.target.value.toUpperCase())}
                       onFocus={inputFocus} onBlur={inputBlur} />
                   </Field>
+                  <Field label="ID proof document *">
+                    <FileUploadZone value={formData.idProofDocument ? [formData.idProofDocument] : []}
+                      onChange={files => set("idProofDocument", files[0] || "")}
+                      purpose="seller-document" maxFiles={1} label="Upload ID proof" />
+                  </Field>
+                  <Field label="PAN document *">
+                    <FileUploadZone value={formData.panDocument ? [formData.panDocument] : []}
+                      onChange={files => set("panDocument", files[0] || "")}
+                      purpose="seller-document" maxFiles={1} label="Upload PAN card" />
+                  </Field>
+                  <Field label="Business registration or signed MoU (optional)">
+                    <FileUploadZone value={formData.businessDocument ? [formData.businessDocument] : []}
+                      onChange={files => set("businessDocument", files[0] || "")}
+                      purpose="seller-document" maxFiles={1} label="Upload supporting document" />
+                  </Field>
                   <Field label="GSTIN">
                     <input className={inputCls} style={inputStyle} placeholder="Enter 15-digit GSTIN"
                       value={formData.gstin} onChange={e => set("gstin", e.target.value.toUpperCase())}
                       onFocus={inputFocus} onBlur={inputBlur} />
                   </Field>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <Field label="Udyam Number (optional)"><input className={inputCls} style={inputStyle} placeholder="Udyam registration number" value={formData.udyamNumber} onChange={e => set("udyamNumber", e.target.value.toUpperCase())} onFocus={inputFocus} onBlur={inputBlur} /></Field>
+                    <Field label="Artisan Pehchan Card (optional)"><input className={inputCls} style={inputStyle} placeholder="Card number" value={formData.artisanPehchanNumber} onChange={e => set("artisanPehchanNumber", e.target.value)} onFocus={inputFocus} onBlur={inputBlur} /></Field>
+                  </div>
                   <div className="p-4 rounded-xl text-[12px] text-[#92400e] leading-relaxed"
                     style={{ background: "rgba(217,119,6,0.07)", border: "1px solid rgba(217,119,6,0.2)" }}>
                     <strong>Note:</strong> GSTIN is required for selling on LoqMart. You can still register without one but won&apos;t be able to list products until GSTIN is added.
@@ -314,7 +343,7 @@ export default function SellerRegistrationPage() {
 
             {currentStep === 4 && (
               <motion.div key="step4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
-                <h2 className="text-[16px] font-black text-[#1a1c1c] mb-5">Set Up Your Store</h2>
+                <h2 className="text-[16px] font-black text-[#111827] mb-5">Set Up Your Store</h2>
                 <div className="space-y-4">
                   <Field label="Store Display Name *">
                     <input className={inputCls} style={inputStyle} placeholder="What buyers will see on your storefront"
@@ -327,6 +356,12 @@ export default function SellerRegistrationPage() {
                       value={formData.description} onChange={e => set("description", e.target.value)}
                       onFocus={inputFocus} onBlur={inputBlur} />
                   </Field>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <Field label="Craft cluster / town *"><input className={inputCls} style={inputStyle} placeholder="Jaipur, Bastar, Varanasi..." value={formData.craftCluster} onChange={e => set("craftCluster", e.target.value)} onFocus={inputFocus} onBlur={inputBlur} /></Field>
+                    <Field label="Craft type *"><select className={inputCls} style={inputStyle} value={formData.craftType} onChange={e => set("craftType", e.target.value)} onFocus={inputFocus} onBlur={inputBlur}><option value="">Choose craft type</option>{["Handloom", "Textile", "Metalwork", "Pottery", "Woodcraft", "Natural fibres", "Jewellery", "Painting", "Food and spices", "Other"].map(item => <option key={item}>{item}</option>)}</select></Field>
+                  </div>
+                  <Field label="Craft tier *"><select className={inputCls} style={inputStyle} value={formData.craftTier} onChange={e => set("craftTier", e.target.value)} onFocus={inputFocus} onBlur={inputBlur}><option value="">Choose your craft tier</option>{["Artisan Guild Handcrafted", "State Apex Body Member", "Contemporary Regional Manufacturer"].map(item => <option key={item}>{item}</option>)}</select></Field>
+                  <Field label={`Product portfolio * (${formData.portfolioImages.length}/5 uploaded, 3 required)`}><FileUploadZone value={formData.portfolioImages} onChange={files => set("portfolioImages", files)} purpose="seller-portfolio" maxFiles={5} label="Add product images" /><span className="mt-1 block text-xs text-[#4d4632]">JPG, PNG or WEBP, up to 5 MB each</span></Field>
                   <Field label={`Categories you plan to sell in * (up to 5, ${formData.intendedCategories.length} selected)`}>
                     <div className="flex flex-wrap gap-2">
                       {categories.map(cat => {
@@ -335,15 +370,15 @@ export default function SellerRegistrationPage() {
                           <button key={cat.id} type="button" onClick={() => toggleCategory(cat.id)}
                             className="px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all"
                             style={{
-                              background: active ? "#fcd020" : "white",
-                              border: active ? "1px solid #fcd020" : "1px solid rgba(26,28,28,0.14)",
-                              color: "#1a1c1c",
+                              background: active ? "#FACC15" : "white",
+                              border: active ? "1px solid #FACC15" : "1px solid rgba(17,24,39,0.14)",
+                              color: "#111827",
                             }}>
                             {cat.name}
                           </button>
                         )
                       })}
-                      {categories.length === 0 && <p className="text-[12px] text-[#1a1c1c]/40">Loading categories…</p>}
+                      {categories.length === 0 && <p className="text-[12px] text-[#111827]/40">Loading categories…</p>}
                     </div>
                   </Field>
                 </div>
@@ -352,7 +387,7 @@ export default function SellerRegistrationPage() {
 
             {currentStep === 5 && (
               <motion.div key="step5" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
-                <h2 className="text-[16px] font-black text-[#1a1c1c] mb-5">Business Address</h2>
+                <h2 className="text-[16px] font-black text-[#111827] mb-5">Business Address</h2>
                 <div className="space-y-4">
                   <Field label="Address *">
                     <input className={inputCls} style={inputStyle} placeholder="Enter full address"
@@ -385,7 +420,7 @@ export default function SellerRegistrationPage() {
 
             {currentStep === 6 && (
               <motion.div key="step6" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
-                <h2 className="text-[16px] font-black text-[#1a1c1c] mb-5">Bank Details</h2>
+                <h2 className="text-[16px] font-black text-[#111827] mb-5">Bank Details</h2>
                 <div className="space-y-4">
                   <Field label="Account Holder Name *">
                     <input className={inputCls} style={inputStyle} placeholder="Name exactly as it appears on the bank account"
@@ -402,8 +437,9 @@ export default function SellerRegistrationPage() {
                       value={formData.ifsc} onChange={e => set("ifsc", e.target.value.toUpperCase())}
                       onFocus={inputFocus} onBlur={inputBlur} />
                   </Field>
-                  <div className="p-4 rounded-xl text-[12px] text-[#1a1c1c]/55"
-                    style={{ background: "#eeece8" }}>
+                  <Field label="Cancelled cheque *"><FileUploadZone value={formData.cancelledCheque ? [formData.cancelledCheque] : []} onChange={files => set("cancelledCheque", files[0] || "")} purpose="seller-document" maxFiles={1} label="Upload cancelled cheque" /></Field>
+                  <div className="p-4 rounded-xl text-[12px] text-[#111827]/55"
+                    style={{ background: "#FBF9F5" }}>
                     Your bank details are securely encrypted and only used for processing payouts.
                   </div>
                 </div>
@@ -412,7 +448,7 @@ export default function SellerRegistrationPage() {
 
             {currentStep === 7 && (
               <motion.div key="step7" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
-                <h2 className="text-[16px] font-black text-[#1a1c1c] mb-5">Review & Submit</h2>
+                <h2 className="text-[16px] font-black text-[#111827] mb-5">Review & Submit</h2>
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
                     {[
@@ -427,16 +463,16 @@ export default function SellerRegistrationPage() {
                       ["City",           formData.city],
                       ["State",          formData.state],
                     ].map(([label, value]) => (
-                      <div key={label} className="p-4 rounded-xl" style={{ background: "#eeece8" }}>
-                        <p className="text-[10px] font-black uppercase tracking-wider text-[#1a1c1c]/40 mb-1">{label}</p>
-                        <p className="text-[13px] font-semibold text-[#1a1c1c]">{value || "—"}</p>
+                      <div key={label} className="p-4 rounded-xl" style={{ background: "#FBF9F5" }}>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-[#111827]/40 mb-1">{label}</p>
+                        <p className="text-[13px] font-semibold text-[#111827]">{value || "—"}</p>
                       </div>
                     ))}
                   </div>
 
-                  <div className="p-4 rounded-xl" style={{ background: "#eeece8" }}>
-                    <p className="text-[10px] font-black uppercase tracking-wider text-[#1a1c1c]/40 mb-1">Categories</p>
-                    <p className="text-[13px] font-semibold text-[#1a1c1c]">
+                  <div className="p-4 rounded-xl" style={{ background: "#FBF9F5" }}>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-[#111827]/40 mb-1">Categories</p>
+                    <p className="text-[13px] font-semibold text-[#111827]">
                       {formData.intendedCategories.map(id => categories.find(c => c.id === id)?.name).filter(Boolean).join(", ") || "—"}
                     </p>
                   </div>
@@ -444,11 +480,11 @@ export default function SellerRegistrationPage() {
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input type="checkbox" checked={formData.acceptTerms}
                       onChange={e => set("acceptTerms", e.target.checked)}
-                      className="mt-0.5 w-4 h-4 accent-[#fcd020]" />
-                    <span className="text-[12px] text-[#1a1c1c]/55 leading-relaxed">
+                      className="mt-0.5 w-4 h-4 accent-[#FACC15]" />
+                    <span className="text-[12px] text-[#111827]/55 leading-relaxed">
                       I agree to the{" "}
-                      <Link href="/seller/terms" className="text-[#725c00] font-semibold hover:underline">Seller Terms</Link>,{" "}
-                      <Link href="/privacy" className="text-[#725c00] font-semibold hover:underline">Privacy Policy</Link>,
+                      <Link href="/seller/terms" className="text-[#111827] font-semibold hover:underline">Seller Terms</Link>,{" "}
+                      <Link href="/privacy" className="text-[#111827] font-semibold hover:underline">Privacy Policy</Link>,
                       and confirm all information is accurate.
                     </span>
                   </label>
@@ -475,11 +511,11 @@ export default function SellerRegistrationPage() {
           )}
 
           {/* Navigation */}
-          <div className="flex justify-between mt-8 pt-6" style={{ borderTop: "1px solid rgba(26,28,28,0.07)" }}>
+          <div className="flex justify-between mt-8 pt-6" style={{ borderTop: "1px solid rgba(17,24,39,0.07)" }}>
             {currentStep > 1 ? (
               <motion.button onClick={prevStep} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                className="px-5 py-2.5 rounded-xl text-[13px] font-semibold text-[#1a1c1c]/60 transition-colors"
-                style={{ border: "1px solid rgba(26,28,28,0.12)" }}>
+                className="px-5 py-2.5 rounded-xl text-[13px] font-semibold text-[#111827]/60 transition-colors"
+                style={{ border: "1px solid rgba(17,24,39,0.12)" }}>
                 Back
               </motion.button>
             ) : <div />}
@@ -488,7 +524,7 @@ export default function SellerRegistrationPage() {
               disabled={(currentStep === 7 && !formData.acceptTerms) || isSubmitting}
               whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-[13px] font-black disabled:opacity-40"
-              style={{ background: currentStep === 7 ? "#22c55e" : "#fcd020", color: currentStep === 7 ? "white" : "#1a1c1c" }}>
+              style={{ background: currentStep === 7 ? "#22c55e" : "#FACC15", color: currentStep === 7 ? "white" : "#111827" }}>
               {isSubmitting
                 ? <><Loader2 size={14} className="animate-spin" /> Submitting…</>
                 : currentStep < 7

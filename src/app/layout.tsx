@@ -4,12 +4,12 @@ import { ConditionalLayout } from "@/components/ConditionalLayout"
 import { LanguageProvider } from "@/lib/i18n/LanguageContext"
 
 export const metadata: Metadata = {
-  title: "LoqMart | India's Multi-Vendor Marketplace",
-  description: "Discover authentic Handmade treasures and quality Machine-Made products from verified sellers across 29 states in India.",
-  keywords: ["marketplace", "handmade", "artisan", "Indian crafts", "e-commerce", "multi-vendor"],
+  title: "LoqMart | Indian Crafts, Handlooms & Regional Goods",
+  description: "Browse handmade and machine-made products from sellers across India. Compare product details, explore by category or seller location, and shop as a guest.",
+  keywords: ["marketplace", "handmade", "Indian products", "machine-made", "online shopping"],
   openGraph: {
-    title: "LoqMart | India's Multi-Vendor Marketplace",
-    description: "Discover authentic Handmade treasures and quality Machine-Made products",
+    title: "LoqMart | Indian Crafts, Handlooms & Regional Goods",
+    description: "Browse products from sellers across India, compare details, and shop as a guest.",
     type: "website",
   },
   appleWebApp: { capable: true, statusBarStyle: "default", title: "LoqMart" },
@@ -18,12 +18,12 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#fcd020",
+  themeColor: "#FACC15",
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body className="min-h-screen flex flex-col antialiased">
         <LanguageProvider>
           <ConditionalLayout>{children}</ConditionalLayout>

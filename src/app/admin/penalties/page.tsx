@@ -83,8 +83,8 @@ export default function PenaltiesPage() {
     <div className="p-7">
       {toast && (
         <div className="fixed top-6 right-6 z-50 ag-toast">
-          <div className="flex items-center gap-3 bg-[#1a1c1c] text-white text-sm font-semibold px-4 py-3 rounded-2xl shadow-2xl" style={{ borderLeft: "3px solid #fcd020" }}>
-            <Check size={14} className="text-[#fcd020]" /> {toast}
+          <div className="flex items-center gap-3 bg-[#111827] text-white text-sm font-semibold px-4 py-3 rounded-2xl shadow-2xl" style={{ borderLeft: "3px solid #FACC15" }}>
+            <Check size={14} className="text-[#FACC15]" /> {toast}
           </div>
         </div>
       )}
@@ -92,11 +92,11 @@ export default function PenaltiesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 ag-slide-up">
         <div>
-          <h1 className="text-[22px] font-black text-[#1a1c1c] tracking-tight">Penalties</h1>
-          <p className="text-[12px] text-[#1a1c1c]/40 mt-1">Seller violations, trust score deductions, held amounts</p>
+          <h1 className="text-[22px] font-black text-[#111827] tracking-tight">Penalties</h1>
+          <p className="text-[12px] text-[#111827]/40 mt-1">Seller violations, trust score deductions, held amounts</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={load} className="w-9 h-9 rounded-xl ag-card flex items-center justify-center text-[#1a1c1c]/40 hover:text-[#1a1c1c] ag-btn">
+          <button onClick={load} className="w-9 h-9 rounded-xl ag-card flex items-center justify-center text-[#111827]/40 hover:text-[#111827] ag-btn">
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           </button>
           <button onClick={() => setShowForm(v => !v)}
@@ -111,11 +111,11 @@ export default function PenaltiesPage() {
       <div className="grid grid-cols-3 gap-4 mb-5 ag-slide-up" style={{ animationDelay: "60ms" }}>
         {(["all","active","resolved"] as const).map(s => (
           <button key={s} onClick={() => setFilter(s)} className="ag-card-stat rounded-xl p-4 text-left ag-btn transition-all"
-            style={filter === s ? { boxShadow: "0 0 0 2px #fcd020, 0 4px 16px rgba(252,208,32,0.25)" } : {}}>
-            <p className="text-[28px] font-black leading-none" style={{ color: s === "active" ? "#b91c1c" : "#1a1c1c" }}>
+            style={filter === s ? { boxShadow: "0 0 0 2px #FACC15, 0 4px 16px rgba(250,204,21,0.25)" } : {}}>
+            <p className="text-[28px] font-black leading-none" style={{ color: s === "active" ? "#b91c1c" : "#111827" }}>
               {loading ? "—" : counts[s]}
             </p>
-            <p className="text-[9.5px] font-black uppercase tracking-widest text-[#1a1c1c]/35 mt-2 capitalize">{s}</p>
+            <p className="text-[9.5px] font-black uppercase tracking-widest text-[#111827]/35 mt-2 capitalize">{s}</p>
           </button>
         ))}
       </div>
@@ -123,42 +123,42 @@ export default function PenaltiesPage() {
       {/* Issue form */}
       {showForm && (
         <div className="ag-card rounded-2xl p-5 mb-5 ag-slide-up" style={{ border: "1px solid rgba(220,38,38,0.18)" }}>
-          <h2 className="text-[12px] font-black text-[#1a1c1c] mb-4">Issue Penalty</h2>
+          <h2 className="text-[12px] font-black text-[#111827] mb-4">Issue Penalty</h2>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#1a1c1c]/40 block mb-1.5">Seller *</label>
+              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#111827]/40 block mb-1.5">Seller *</label>
               <select value={form.seller_id} onChange={e => setForm(f => ({ ...f, seller_id: e.target.value }))}
-                className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+                className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
                 style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }}>
                 <option value="">Select seller...</option>
                 {sellers.map(s => <option key={s.id} value={s.id}>{s.business_name}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#1a1c1c]/40 block mb-1.5">Violation Type</label>
+              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#111827]/40 block mb-1.5">Violation Type</label>
               <select value={form.type} onChange={e => onTypeChange(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+                className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
                 style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }}>
                 {PENALTY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#1a1c1c]/40 block mb-1.5">Amount Held (Rs)</label>
+              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#111827]/40 block mb-1.5">Amount Held (Rs)</label>
               <input type="number" value={form.amount_held} onChange={e => setForm(f => ({ ...f, amount_held: e.target.value }))}
-                className="w-full px-3 py-2 rounded-xl text-[13px] font-bold focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+                className="w-full px-3 py-2 rounded-xl text-[13px] font-bold focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
                 style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }} />
             </div>
             <div>
-              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#1a1c1c]/40 block mb-1.5">Trust Score Impact</label>
+              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#111827]/40 block mb-1.5">Trust Score Impact</label>
               <input type="number" value={form.trust_score_impact} onChange={e => setForm(f => ({ ...f, trust_score_impact: e.target.value }))}
-                className="w-full px-3 py-2 rounded-xl text-[13px] font-bold focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+                className="w-full px-3 py-2 rounded-xl text-[13px] font-bold focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
                 style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }} placeholder="-5" />
             </div>
           </div>
           <div className="mb-4">
-            <label className="text-[9.5px] font-black uppercase tracking-wide text-[#1a1c1c]/40 block mb-1.5">Reason / Evidence *</label>
+            <label className="text-[9.5px] font-black uppercase tracking-wide text-[#111827]/40 block mb-1.5">Reason / Evidence *</label>
             <textarea value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} rows={2}
-              className="w-full px-3 py-2 rounded-xl text-[13px] resize-none focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+              className="w-full px-3 py-2 rounded-xl text-[13px] resize-none focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
               style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }}
               placeholder="Describe the violation in detail..." />
           </div>
@@ -169,7 +169,7 @@ export default function PenaltiesPage() {
               <AlertTriangle size={12} /> {saving ? "Issuing..." : "Issue Penalty"}
             </button>
             <button onClick={() => { setShowForm(false); setForm(EMPTY) }}
-              className="px-5 py-2 text-[12px] font-semibold text-[#1a1c1c]/45 hover:bg-black/5 rounded-xl ag-btn transition-colors">
+              className="px-5 py-2 text-[12px] font-semibold text-[#111827]/45 hover:bg-black/5 rounded-xl ag-btn transition-colors">
               Cancel
             </button>
           </div>
@@ -182,7 +182,7 @@ export default function PenaltiesPage() {
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
               {["Seller","State","Violation","Amount Held","Trust Impact","Status","Issued","Actions"].map(h => (
-                <th key={h} className="text-left px-5 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#1a1c1c]/28 whitespace-nowrap">{h}</th>
+                <th key={h} className="text-left px-5 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#111827]/28 whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
@@ -192,14 +192,14 @@ export default function PenaltiesPage() {
                 <td colSpan={8} className="px-5 py-3"><div className="h-3.5 ag-shimmer rounded" /></td>
               </tr>
             )) : penalties.length === 0 ? (
-              <tr><td colSpan={8} className="px-5 py-12 text-center text-[12px] text-[#1a1c1c]/30">No penalties found. Run missing-tables.sql to create the penalties table.</td></tr>
+              <tr><td colSpan={8} className="px-5 py-12 text-center text-[12px] text-[#111827]/30">No penalties found. Run missing-tables.sql to create the penalties table.</td></tr>
             ) : penalties.map((p, i) => (
               <tr key={p.id} className="ag-table-row ag-row-in" style={{ borderBottom: "1px solid rgba(0,0,0,0.03)", animationDelay: `${i * 30}ms` }}>
                 <td className="px-5 py-3 font-bold text-[13px]">{p.sellers?.business_name || "-"}</td>
-                <td className="px-5 py-3 text-[11px] text-[#1a1c1c]/45">{p.sellers?.state || "-"}</td>
+                <td className="px-5 py-3 text-[11px] text-[#111827]/45">{p.sellers?.state || "-"}</td>
                 <td className="px-5 py-3">
-                  <p className="text-[11px] font-bold text-[#1a1c1c]/65">{PENALTY_TYPES.find(t => t.value === p.type)?.label || p.type}</p>
-                  <p className="text-[10px] text-[#1a1c1c]/30 mt-0.5 truncate max-w-[180px]">{p.reason}</p>
+                  <p className="text-[11px] font-bold text-[#111827]/65">{PENALTY_TYPES.find(t => t.value === p.type)?.label || p.type}</p>
+                  <p className="text-[10px] text-[#111827]/30 mt-0.5 truncate max-w-[180px]">{p.reason}</p>
                 </td>
                 <td className="px-5 py-3 font-black text-[13px] text-red-600">Rs {p.amount_held}</td>
                 <td className="px-5 py-3">
@@ -215,7 +215,7 @@ export default function PenaltiesPage() {
                     {p.status}
                   </span>
                 </td>
-                <td className="px-5 py-3 text-[11px] text-[#1a1c1c]/35">{new Date(p.created_at).toLocaleDateString("en-IN")}</td>
+                <td className="px-5 py-3 text-[11px] text-[#111827]/35">{new Date(p.created_at).toLocaleDateString("en-IN")}</td>
                 <td className="px-5 py-3">
                   {p.status === "active" && (
                     <div className="flex gap-1">

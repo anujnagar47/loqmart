@@ -26,7 +26,7 @@ export async function POST(
 
     const { data: order, error: orderError } = await supabase
       .from("orders")
-      .select("id, user_id, order_status, payment_status, order_items(id, product_id, quantity)")
+      .select("id, user_id, order_status, payment_status")
       .eq("id", id)
       .eq("user_id", user.id)
       .maybeSingle()
@@ -44,32 +44,18 @@ export async function POST(
       )
     }
 
-    const { error: updateError } = await supabase
-      .from("orders")
-      .update({ order_status: "cancelled", updated_at: new Date().toISOString() })
-      .eq("id", id)
+    const { data: cancelled, error: cancelError } = await supabase
+      .rpc("cancel_unpaid_order_and_release_inventory", {
+        p_order_id: id,
+        p_buyer_id: user.id,
+      })
 
-    if (updateError) {
-      console.error("Order cancel error:", updateError)
+    if (cancelError) {
+      console.error("Order cancel error:", cancelError)
       return NextResponse.json({ error: "Failed to cancel order" }, { status: 500 })
     }
-
-    // Restore stock reserved by this order.
-    for (const item of order.order_items || []) {
-      const { data: product } = await supabase
-        .from("products")
-        .select("stock, sold_count")
-        .eq("id", item.product_id)
-        .maybeSingle()
-      if (product) {
-        await supabase
-          .from("products")
-          .update({
-            stock: product.stock + item.quantity,
-            sold_count: Math.max(0, (product.sold_count || 0) - item.quantity),
-          })
-          .eq("id", item.product_id)
-      }
+    if (!cancelled) {
+      return NextResponse.json({ error: "This order can no longer be cancelled." }, { status: 409 })
     }
 
     return NextResponse.json({ success: true })

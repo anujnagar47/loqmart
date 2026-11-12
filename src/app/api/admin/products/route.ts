@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
 
   let query = db
     .from("products")
-    .select("id, name, price, mode, state_code, approval_status, is_featured, created_at, seller_id")
+      .select("id, name, price, mode, state_code, tags, approval_status, is_featured, created_at, seller_id")
     .order("created_at", { ascending: false })
     .limit(300)
 

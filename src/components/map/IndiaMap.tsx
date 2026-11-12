@@ -1,659 +1,385 @@
-﻿"use client";
+"use client"
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { ComposableMap, Geographies, Geography } from 'react-simple-maps';
-import { Tooltip } from 'react-tooltip';
-import * as topojson from 'topojson-client';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, MapPin, Users, Package, Search, X, Globe, ArrowRight, Star, TrendingUp } from 'lucide-react';
-import styles from './IndiaMap.module.css';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import type { KeyboardEvent } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { ComposableMap, Geographies, Geography } from "react-simple-maps"
+import * as topojson from "topojson-client"
+import { ArrowRight, MapPin, Package, Search, Store, X } from "lucide-react"
+import { INDIA_STATE_BY_NAME, INDIA_STATE_DATA, type IndiaStateData } from "@/lib/indiaStateData"
+import styles from "./IndiaMap.module.css"
 
-const INDIA_TOPO_JSON = "/maps/india-topo.json";
-
-const STATE_CODE_MAP: Record<string, string> = {
-  "Andaman and Nicobar Islands": "AN",
-  "Andhra Pradesh": "AP",
-  "Arunachal Pradesh": "AR",
-  "Assam": "AS",
-  "Bihar": "BR",
-  "Chandigarh": "CH",
-  "Chhattisgarh": "CT",
-  "Dadra and Nagar Haveli": "DN",
-  "Daman and Diu": "DD",
-  "Delhi": "DL",
-  "Goa": "GA",
-  "Gujarat": "GJ",
-  "Haryana": "HR",
-  "Himachal Pradesh": "HP",
-  "Jammu and Kashmir": "JK",
-  "Jharkhand": "JH",
-  "Karnataka": "KA",
-  "Kerala": "KL",
-  "Ladakh": "LA",
-  "Lakshadweep": "LD",
-  "Madhya Pradesh": "MP",
-  "Maharashtra": "MH",
-  "Manipur": "MN",
-  "Meghalaya": "ML",
-  "Mizoram": "MZ",
-  "Nagaland": "NL",
-  "Odisha": "OR",
-  "Puducherry": "PY",
-  "Punjab": "PB",
-  "Rajasthan": "RJ",
-  "Sikkim": "SK",
-  "Tamil Nadu": "TN",
-  "Telangana": "TG",
-  "Tripura": "TR",
-  "Uttar Pradesh": "UP",
-  "Uttarakhand": "UA",
-  "West Bengal": "WB",
-};
+const INDIA_TOPO_JSON = "/maps/india-topo.json"
 
 interface StateStats {
-  stateName: string;
-  stateCode: string;
-  artisanCount: number;
-  productCount: number;
+  stateName: string
+  stateCode: string
+  artisanCount: number
+  productCount: number
 }
 
-interface StateInfo {
-  stateName: string;
-  artisans: string;
-  products: string;
-  districts: string;
-  description: string;
-  crafts: string[];
-  featured?: boolean;
-  trend?: string;
+interface MapProduct {
+  id: string
+  name: string
+  slug: string
+  price: number
+  images?: string[]
+  sellers?: { id: string; business_name: string; swadeshi_rank?: number | null } | null
 }
 
-const STATIC_STATE_DATA: Record<string, StateInfo> = {
-  "Andhra Pradesh": { stateName: "Andhra Pradesh", artisans: "85K+", products: "32K+", districts: "26", description: "Rich heritage of Kalamkari, Pochampally ikat, and Bidriware.", crafts: ["Kalamkari", "Pochampally Ikat", "Bidriware"], trend: "+19%", featured: false },
-  "Arunachal Pradesh": { stateName: "Arunachal Pradesh", artisans: "22K+", products: "8K+", districts: "25", description: "Diverse tribal crafts, bamboo, and woven textiles.", crafts: ["Tribal Weaving", "Bamboo Crafts", "Wood Carving"], featured: false },
-  "Assam": { stateName: "Assam", artisans: "48K+", products: "18K+", districts: "33", description: "Known for Muga silk, Assam tea, and bamboo crafts.", crafts: ["Muga Silk", "Assam Tea", "Bamboo Crafts"], trend: "+19%", featured: false },
-  "Bihar": { stateName: "Bihar", artisans: "75K+", products: "25K+", districts: "38", description: "Famous for Madhubani paintings and Bhagalpur silk.", crafts: ["Madhubani Paintings", "Bhagalpur Silk", "Paper Machie"], trend: "+29%", featured: false },
-  "Chhattisgarh": { stateName: "Chhattisgarh", artisans: "42K+", products: "16K+", districts: "33", description: "Home to tribal art, bell metal craft, and Dokra art.", crafts: ["Dokra Art", "Bell Metal", "Tribal Art"], trend: "+28%", featured: false },
-  "Delhi": { stateName: "Delhi", artisans: "120K+", products: "45K+", districts: "11", description: "A melting pot of crafts from across India with modern artisans.", crafts: ["Contemporary Crafts", "Jewelry", "Textiles"], featured: false, trend: "+35%" },
-  "Goa": { stateName: "Goa", artisans: "12K+", products: "4.5K+", districts: "2", description: "Portuguese-influenced crafts and Feni-inspired art.", crafts: ["Tile Art", "Feni Artifacts", "Crochet Lace"], featured: false },
-  "Gujarat": { stateName: "Gujarat", artisans: "120K+", products: "38K+", districts: "33", description: "Rich heritage of Bandhani, Patola, and Block printing traditions.", crafts: ["Bandhani", "Patola Sarees", "Block Printing"], trend: "+18%", featured: false },
-  "Haryana": { stateName: "Haryana", artisans: "38K+", products: "15K+", districts: "22", description: "Known for pottery, Durrie weaving, and leather crafts.", crafts: ["Pottery", "Durrie Weaving", "Leather Craft"], trend: "+11%", featured: false },
-  "Himachal Pradesh": { stateName: "Himachal Pradesh", artisans: "28K+", products: "11K+", districts: "12", description: "Known for woolen crafts, Chamba rumal, and wooden toys.", crafts: ["Woolen Crafts", "Chamba Rumal", "Wooden Toys"], trend: "+16%", featured: false },
-  "Jammu and Kashmir": { stateName: "Jammu and Kashmir", artisans: "35K+", products: "14K+", districts: "20", description: "Pashmina shawls, saffron, and intricate woodwork.", crafts: ["Pashmina Shawls", "Saffron", "Walnut Wood Carving"], trend: "+42%", featured: true },
-  "Jharkhand": { stateName: "Jharkhand", artisans: "35K+", products: "12K+", districts: "24", description: "Home to tribal crafts, Pattachitra, and bamboo work.", crafts: ["Tribal Crafts", "Pattachitra", "Bamboo Work"], trend: "+24%", featured: false },
-  "Karnataka": { stateName: "Karnataka", artisans: "95K+", products: "28K+", districts: "30", description: "Home to exquisite silk sarees and sandalwood carvings.", crafts: ["Bangalore Silk", "Sandalwood Carving", "Channapatna Toys"], trend: "+15%", featured: false },
-  "Kerala": { stateName: "Kerala", artisans: "65K+", products: "22K+", districts: "14", description: "Known for Kasavu sarees, coir products, and Kathakali masks.", crafts: ["Kasavu Sarees", "Coir Products", "Kathakali Masks"], trend: "+12%", featured: false },
-  "Madhya Pradesh": { stateName: "Madhya Pradesh", artisans: "92K+", products: "30K+", districts: "52", description: "Famous for Bagh prints, Gond art, and handwoven fabrics.", crafts: ["Bagh Prints", "Gond Art", "Handwoven Fabrics"], trend: "+22%", featured: false },
-  "Maharashtra": { stateName: "Maharashtra", artisans: "180K+", products: "52K+", districts: "36", description: "From Paithani sarees to Warli paintings, Maharashtra has it all.", crafts: ["Paithani Sarees", "Warli Paintings", "Bidriware"], trend: "+31%", featured: false },
-  "Manipur": { stateName: "Manipur", artisans: "18K+", products: "6K+", districts: "16", description: "Rich weaving traditions and bamboo crafts.", crafts: ["Phanek Weaving", "Bamboo Crafts", "Handloom"], featured: false },
-  "Meghalaya": { stateName: "Meghalaya", artisans: "22K+", products: "7K+", districts: "11", description: "Bamboo and cane crafts with tribal artistry.", crafts: ["Bamboo Crafts", "Cane Work", "Tribal Weaving"], featured: false },
-  "Odisha": { stateName: "Odisha", artisans: "68K+", products: "24K+", districts: "30", description: "Known for Pattachitra, silver filigree, and appliqué work.", crafts: ["Pattachitra", "Silver Filigree", "Appliqué Work"], trend: "+17%", featured: false },
-  "Punjab": { stateName: "Punjab", artisans: "45K+", products: "18K+", districts: "22", description: "Famous for Phulkari, jutti, and wood carving traditions.", crafts: ["Phulkari", "Punjabi Jutti", "Wood Carving"], trend: "+14%", featured: false },
-  "Rajasthan": { stateName: "Rajasthan", artisans: "150K+", products: "45K+", districts: "33", description: "The land of kings, famous for blue pottery, block prints, and handwoven textiles.", crafts: ["Blue Pottery", "Block Printing", "Handwoven Textiles"], trend: "+23%", featured: true },
-  "Tamil Nadu": { stateName: "Tamil Nadu", artisans: "110K+", products: "35K+", districts: "38", description: "Famous for Kanchipuram silk, Temple jewelry, and bronze sculptures.", crafts: ["Kanchipuram Silk", "Temple Jewelry", "Bronze Sculptures"], trend: "+27%", featured: true },
-  "Telangana": { stateName: "Telangana", artisans: "70K+", products: "25K+", districts: "33", description: "Historic Nizam crafts, Kalamkari, and Pochampally ikat.", crafts: ["Kalamkari", "Pochampally Ikat", "Bidriware"], trend: "+21%", featured: false },
-  "Uttar Pradesh": { stateName: "Uttar Pradesh", artisans: "200K+", products: "65K+", districts: "75", description: "Varanasi silk, Lucknowi chikankari, and brassware excellence.", crafts: ["Banarasi Silk", "Chikankari", "Brassware"], trend: "+35%", featured: true },
-  "Uttarakhand": { stateName: "Uttarakhand", artisans: "32K+", products: "12K+", districts: "13", description: "Famous for Aipan art, wooden craft, and Ayurvastra.", crafts: ["Aipan Art", "Wooden Craft", "Ayurvastra"], trend: "+13%", featured: false },
-  "West Bengal": { stateName: "West Bengal", artisans: "98K+", products: "30K+", districts: "23", description: "Home to Baluchari sarees, Dhokra art, and terracotta crafts.", crafts: ["Baluchari Sarees", "Dhokra Art", "Terracotta"], trend: "+21%", featured: false },
-};
-
-const DEFAULT_STATES = ["Rajasthan", "Uttar Pradesh", "Karnataka", "Maharashtra", "Tamil Nadu", "West Bengal", "Gujarat", "Kerala", "Assam", "Odisha"];
-
-// Deterministic pseudo-random generator (seeded by index) so particle
-// positions/timings match between server and client render and avoid
-// a hydration mismatch. Math.random() would produce different values
-// on the server vs. the client for the same render.
-function seededRandom(seed: number): number {
-    const x = Math.sin(seed) * 10000;
-    return x - Math.floor(x);
+function catalogHref(state: IndiaStateData) {
+  return `/category?state=${encodeURIComponent(state.filterCodes.join(","))}`
 }
 
-const PARTICLES = Array.from({ length: 15 }, (_, i) => ({
-    left: 10 + seededRandom(i * 1.7 + 1) * 80,
-    top: 60 + seededRandom(i * 3.1 + 2) * 30,
-    xOffset: seededRandom(i * 5.3 + 3) * 30 - 15,
-    duration: 4 + seededRandom(i * 7.9 + 4) * 2,
-    delay: seededRandom(i * 11.3 + 5) * 4,
-}));
+function StatePreview({
+  state,
+  stats,
+  products,
+  loadingProducts,
+  heroImage,
+  close,
+}: {
+  state: IndiaStateData
+  stats?: StateStats
+  products: MapProduct[]
+  loadingProducts: boolean
+  heroImage?: string
+  close?: () => void
+}) {
+  const makers = Array.from(new Map(products
+    .map((product) => product.sellers)
+    .filter((seller): seller is NonNullable<MapProduct["sellers"]> => !!seller?.id && !!seller.business_name)
+    .map((seller) => [seller.id, seller])).values()).slice(0, 4)
 
-function getStateCode(stateName: string): string {
-  return STATE_CODE_MAP[stateName] || stateName.toUpperCase().slice(0, 2);
+  return (
+    <article className={styles.previewCard}>
+      <div className={styles.previewImage}>
+        <img
+          src={heroImage || state.image}
+          loading="lazy"
+          alt={`${state.name} craft traditions`}
+          className={styles.previewImageAsset}
+          onError={(event) => {
+            if (heroImage && event.currentTarget.src !== state.image) event.currentTarget.src = state.image
+            else event.currentTarget.style.visibility = "hidden"
+          }}
+        />
+        <span className={styles.regionBadge}>{state.region}</span>
+        {close && <button type="button" className={styles.closeSheet} onClick={close} aria-label="Close state preview"><X size={18} /></button>}
+      </div>
+      <div className={styles.previewBody}>
+        <div className={styles.previewHeading}>
+          <div>
+            <p className={styles.previewEyebrow}>Explore the region</p>
+            <h2>{state.name}</h2>
+          </div>
+          <MapPin aria-hidden="true" size={18} />
+        </div>
+        <p className={styles.previewSummary}>
+          {stats?.productCount
+            ? `${stats.productCount.toLocaleString("en-IN")} listed products from ${stats.artisanCount.toLocaleString("en-IN")} approved sellers`
+            : "Browse local makers, materials and regional craft traditions."}
+        </p>
+        <div className={styles.craftList} aria-label={`Craft traditions in ${state.name}`}>
+          {state.crafts.slice(0, 3).map((craft) => <span key={craft} className={styles.craftTag}>{craft}</span>)}
+        </div>
+
+        {state.giTagsCount > 0 && <p className={styles.giCount}>{state.giTagsCount} products with reviewed GI marks</p>}
+
+        <div className={styles.trendingSection}>
+          <div className={styles.trendingHeading}><span>Popular in {state.name}</span><Package size={14} /></div>
+          {loadingProducts ? (
+            <p className={styles.trendingEmpty}>Loading regional products…</p>
+          ) : products.length ? (
+            <div className={styles.trendingList}>
+              {products.slice(0, 4).map((product) => (
+                <Link href={`/product/${product.slug}`} key={product.id} className={styles.trendingProduct}>
+                  <span>{product.name}</span><ArrowRight size={14} aria-hidden="true" />
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className={styles.trendingEmpty}>Explore the collection to see available products.</p>
+          )}
+        </div>
+
+        {makers.length > 0 && (
+          <div className={styles.makersSection}>
+            <p>Makers to discover</p>
+            <div>{makers.map((maker) => (
+              <span key={maker.id} title={maker.swadeshi_rank ? `Swadeshi rank ${maker.swadeshi_rank}` : undefined}>
+                {maker.business_name}
+                {maker.swadeshi_rank ? <small>Rank {maker.swadeshi_rank}</small> : null}
+              </span>
+            ))}</div>
+          </div>
+        )}
+
+        <Link href={catalogHref(state)} className={styles.exploreButton} onClick={close}>
+          View products from {state.name}<ArrowRight size={16} aria-hidden="true" />
+        </Link>
+      </div>
+    </article>
+  )
 }
 
 export function IndiaMap() {
-    const router = useRouter();
-    const [geoData, setGeoData] = useState<any>(null);
-    const [hoveredState, setHoveredState] = useState<string | null>(null);
-    const [selectedState, setSelectedState] = useState<string>("");
-    const [allStates, setAllStates] = useState<string[]>([]);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [isSearchFocused, setIsSearchFocused] = useState(false);
-    const [stateStats, setStateStats] = useState<StateStats[]>([]);
-    const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const router = useRouter()
+  const [geoData, setGeoData] = useState<any>(null)
+  const [hoveredState, setHoveredState] = useState<IndiaStateData | null>(null)
+  const [selectedState, setSelectedState] = useState<IndiaStateData | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [stateStats, setStateStats] = useState<StateStats[]>([])
+  const [productsByState, setProductsByState] = useState<Record<string, MapProduct[]>>({})
+  const [productCountsByState, setProductCountsByState] = useState<Record<string, number>>({})
+  const [loadingState, setLoadingState] = useState<string | null>(null)
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
+  const productsCache = useRef(new Map<string, MapProduct[]>())
+  const activeState = hoveredState || selectedState
 
-    useEffect(() => {
-        fetch(INDIA_TOPO_JSON)
-            .then(response => response.json())
-            .then(topology => {
-                if (topology.objects && topology.objects.states) {
-                    const statesGeo = topojson.feature(topology, topology.objects.states) as any;
-                    setGeoData(statesGeo);
-                    const names = statesGeo.features.map((f: any) => f.properties.st_nm).sort();
-                    setAllStates(names);
-                } else {
-                    console.error("Could not find 'states' object in TopoJSON.");
-                }
-            })
-            .catch(err => console.error("Error loading map data:", err));
-    }, []);
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch(INDIA_TOPO_JSON, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("Map data unavailable")
+        return response.json()
+      })
+      .then((topology) => {
+        const states = topology?.objects?.states
+        if (states) setGeoData(topojson.feature(topology, states))
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") console.error("Could not load India map:", error)
+      })
+    return () => controller.abort()
+  }, [])
 
-    useEffect(() => {
-        async function fetchStateStats() {
-            try {
-                const response = await fetch('/api/states/stats');
-                if (response.ok) {
-                    const data = await response.json();
-                    setStateStats(data.states || []);
-                }
-            } catch (err) {
-                console.error("Error fetching state stats:", err);
-            } finally {
-                setIsLoadingStats(false);
-            }
-        }
-        fetchStateStats();
-    }, []);
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch("/api/states/stats", { signal: controller.signal })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => { if (!controller.signal.aborted) setStateStats(data?.states || []) })
+      .catch((error) => { if (error.name !== "AbortError") console.error("Could not load regional inventory:", error) })
+    return () => controller.abort()
+  }, [])
 
-    const handleStateClick = (stateName: string) => {
-        if (stateName) {
-            const slug = stateName.toLowerCase().replace(/\s+/g, '-');
-            router.push(`/state/${slug}`);
-        }
-    };
+  // Wait for a brief pause on a region before requesting its top products.
+  // This keeps pointer movement cheap and avoids a request for every state crossed.
+  useEffect(() => {
+    if (!activeState || productsCache.current.has(activeState.id)) return
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => {
+      setLoadingState(activeState.id)
+      const params = new URLSearchParams({ state: activeState.filterCodes.join(","), inStock: "1", sort: "sold_desc", limit: "4", page: "1" })
+      fetch(`/api/products?${params}`, { signal: controller.signal })
+        .then((response) => response.ok ? response.json() : null)
+        .then((data) => {
+          if (controller.signal.aborted) return
+          const products = (data?.products || []).slice(0, 4) as MapProduct[]
+          productsCache.current.set(activeState.id, products)
+          setProductsByState((current) => ({ ...current, [activeState.id]: products }))
+          setProductCountsByState((current) => ({ ...current, [activeState.id]: Number(data?.total) || 0 }))
+          setLoadingState(null)
+        })
+        .catch((error) => {
+          if (error.name !== "AbortError") setLoadingState(null)
+        })
+    }, 220)
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
+  }, [activeState])
 
-    const handleManualSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const val = e.target.value;
-        setSelectedState(val);
-        if (val) handleStateClick(val);
-    };
+  const suggestions = useMemo(() => {
+    const query = searchQuery.trim().toLocaleLowerCase()
+    if (!query) return []
+    return INDIA_STATE_DATA.filter((state) =>
+      state.name.toLocaleLowerCase().includes(query) ||
+      state.slug.includes(query.replaceAll(" ", "-")) ||
+      state.crafts.some((craft) => craft.toLocaleLowerCase().includes(query))
+    ).slice(0, 7)
+  }, [searchQuery])
 
-    const filteredStates = allStates.filter(st => 
-        st.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+  const getStateStats = useCallback((state: IndiaStateData) =>
+    stateStats.find((stat) => state.filterCodes.includes(stat.stateCode) || stat.stateName.toLocaleLowerCase() === state.name.toLocaleLowerCase()),
+  [stateStats])
 
-    const featuredStates = DEFAULT_STATES;
+  const previewStats = (state: IndiaStateData) => {
+    const stats = getStateStats(state)
+    const liveProductCount = productCountsByState[state.id]
+    if (!stats && liveProductCount == null) return undefined
+    return {
+      stateName: state.name,
+      stateCode: state.id,
+      artisanCount: stats?.artisanCount || 0,
+      productCount: liveProductCount ?? stats?.productCount ?? 0,
+    }
+  }
 
-    const getStateData = (stateName: string) => {
-        if (STATIC_STATE_DATA[stateName]) {
-            return STATIC_STATE_DATA[stateName];
-        }
-        return {
-            stateName,
-            artisans: "0",
-            products: "0",
-            districts: "0",
-            description: `Explore authentic ${stateName} crafts and handmade products from verified artisans.`,
-            crafts: ["Traditional Crafts"],
-            featured: false,
-        };
-    };
+  const previewState = (state: IndiaStateData) => {
+    setSelectedState(state)
+    setHoveredState(null)
+    setSearchQuery(state.name)
+    setSearchOpen(false)
+  }
 
-    const currentStateData = hoveredState ? getStateData(hoveredState) : null;
+  const selectState = (state: IndiaStateData) => {
+    setSelectedState(state)
+    setHoveredState(null)
+    if (window.matchMedia("(max-width: 767px)").matches) {
+      setMobileSheetOpen(true)
+    } else {
+      router.push(catalogHref(state))
+    }
+  }
 
-    return (
-        <div className={styles.container}>
-            <div className={styles.bgGradient} />
-            <div className={styles.bgPattern} />
-            
-            <div className={styles.particles}>
-                {PARTICLES.map((particle, i) => (
-                    <motion.div
-                        key={i}
-                        className={styles.particle}
-                        initial={{ opacity: 0 }}
-                        animate={{
-                            opacity: [0, 0.4, 0],
-                            y: [-20, -80],
-                            x: particle.xOffset
-                        }}
-                        transition={{
-                            duration: particle.duration,
-                            repeat: Infinity,
-                            delay: particle.delay,
-                        }}
-                        style={{
-                            left: `${particle.left}%`,
-                            top: `${particle.top}%`,
-                        }}
-                    />
-                ))}
-            </div>
+  const resetMap = () => {
+    setHoveredState(null)
+    setSelectedState(null)
+    setSearchQuery("")
+    setSearchOpen(false)
+    setMobileSheetOpen(false)
+    router.replace("/india-map", { scroll: false })
+  }
 
-            <motion.div 
-                className={styles.header}
-                initial={{ opacity: 0, y: -30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-            >
-                <motion.div 
-                    className={styles.headerBadge}
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                >
-                    <Globe size={16} />
-                    <span>All 36 States & UTs</span>
-                </motion.div>
-                <h1 className={styles.title}>
-                    Shop India by
-                    <span className={styles.titleGradient}> State</span>
-                </h1>
-                <p className={styles.subtitle}>
-                    36 states. 1.2 million artisans. One destination - hover any state to discover its crafts, or search below.
-                </p>
-            </motion.div>
+  const visibleState = activeState
+  const visibleProducts = visibleState ? productsByState[visibleState.id] || [] : []
+  const productLoading = !!visibleState && loadingState === visibleState.id
+  const heroImage = visibleProducts.find((product) => product.images?.[0])?.images?.[0]
 
-            {!geoData ? (
-                <div className={styles.loadingContainer}>
-                    <motion.div
-                        className={styles.loadingSpinner}
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" as const }}
-                    >
-                        <Globe size={40} />
-                    </motion.div>
-                    <motion.p
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                    >
-                        Loading Interactive Map...
-                    </motion.p>
-                    <motion.div
-                        className={styles.loadingProgress}
-                        initial={{ scaleX: 0 }}
-                        animate={{ scaleX: 1 }}
-                        transition={{ duration: 2, ease: "easeInOut" as const }}
-                    />
-                </div>
-            ) : (
-            <motion.div
-                className={styles.mapLayout}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.3 }}
-            >
-                <div className={styles.mapColumn}>
-                    <div className={styles.mapCard}>
-                        <div className={styles.mapOverlay} />
-                        <div className={styles.mapGlow} />
-                        
-                        <ComposableMap
-                            projection="geoMercator"
-                            projectionConfig={{
-                                scale: 1100,
-                                center: [78.9, 22.5]
-                            }}
-                            className={styles.composableMap}
-                            viewBox="0 0 800 700"
-                        >
-                            <Geographies geography={geoData}>
-                                {({ geographies }: { geographies: any[] }) =>
-                                    geographies.map((geo: any) => {
-                                        const stName = geo.properties.st_nm;
-                                        const isHovered = hoveredState === stName;
-                                        const isFeatured = featuredStates.includes(stName);
+  return (
+    <main className={styles.page}>
+      <header className={styles.header}>
+        <p className={styles.eyebrow}>Regional craft, one place at a time</p>
+        <h1>Shop India by state</h1>
+        <p className={styles.subtitle}>Explore the makers and traditions behind products from across India.</p>
+      </header>
 
-                                        return (
-                                            <Geography
-                                                key={geo.rsmKey}
-                                                geography={geo}
-                                                onMouseEnter={() => setHoveredState(stName)}
-                                                onMouseLeave={() => setHoveredState(null)}
-                                                onClick={() => handleStateClick(stName)}
-                                                className={styles.geography}
-                                                data-tooltip-id="my-tooltip"
-                                                data-tooltip-content={stName}
-                                                style={{
-                                                    default: {
-                                                        fill: isFeatured ? "#FDEDB0" : "#EDE5D4",
-                                                        outline: "none",
-                                                        stroke: "rgba(114, 92, 0, 0.25)",
-                                                        strokeWidth: 0.7,
-                                                        transition: "all 0.25s ease"
-                                                    },
-                                                    hover: {
-                                                        fill: "#fcd020",
-                                                        outline: "none",
-                                                        stroke: "#1a1c1c",
-                                                        strokeWidth: 1.5,
-                                                        filter: "drop-shadow(0 4px 14px rgba(252, 208, 32, 0.45))",
-                                                        cursor: "pointer",
-                                                    },
-                                                    pressed: {
-                                                        fill: "#edc204",
-                                                        outline: "none",
-                                                        stroke: "#1a1c1c",
-                                                        strokeWidth: 1.5,
-                                                    }
-                                                }}
-                                            />
-                                        );
-                                    })
-                                }
-                            </Geographies>
-                        </ComposableMap>
-                        
-                        <Tooltip
-                            id="my-tooltip"
-                            style={{
-                                backgroundColor: "rgba(26, 28, 28, 0.92)",
-                                color: "#fff",
-                                padding: "8px 14px",
-                                borderRadius: "10px",
-                                fontSize: "13px",
-                                fontWeight: 700,
-                                letterSpacing: "0.01em",
-                                border: "none",
-                                boxShadow: "0 8px 24px rgba(26, 28, 28, 0.2)"
-                            }}
-                        />
-
-                        <motion.div 
-                            className={styles.legend}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.5 }}
-                        >
-                                            <div className={styles.legendItem}>
-                                <div className={styles.legendDot} style={{ background: "#fcd020", border: "1px solid rgba(114,92,0,0.2)" }} />
-                                <span>Top Craft States</span>
-                            </div>
-                            <div className={styles.legendItem}>
-                                <div className={styles.legendDot} style={{ background: "#EDE5D4", border: "1px solid rgba(114,92,0,0.2)" }} />
-                                <span>All States & UTs</span>
-                            </div>
-                        </motion.div>
-                    </div>
-                </div>
-
-                <div className={styles.infoColumn}>
-                    <motion.div 
-                        className={styles.searchContainer}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.4 }}
-                    >
-                        <div className={`${styles.searchWrapper} ${isSearchFocused ? styles.searchFocused : ''}`}>
-                            <Search className={styles.searchIcon} />
-                            <input
-                                type="text"
-                                placeholder="Search states..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                onFocus={() => setIsSearchFocused(true)}
-                                onBlur={() => setIsSearchFocused(false)}
-                                className={styles.searchInput}
-                            />
-                            {searchQuery && (
-                                <button 
-                                    onClick={() => setSearchQuery("")}
-                                    className={styles.searchClear}
-                                >
-                                    <X size={16} />
-                                </button>
-                            )}
-                        </div>
-                        
-                        <AnimatePresence>
-                            {searchQuery && filteredStates.length > 0 && (
-                                <motion.div 
-                                    className={styles.searchResults}
-                                    initial={{ opacity: 0, y: -10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -10 }}
-                                >
-                                    {filteredStates.slice(0, 6).map((state) => (
-                                        <button
-                                            key={state}
-                                            className={styles.searchResultItem}
-                                            onClick={() => {
-                                                setSearchQuery(state);
-                                                handleStateClick(state);
-                                            }}
-                                        >
-                                            <MapPin size={14} />
-                                            <span>{state}</span>
-                                        </button>
-                                    ))}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </motion.div>
-
-                    <motion.div 
-                        className={styles.featuredSection}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.5 }}
-                    >
-                        <h3 className={styles.sectionTitle}>
-                            <Star className={styles.sectionIcon} />
-                            Featured Regions
-                        </h3>
-                        <div className={styles.featuredGrid}>
-                            {featuredStates.slice(0, 3).map((state, i) => (
-                                <motion.button
-                                    key={state}
-                                    className={styles.featuredCard}
-                                    onClick={() => {
-                                        setSelectedState(state);
-                                        handleStateClick(state);
-                                    }}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.6 + i * 0.1 }}
-                                    whileHover={{ scale: 1.02, y: -2 }}
-                                    whileTap={{ scale: 0.98 }}
-                                >
-                                    <div className={styles.featuredBadge}>
-                                        <Star size={12} />
-                                    </div>
-                                    <span className={styles.featuredName}>{state}</span>
-                                    {getStateData(state).trend && (
-                                        <span className={styles.featuredTrend}>
-                                            <TrendingUp size={12} />
-                                            {getStateData(state).trend}
-                                        </span>
-                                    )}
-                                </motion.button>
-                            ))}
-                        </div>
-                    </motion.div>
-
-                    <motion.div 
-                        className={styles.selectWrapper}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.6 }}
-                    >
-                        <label className={styles.selectLabel}>
-                            <MapPin size={14} />
-                            Select State Manually
-                        </label>
-                        <div className={styles.selectContainer}>
-                            <select
-                                className={styles.stateSelect}
-                                value={selectedState}
-                                onChange={handleManualSelect}
-                            >
-                                <option value="">-- Choose State --</option>
-                                {allStates.map(st => (
-                                    <option key={st} value={st}>{st}</option>
-                                ))}
-                            </select>
-                            <div className={styles.selectArrow}>
-                                <ChevronRight size={18} style={{ transform: 'rotate(90deg)' }} />
-                            </div>
-                        </div>
-                    </motion.div>
-
-                    <motion.div 
-                        className={styles.infoCard}
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.7 }}
-                    >
-                        <AnimatePresence mode="wait">
-                            {currentStateData ? (
-                                <motion.div
-                                    key={hoveredState}
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -20 }}
-                                    transition={{ duration: 0.3 }}
-                                >
-                                    <div className={styles.infoHeader}>
-                                        <div className={styles.infoStateInfo}>
-                                            <motion.h3 
-                                                className={styles.infoStateName}
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
-                                                key={hoveredState}
-                                            >
-                                                {hoveredState}
-                                            </motion.h3>
-                                        </div>
-                                        {currentStateData.featured && (
-                                            <div className={styles.featuredBadgeLarge}>
-                                                <Star size={14} />
-                                                Featured
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <motion.p 
-                                        className={styles.infoDescription}
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        transition={{ delay: 0.1 }}
-                                    >
-                                        {currentStateData.description}
-                                    </motion.p>
-
-                                    <div className={styles.statsGrid}>
-                                        <motion.div 
-                                            className={styles.statItem}
-                                            initial={{ opacity: 0, x: -20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: 0.15 }}
-                                        >
-                                            <div className={styles.statIconWrapper}>
-                                                <Users size={20} />
-                                            </div>
-                                            <div className={styles.statContent}>
-                                                <span className={styles.statValue}>
-                                                    {currentStateData.artisans}
-                                                </span>
-                                                <span className={styles.statLabel}>Active Artisans</span>
-                                            </div>
-                                        </motion.div>
-
-                                        <motion.div 
-                                            className={styles.statItem}
-                                            initial={{ opacity: 0, x: -20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: 0.2 }}
-                                        >
-                                            <div className={styles.statIconWrapper}>
-                                                <Package size={20} />
-                                            </div>
-                                            <div className={styles.statContent}>
-                                                <span className={styles.statValue}>
-                                                    {currentStateData.products}
-                                                </span>
-                                                <span className={styles.statLabel}>Products</span>
-                                            </div>
-                                        </motion.div>
-                                    </div>
-
-                                    <div className={styles.craftsSection}>
-                                        <h4 className={styles.craftsTitle}>Specialties</h4>
-                                        <div className={styles.craftsList}>
-                                            {currentStateData.crafts.map((craft, i) => (
-                                                <motion.span 
-                                                    key={craft} 
-                                                    className={styles.craftTag}
-                                                    initial={{ opacity: 0, scale: 0.8 }}
-                                                    animate={{ opacity: 1, scale: 1 }}
-                                                    transition={{ delay: 0.3 + i * 0.05 }}
-                                                >
-                                                    {craft}
-                                                </motion.span>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <motion.button
-                                        className={styles.exploreBtn}
-                                        onClick={() => handleStateClick(hoveredState!)}
-                                        whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
-                                    >
-                                        <span>Explore {hoveredState}</span>
-                                        <motion.span
-                                            animate={{ x: [0, 5, 0] }}
-                                            transition={{ duration: 1.5, repeat: Infinity }}
-                                        >
-                                            <ArrowRight size={18} />
-                                        </motion.span>
-                                    </motion.button>
-                                </motion.div>
-                            ) : (
-                                <motion.div
-                                    key="empty"
-                                    className={styles.emptyState}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                >
-                                    <Globe className={styles.emptyIcon} />
-                                    <p>Hover over a state on the map or search to explore</p>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </motion.div>
-                </div>
-            </motion.div>
+      <section className={styles.explorer} aria-label="Explore India by state">
+        <div className={styles.toolbar}>
+          <div className={styles.searchWrap}>
+            <Search size={18} aria-hidden="true" />
+            <input
+              type="search"
+              role="combobox"
+              aria-label="Search states or crafts"
+              aria-expanded={searchOpen && suggestions.length > 0}
+              aria-controls="state-search-results"
+              placeholder="Type a state or craft name…"
+              value={searchQuery}
+              onChange={(event) => { setSearchQuery(event.target.value); setSearchOpen(true); setSelectedState(null); setHoveredState(null) }}
+              onFocus={() => setSearchOpen(true)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && suggestions[0]) previewState(suggestions[0])
+                if (event.key === "Escape") setSearchOpen(false)
+              }}
+            />
+            {searchQuery && <button type="button" aria-label="Clear search" onClick={() => { setSearchQuery(""); setSearchOpen(false); setSelectedState(null) }}><X size={16} /></button>}
+            {searchOpen && searchQuery && (
+              <div className={styles.searchResults} id="state-search-results" role="listbox">
+                {suggestions.length ? suggestions.map((state) => (
+                  <button key={state.id} type="button" role="option" aria-selected={activeState?.id === state.id} onClick={() => previewState(state)}>
+                    <MapPin size={15} aria-hidden="true" /><span>{state.name}</span><small>{state.crafts[0]}</small>
+                  </button>
+                )) : <p>No states or crafts match that search.</p>}
+              </div>
             )}
-
-            <motion.div
-                className={styles.statsBar}
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8 }}
-            >
-                <div className={styles.statsBarItem}>
-                    <span className={styles.statsBarValue}>36</span>
-                    <span className={styles.statsBarLabel}>States & UTs</span>
-                </div>
-                <div className={styles.statsBarDivider} />
-                <div className={styles.statsBarItem}>
-                    <span className={styles.statsBarValue}>1.2M+</span>
-                    <span className={styles.statsBarLabel}>Active Artisans</span>
-                </div>
-                <div className={styles.statsBarDivider} />
-                <div className={styles.statsBarItem}>
-                    <span className={styles.statsBarValue}>500K+</span>
-                    <span className={styles.statsBarLabel}>Products</span>
-                </div>
-                <div className={styles.statsBarDivider} />
-                <div className={styles.statsBarItem}>
-                    <span className={styles.statsBarValue}>15%</span>
-                    <span className={styles.statsBarLabel}>Max Bonus</span>
-                </div>
-            </motion.div>
+          </div>
+          <button type="button" className={styles.resetButton} onClick={resetMap}>All India</button>
         </div>
-    );
+
+        <div className={styles.mobileStateStrip} aria-label="Choose a state">
+          {INDIA_STATE_DATA.map((state) => (
+            <button type="button" key={state.id} aria-pressed={selectedState?.id === state.id} onClick={() => selectState(state)}>
+              {state.name}
+            </button>
+          ))}
+        </div>
+
+        <div className={styles.mapLayout}>
+          <div className={styles.mapColumn}>
+            <div className={styles.mapHeading}>
+              <div><h2>Explore the map</h2><p>Hover to preview, select a state to browse its collection.</p></div>
+              <span className={styles.coverage}><MapPin size={14} /> 28 states · 8 union territories</span>
+            </div>
+            <div className={styles.mapCard} onMouseLeave={() => setHoveredState(null)}>
+              {geoData ? (
+                <ComposableMap
+                  projection="geoMercator"
+                  projectionConfig={{ scale: 1050, center: [82.3, 22.3] }}
+                  className={styles.mapSvg}
+                  viewBox="0 0 800 680"
+                  aria-label="Interactive map of India"
+                >
+                  <Geographies geography={geoData}>
+                    {({ geographies }: { geographies: any[] }) => geographies.map((geography: any) => {
+                      const state = INDIA_STATE_BY_NAME.get(String(geography.properties?.st_nm || "").toLocaleLowerCase())
+                      if (!state) return null
+                      const inventory = getStateStats(state)
+                      const hasLiveProducts = (productCountsByState[state.id] ?? inventory?.productCount ?? 0) > 0
+                      const isActive = visibleState?.id === state.id
+                      return (
+                        <Geography
+                          key={geography.rsmKey}
+                          geography={geography}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`${state.name}${inventory?.productCount ? `, ${inventory.productCount} listed products` : ""}`}
+                          aria-pressed={selectedState?.id === state.id}
+                          onMouseEnter={() => setHoveredState(state)}
+                          onFocus={() => setHoveredState(state)}
+                          onBlur={() => setHoveredState(null)}
+                          onClick={() => selectState(state)}
+                          onKeyDown={(event: KeyboardEvent<SVGPathElement>) => {
+                            if (event.key === "Enter" || event.key === " ") { event.preventDefault(); selectState(state) }
+                          }}
+                          className={styles.statePath}
+                          style={{
+                            default: { fill: isActive ? "#EAB308" : hasLiveProducts ? "#FEF3C7" : "#FFFBEB", stroke: "#D6C69A", strokeWidth: 0.75, outline: "none", transition: "fill 150ms ease, stroke 150ms ease" },
+                            hover: { fill: "#FACC15", stroke: "#A16207", strokeWidth: 1.5, outline: "none", cursor: "pointer", filter: "drop-shadow(0 2px 3px rgba(120, 86, 0, 0.18))" },
+                            pressed: { fill: "#EAB308", stroke: "#854D0E", strokeWidth: 1.5, outline: "none" },
+                          }}
+                        />
+                      )
+                    })}
+                  </Geographies>
+                </ComposableMap>
+              ) : (
+                <div className={styles.mapLoading} aria-live="polite">Loading India map…</div>
+              )}
+              <div className={styles.mapLegend}>
+                <span><i className={styles.inventoryDot} /> Products listed</span>
+                <span><i className={styles.neutralDot} /> Browse all regions</span>
+              </div>
+            </div>
+          </div>
+
+          <aside className={styles.detailPanel} aria-live="polite">
+            {visibleState ? (
+              <StatePreview state={visibleState} stats={previewStats(visibleState)} products={visibleProducts} loadingProducts={productLoading} heroImage={heroImage} />
+            ) : (
+              <div className={styles.emptyPreview}>
+                <div className={styles.emptyIcon}><Store size={22} /></div>
+                <h2>Find a regional collection</h2>
+                <p>Choose a state on the map or search by place and craft to see its traditions and available products.</p>
+                <span>Every state and union territory is included</span>
+              </div>
+            )}
+          </aside>
+        </div>
+      </section>
+
+      {mobileSheetOpen && visibleState && (
+        <div className={styles.sheetBackdrop} onMouseDown={(event) => { if (event.target === event.currentTarget) setMobileSheetOpen(false) }}>
+          <div className={styles.mobileSheet} role="dialog" aria-modal="true" aria-label={`${visibleState.name} collection`}>
+            <div className={styles.sheetHandle} />
+            <StatePreview state={visibleState} stats={previewStats(visibleState)} products={visibleProducts} loadingProducts={productLoading} heroImage={heroImage} close={() => setMobileSheetOpen(false)} />
+          </div>
+        </div>
+      )}
+    </main>
+  )
 }

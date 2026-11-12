@@ -1,104 +1,139 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
+import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { ArrowRight, MapPin, Star, Award, Loader2 } from "lucide-react"
-import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { ArrowRight, Award, MapPin, Package } from "lucide-react"
 import { useLanguage } from "@/lib/i18n/LanguageContext"
+import type { Seller } from "@/types/database"
+
+type SpotlightSeller = Pick<
+  Seller,
+  | "id"
+  | "business_name"
+  | "owner_name"
+  | "state_code"
+  | "city"
+  | "address"
+  | "logo_url"
+  | "banner_url"
+  | "swadeshi_rank"
+  | "swadeshi_score"
+  | "total_products"
+  | "total_orders"
+>
 
 const STATE_NAMES: Record<string, string> = {
-  RJ:"Rajasthan", UP:"Uttar Pradesh", MH:"Maharashtra", WB:"West Bengal",
-  KA:"Karnataka", TN:"Tamil Nadu", OR:"Odisha", AP:"Andhra Pradesh",
-  GJ:"Gujarat", JK:"Jammu & Kashmir", KL:"Kerala", BR:"Bihar",
+  RJ: "Rajasthan", UP: "Uttar Pradesh", MH: "Maharashtra", WB: "West Bengal",
+  KA: "Karnataka", TN: "Tamil Nadu", OR: "Odisha", AP: "Andhra Pradesh",
+  GJ: "Gujarat", JK: "Jammu & Kashmir", KL: "Kerala", BR: "Bihar",
+  MP: "Madhya Pradesh", PB: "Punjab", HR: "Haryana", DL: "Delhi",
 }
 
 export function SellerSpotlight() {
   const { t } = useLanguage()
-  const [sellers, setSellers] = useState<any[]>([])
+  const [sellers, setSellers] = useState<SpotlightSeller[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let cancelled = false
+
     async function fetchSellers() {
-      const supabase = createClient()
-      const { data } = await supabase
-        .from("sellers")
-        .select("id, business_name, owner_name, state_code, swadeshi_rank, approval_status")
-        .eq("approval_status", "approved")
-        .order("swadeshi_rank", { ascending: false })
-        .limit(4)
-      setSellers(data || [])
-      setLoading(false)
+      try {
+        const response = await fetch("/api/sellers/featured")
+        if (!response.ok) throw new Error("Featured sellers are unavailable")
+        const data = await response.json() as { sellers?: SpotlightSeller[] }
+        if (!cancelled) setSellers(data.sellers || [])
+      } catch {
+        if (!cancelled) setSellers([])
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
+
     fetchSellers()
+    return () => { cancelled = true }
   }, [])
 
   return (
-    <section className="py-10 md:py-20 px-4 md:px-6 bg-white">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+    <section className="bg-white px-4 py-8 sm:px-6 md:py-12 lg:px-8">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end sm:gap-6 md:mb-8">
           <div>
-            <span className="text-xs font-black uppercase tracking-[0.3em] text-[#1a1c1c]/40 mb-2 block">{t("sellerSpotlight.eyebrow")}</span>
-            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-[#1a1c1c]">{t("sellerSpotlight.title")}</h2>
+            <span className="mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-[#111827]">
+              {t("sellerSpotlight.eyebrow")}
+            </span>
+            <h2 className="text-2xl font-bold tracking-tight text-[#111827] md:text-3xl">
+              {t("sellerSpotlight.title")}
+            </h2>
           </div>
-          <Link href="/sellers" className="flex items-center text-[#1a1c1c]/50 font-bold hover:text-[#1a1c1c] transition-colors">
-            {t("sellerSpotlight.viewAllSellers")} <ArrowRight className="ml-2 w-4 h-4" />
+          <Link href="/sellers" className="inline-flex min-h-10 shrink-0 items-center gap-2 text-sm font-semibold text-[#4B5563] transition-colors hover:text-[#111827] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#EAB308]">
+            {t("sellerSpotlight.viewAllSellers")} <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="w-7 h-7 animate-spin text-[#1a1c1c]/30" />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4" aria-label="Loading seller profiles">
+            {Array.from({ length: 4 }, (_, index) => (
+              <div key={index} className="h-56 animate-pulse border border-[#e8e4da] bg-white" />
+            ))}
           </div>
         ) : sellers.length === 0 ? (
-          <p className="text-center text-[#1a1c1c]/40 py-12 font-medium">{t("sellerSpotlight.loadingSoon")}</p>
+          <div className="flex flex-col items-start justify-between gap-4 border-y border-[#e8e4da] py-5 sm:flex-row sm:items-center">
+            <p className="text-sm text-[#4B5563]">{t("sellerSpotlight.loadingSoon")}</p>
+            <Link href="/sellers" className="inline-flex min-h-10 items-center gap-2 border border-[#E5E7EB] px-4 text-sm font-semibold text-[#111827] transition-colors hover:border-[#EAB308] hover:bg-[#FACC15]">
+              {t("sellerSpotlight.viewAllSellers")} <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-4">
-            {sellers.map((seller, i) => {
-              const initials = (seller.business_name || "?").split(" ").map((w: string) => w[0]).join("").substring(0, 2).toUpperCase()
-              const stateName = STATE_NAMES[seller.state_code] || seller.state_code || "India"
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+            {sellers.map((seller, index) => {
+              const initials = seller.business_name.split(/\s+/).map((word) => word[0]).join("").slice(0, 2).toUpperCase()
+              const stateName = (seller.state_code && STATE_NAMES[seller.state_code]) || seller.state_code
+              const location = [seller.city, stateName].filter(Boolean).join(", ")
+
               return (
                 <motion.div
                   key={seller.id}
-                  initial={{ opacity: 0, y: 24 }}
+                  initial={{ opacity: 0, y: 12 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: i * 0.1 }}
-                  whileHover={{ y: -4 }}
+                  transition={{ duration: 0.25, delay: index * 0.04 }}
+                  className="h-full"
                 >
-                  <Link href={`/seller/${seller.id}`}
-                    className="group block bg-[#f8f5f0] rounded-[4px] border border-[#1a1c1c]/10 overflow-hidden hover:shadow-[0_2px_10px_rgba(26,28,28,0.12)] transition-shadow duration-200">
-                    <div className="relative h-28 bg-gradient-to-br from-[#fcd020] to-[#e6b800]">
-                      <div className="absolute -bottom-8 left-5">
-                        <div className="w-16 h-16 rounded-full border-4 border-white bg-[#1a1c1c] flex items-center justify-center shadow-lg">
-                          <span className="text-[#fcd020] font-black text-lg">{initials}</span>
+                  <Link
+                    href={`/seller/${seller.id}`}
+                    className="group flex h-full min-h-[270px] flex-col border border-[#E5E7EB] bg-white transition-colors hover:border-[#EAB308] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#EAB308]"
+                  >
+                    <div className="relative h-28 shrink-0 overflow-hidden border-b border-[#e8e4da] bg-white sm:h-32">
+                      {seller.banner_url ? (
+                        <Image src={seller.banner_url} alt="" fill sizes="(max-width: 640px) 50vw, 25vw" className="object-cover" />
+                      ) : seller.logo_url ? (
+                        <Image src={seller.logo_url} alt="" fill sizes="(max-width: 640px) 50vw, 25vw" className="object-contain p-5" />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-3xl font-semibold text-[#111827]" aria-hidden="true">
+                          {initials}
                         </div>
-                      </div>
-                    </div>
-                    <div className="pt-12 pb-5 px-5">
-                      <div className="flex items-start justify-between mb-1 gap-2">
-                        <div>
-                          <h3 className="font-extrabold text-[#1a1c1c] text-sm group-hover:text-[#725c00] transition-colors leading-tight">
-                            {seller.business_name}
-                          </h3>
-                          {seller.owner_name && (
-                            <p className="text-xs text-[#1a1c1c]/50 mt-0.5">{seller.owner_name}</p>
-                          )}
-                        </div>
-                        {seller.swadeshi_rank > 0 && (
-                          <div className="flex items-center gap-1 bg-[#fcd020]/30 px-2 py-1 rounded-full shrink-0">
-                            <Award className="w-3 h-3 text-[#725c00]" />
-                            <span className="text-[10px] font-black text-[#725c00]">{seller.swadeshi_rank}</span>
-                          </div>
-                        )}
-                      </div>
-                      {seller.specialty && (
-                        <p className="text-xs text-[#725c00] font-semibold mb-3 mt-1">{seller.specialty}</p>
                       )}
-                      <div className="flex items-center gap-3 text-xs text-[#1a1c1c]/40">
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />{stateName}
-                        </span>
+                      <span className="absolute left-2 top-2 inline-flex items-center gap-1 border border-[#E5E7EB] bg-white px-2 py-1 text-[10px] font-semibold text-[#4B5563]">
+                        <Award className="h-3 w-3 text-[#111827]" /> Top seller {index + 1}
+                      </span>
+                    </div>
+                    <div className="flex flex-1 flex-col p-3 sm:p-4">
+                      <h3 className="line-clamp-2 text-sm font-bold leading-5 text-[#111827] group-hover:text-[#111827]">
+                        {seller.business_name}
+                      </h3>
+                      {seller.owner_name && <p className="mt-1 truncate text-xs text-[#4B5563]">{seller.owner_name}</p>}
+                      {(seller.address || location) && (
+                        <p className="mt-3 flex items-start gap-1.5 text-xs leading-4 text-[#4B5563]">
+                          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#111827]" />
+                          <span className="line-clamp-2">{[seller.address, location].filter(Boolean).join(", ")}</span>
+                        </p>
+                      )}
+                      <div className="mt-auto flex items-center gap-4 border-t border-[#e8e4da] pt-3 text-xs text-[#4B5563]">
+                        <span className="inline-flex items-center gap-1"><Package className="h-3.5 w-3.5" />{seller.total_products} products</span>
+                        <span className="inline-flex items-center gap-1">{seller.total_orders} orders</span>
                       </div>
                     </div>
                   </Link>

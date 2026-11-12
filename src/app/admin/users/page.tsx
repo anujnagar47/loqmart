@@ -91,8 +91,8 @@ export default function UsersPage() {
     <div className="p-7">
       {toast && (
         <div className="fixed top-6 right-6 z-50 ag-toast">
-          <div className="flex items-center gap-3 bg-[#1a1c1c] text-white text-sm font-semibold px-4 py-3 rounded-2xl shadow-2xl" style={{ borderLeft: "3px solid #fcd020" }}>
-            <Check size={14} className="text-[#fcd020]" /> {toast}
+          <div className="flex items-center gap-3 bg-[#111827] text-white text-sm font-semibold px-4 py-3 rounded-2xl shadow-2xl" style={{ borderLeft: "3px solid #FACC15" }}>
+            <Check size={14} className="text-[#FACC15]" /> {toast}
           </div>
         </div>
       )}
@@ -100,11 +100,11 @@ export default function UsersPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 ag-slide-up">
         <div>
-          <h1 className="text-[22px] font-black text-[#1a1c1c] tracking-tight">Users</h1>
-          <p className="text-[12px] text-[#1a1c1c]/40 mt-1">{users.length} registered accounts</p>
+          <h1 className="text-[22px] font-black text-[#111827] tracking-tight">Users</h1>
+          <p className="text-[12px] text-[#111827]/40 mt-1">{users.length} registered accounts</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={load} className="w-9 h-9 rounded-xl ag-card flex items-center justify-center text-[#1a1c1c]/40 hover:text-[#1a1c1c] ag-btn">
+          <button onClick={load} className="w-9 h-9 rounded-xl ag-card flex items-center justify-center text-[#111827]/40 hover:text-[#111827] ag-btn">
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           </button>
           <button onClick={() => setShowForm(v => !v)} className="flex items-center gap-2 px-4 py-2 rounded-xl ag-btn-primary text-[12px] font-black ag-btn">
@@ -115,48 +115,48 @@ export default function UsersPage() {
 
       {/* Create form */}
       {showForm && (
-        <div className="ag-card rounded-2xl p-5 mb-5 ag-slide-up" style={{ border: "1px solid rgba(252,208,32,0.3)" }}>
-          <h2 className="text-[12px] font-black text-[#1a1c1c] mb-4">New User Account</h2>
+        <div className="ag-card rounded-2xl p-5 mb-5 ag-slide-up" style={{ border: "1px solid rgba(250,204,21,0.3)" }}>
+          <h2 className="text-[12px] font-black text-[#111827] mb-4">New User Account</h2>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#1a1c1c]/40 block mb-1.5">Full Name *</label>
+              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#111827]/40 block mb-1.5">Full Name *</label>
               <input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
-                className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+                className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
                 style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }} placeholder="Full Name" />
             </div>
             <div>
-              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#1a1c1c]/40 block mb-1.5">Email *</label>
+              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#111827]/40 block mb-1.5">Email *</label>
               <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+                className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
                 style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }} placeholder="email@example.com" />
             </div>
             <div>
-              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#1a1c1c]/40 block mb-1.5">Password *</label>
+              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#111827]/40 block mb-1.5">Password *</label>
               <input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+                className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
                 style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }} placeholder="Min 6 characters" />
             </div>
             <div>
-              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#1a1c1c]/40 block mb-1.5">Role</label>
+              <label className="text-[9.5px] font-black uppercase tracking-wide text-[#111827]/40 block mb-1.5">Role</label>
               <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
-                className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+                className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
                 style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }}>
                 {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
             {(form.role === "admin" || form.role === "sub_admin") && (
               <div className="col-span-2">
-                <label className="text-[9.5px] font-black uppercase tracking-wide text-[#1a1c1c]/40 block mb-1.5">
-                  <MapPin size={10} className="inline mr-1 text-[#fcd020]" />
+                <label className="text-[9.5px] font-black uppercase tracking-wide text-[#111827]/40 block mb-1.5">
+                  <MapPin size={10} className="inline mr-1 text-[#FACC15]" />
                   State Scope (leave blank for full access)
                 </label>
                 <select value={form.state_scope} onChange={e => setForm(f => ({ ...f, state_scope: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+                  className="w-full px-3 py-2 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
                   style={{ border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.8)" }}>
                   <option value="">Full Access (All States)</option>
                   {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
-                <p className="text-[10px] text-[#1a1c1c]/35 mt-1">Sub-admins with a state scope can only manage sellers/products from that state.</p>
+                <p className="text-[10px] text-[#111827]/35 mt-1">Sub-admins with a state scope can only manage sellers/products from that state.</p>
               </div>
             )}
           </div>
@@ -166,7 +166,7 @@ export default function UsersPage() {
               <Check size={13} /> {saving ? "Creating..." : "Create User"}
             </button>
             <button onClick={() => { setShowForm(false); setForm(EMPTY_FORM) }}
-              className="px-5 py-2 text-[12px] font-semibold text-[#1a1c1c]/45 hover:bg-black/5 rounded-xl ag-btn transition-colors">Cancel</button>
+              className="px-5 py-2 text-[12px] font-semibold text-[#111827]/45 hover:bg-black/5 rounded-xl ag-btn transition-colors">Cancel</button>
           </div>
         </div>
       )}
@@ -175,18 +175,18 @@ export default function UsersPage() {
       <div className="grid grid-cols-5 gap-3 mb-5 ag-slide-up" style={{ animationDelay: "60ms" }}>
         {(["all","buyer","seller","admin","sub_admin"] as const).map(r => (
           <button key={r} onClick={() => setFilter(r)} className="ag-card-stat rounded-xl p-3 text-left ag-btn transition-all"
-            style={filter === r ? { boxShadow: "0 0 0 2px #fcd020, 0 4px 16px rgba(252,208,32,0.25)" } : {}}>
-            <p className="text-[22px] font-black text-[#1a1c1c] leading-none">{counts[r]}</p>
-            <p className="text-[9px] font-black uppercase tracking-widest text-[#1a1c1c]/35 mt-1.5">{r.replace("_", " ")}</p>
+            style={filter === r ? { boxShadow: "0 0 0 2px #FACC15, 0 4px 16px rgba(250,204,21,0.25)" } : {}}>
+            <p className="text-[22px] font-black text-[#111827] leading-none">{counts[r]}</p>
+            <p className="text-[9px] font-black uppercase tracking-widest text-[#111827]/35 mt-1.5">{r.replace("_", " ")}</p>
           </button>
         ))}
       </div>
 
       {/* Search */}
       <div className="relative mb-5 ag-slide-up" style={{ animationDelay: "80ms" }}>
-        <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#1a1c1c]/30 pointer-events-none" />
+        <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#111827]/30 pointer-events-none" />
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by email or name..."
-          className="w-full pl-9 pr-4 py-2.5 rounded-xl text-[13px] text-[#1a1c1c] placeholder:text-[#1a1c1c]/30 focus:outline-none focus:ring-2 focus:ring-[#fcd020]/50"
+          className="w-full pl-9 pr-4 py-2.5 rounded-xl text-[13px] text-[#111827] placeholder:text-[#111827]/30 focus:outline-none focus:ring-2 focus:ring-[#FACC15]/50"
           style={{ background: "rgba(255,255,255,0.75)", border: "1px solid rgba(0,0,0,0.07)" }} />
       </div>
 
@@ -196,7 +196,7 @@ export default function UsersPage() {
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
               {["User","Email","Role","State Scope","Joined","Actions"].map(h => (
-                <th key={h} className="text-left px-5 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#1a1c1c]/28">{h}</th>
+                <th key={h} className="text-left px-5 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#111827]/28">{h}</th>
               ))}
             </tr>
           </thead>
@@ -206,7 +206,7 @@ export default function UsersPage() {
                 <td colSpan={6} className="px-5 py-3"><div className="h-3.5 ag-shimmer rounded" /></td>
               </tr>
             )) : filtered.length === 0 ? (
-              <tr><td colSpan={6} className="px-5 py-12 text-center text-[12px] text-[#1a1c1c]/30">No users found</td></tr>
+              <tr><td colSpan={6} className="px-5 py-12 text-center text-[12px] text-[#111827]/30">No users found</td></tr>
             ) : filtered.map((u, i) => (
               <tr key={u.id} className="ag-table-row ag-row-in" style={{ borderBottom: "1px solid rgba(0,0,0,0.03)", animationDelay: `${i * 25}ms` }}>
                 <td className="px-5 py-3">
@@ -215,10 +215,10 @@ export default function UsersPage() {
                       style={{ background: ROLE_PILL[u.role]?.avatarBg || "rgba(100,116,139,0.1)", color: ROLE_PILL[u.role]?.color || "#475569" }}>
                       {(u.full_name || u.email || "?").charAt(0).toUpperCase()}
                     </div>
-                    <span className="font-bold text-[#1a1c1c] text-[12px]">{u.full_name || "No name"}</span>
+                    <span className="font-bold text-[#111827] text-[12px]">{u.full_name || "No name"}</span>
                   </div>
                 </td>
-                <td className="px-5 py-3 text-[11px] text-[#1a1c1c]/45">{u.email}</td>
+                <td className="px-5 py-3 text-[11px] text-[#111827]/45">{u.email}</td>
                 <td className="px-5 py-3">
                   <select value={u.role} onChange={e => updateUser(u.id, "role", e.target.value)}
                     className="text-[9.5px] font-black uppercase px-2 py-0.5 rounded-full border-0 cursor-pointer focus:outline-none"
@@ -229,14 +229,14 @@ export default function UsersPage() {
                 <td className="px-5 py-3">
                   {(u.role === "admin" || u.role === "sub_admin") ? (
                     <select value={u.state_scope || ""} onChange={e => updateUser(u.id, "state_scope", e.target.value)}
-                      className="text-[10px] font-bold rounded-lg px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-[#fcd020]"
+                      className="text-[10px] font-bold rounded-lg px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-[#FACC15]"
                       style={{ border: "1px solid rgba(0,0,0,0.08)" }}>
                       <option value="">All States</option>
                       {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
-                  ) : <span className="text-[10px] text-[#1a1c1c]/25">—</span>}
+                  ) : <span className="text-[10px] text-[#111827]/25">—</span>}
                 </td>
-                <td className="px-5 py-3 text-[11px] text-[#1a1c1c]/30">{new Date(u.created_at).toLocaleDateString("en-IN")}</td>
+                <td className="px-5 py-3 text-[11px] text-[#111827]/30">{new Date(u.created_at).toLocaleDateString("en-IN")}</td>
                 <td className="px-5 py-3">
                   <button onClick={() => deleteUser(u.id, u.email)}
                     disabled={deleting === u.id || u.role === "admin"}
@@ -252,7 +252,7 @@ export default function UsersPage() {
             ))}
           </tbody>
         </table>
-        <div className="px-5 py-3 text-[10.5px] text-[#1a1c1c]/25 font-medium" style={{ borderTop: "1px solid rgba(0,0,0,0.04)" }}>
+        <div className="px-5 py-3 text-[10.5px] text-[#111827]/25 font-medium" style={{ borderTop: "1px solid rgba(0,0,0,0.04)" }}>
           Showing {filtered.length} of {users.length}
         </div>
       </div>

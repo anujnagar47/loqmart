@@ -2,6 +2,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { createServiceClient } from "@/lib/supabase/admin"
 import Razorpay from "razorpay"
+import { randomBytes } from "crypto"
 
 // POST /api/checkout - Create order from cart
 export async function POST(request: Request) {
@@ -15,12 +16,32 @@ export async function POST(request: Request) {
     }
 
     const supabase = createServiceClient()
+    const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
+    if (profile?.role !== "admin" && profile?.role !== "sub_admin") {
+      return NextResponse.json({ error: "Customer checkout is not open yet. Join the priority list for launch updates." }, { status: 403 })
+    }
 
     const body = await request.json()
     const { items, address_id, payment_method = "razorpay", promo_code, loqcoins_to_redeem } = body
 
-    if (!items || items.length === 0) {
+    if (payment_method !== "razorpay" && payment_method !== "cod") {
+      return NextResponse.json({ error: "Unsupported payment method" }, { status: 400 })
+    }
+    if (payment_method === "razorpay" && (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET)) {
+      return NextResponse.json({ error: "Online payments are temporarily unavailable. Choose Cash on Delivery or try again later." }, { status: 503 })
+    }
+
+    if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: "No items in order" }, { status: 400 })
+    }
+    if (items.some((item: unknown) => {
+      if (!item || typeof item !== "object") return true
+      const line = item as { product_id?: unknown; quantity?: unknown; variant_id?: unknown }
+      return typeof line.product_id !== "string" || !line.product_id.trim() ||
+        typeof line.quantity !== "number" || !Number.isSafeInteger(line.quantity) || line.quantity < 1 ||
+        (line.variant_id !== undefined && typeof line.variant_id !== "string")
+    })) {
+      return NextResponse.json({ error: "Cart contains an invalid item or quantity" }, { status: 400 })
     }
     if (!address_id) {
       return NextResponse.json({ error: "Delivery address required" }, { status: 400 })
@@ -116,12 +137,15 @@ export async function POST(request: Request) {
     if (promo_code && typeof promo_code === "string") {
       const { data: promo } = await supabase
         .from("survey_discount_codes")
-        .select("id, code, discount_percent, free_delivery, free_order, is_used, expires_at")
+        .select("id, code, email, discount_percent, free_delivery, free_order, is_used, expires_at")
         .ilike("code", promo_code.trim())
         .maybeSingle()
 
       if (!promo || promo.is_used || (promo.expires_at && new Date(promo.expires_at) < new Date())) {
         return NextResponse.json({ error: "Promo code is no longer valid" }, { status: 400 })
+      }
+      if (!user.email || promo.email?.trim().toLowerCase() !== user.email.trim().toLowerCase()) {
+        return NextResponse.json({ error: "This promo code is not linked to your account" }, { status: 403 })
       }
 
       appliedPromoCode = promo.code
@@ -159,7 +183,31 @@ export async function POST(request: Request) {
     const total = Math.max(0, preCoinsTotal - coinsDiscount)
 
     // Generate order number
-    const orderNumber = `LM${Date.now()}`
+    const orderNumber = `LM${Date.now()}${randomBytes(3).toString("hex").toUpperCase()}`
+
+    // Create the payment intent before writing the order or reserving stock.
+    // If Razorpay is unavailable, checkout exits without leaving a pending
+    // order or reducing inventory. The webhook resolves the local order by
+    // this unique receipt if payment completes after the order is saved.
+    let razorpayOrderId: string | null = null
+    if (payment_method === "razorpay") {
+      try {
+        const razorpay = new Razorpay({
+          key_id: process.env.RAZORPAY_KEY_ID!,
+          key_secret: process.env.RAZORPAY_KEY_SECRET!,
+        })
+        const rzpOrder = await razorpay.orders.create({
+          amount: total * 100,
+          currency: "INR",
+          receipt: orderNumber,
+          notes: { order_number: orderNumber, user_id: user.id },
+        })
+        razorpayOrderId = rzpOrder.id
+      } catch (rzpErr) {
+        console.error("Razorpay order creation failed:", rzpErr)
+        return NextResponse.json({ error: "Online payment could not be started. Please try again." }, { status: 502 })
+      }
+    }
 
     // Get seller_id (for now use first item's seller - multi-seller orders handled later)
     const sellerId = orderItemsData[0].seller_id
@@ -180,6 +228,7 @@ export async function POST(request: Request) {
         coupon_code: appliedPromoCode,
         coins_used: coinsUsed,
         coins_discount: coinsDiscount,
+        razorpay_order_id: razorpayOrderId,
         order_status: "pending",
         payment_status: "pending",
       })
@@ -202,34 +251,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to create order items" }, { status: 500 })
     }
 
-    // Deduct stock with optimistic concurrency: .gte("stock", quantity) prevents overselling.
-    // Variant-bearing items deduct from the variant's own stock, not the
-    // product's aggregate stock — product.sold_count still increments either
-    // way so Best Sellers ranking works the same for variant products.
-    for (const item of items) {
-      const product = products.find(p => p.id === item.product_id)!
-      if (item.variant_id) {
-        const variant = variants?.find(v => v.id === item.variant_id)
-        if (!variant) continue // already validated above; unreachable in practice
-        await supabase
-          .from("product_variants")
-          .update({ stock: variant.stock - item.quantity })
-          .eq("id", item.variant_id)
-          .gte("stock", item.quantity)
-        await supabase
-          .from("products")
-          .update({ sold_count: (product.sold_count || 0) + item.quantity })
-          .eq("id", item.product_id)
-      } else {
-        await supabase
-          .from("products")
-          .update({
-            stock: product.stock - item.quantity,
-            sold_count: (product.sold_count || 0) + item.quantity,
-          })
-          .eq("id", item.product_id)
-          .gte("stock", item.quantity)
+    // Reserve the full cart in one database transaction. The RPC uses row
+    // locks and a conditional decrement so concurrent checkouts cannot
+    // oversell or leave only part of a multi-item order reserved.
+    const { data: inventoryReserved, error: inventoryError } = await supabase
+      .rpc("reserve_checkout_inventory", { p_order_id: order.id })
+    if (inventoryError || !inventoryReserved) {
+      console.error("Checkout inventory reservation failed:", inventoryError)
+      await supabase.from("orders").delete().eq("id", order.id)
+      if (inventoryError && !inventoryError.message.includes("INSUFFICIENT_STOCK")) {
+        return NextResponse.json({ error: "Checkout inventory setup is unavailable. Apply supabase/checkout-inventory.sql and try again." }, { status: 503 })
       }
+      return NextResponse.json({ error: "Stock changed while you were checking out. Refresh your cart and try again." }, { status: 409 })
     }
 
     // Redeeming LoqCoins spends the buyer's own balance immediately for Cash
@@ -260,28 +293,6 @@ export async function POST(request: Request) {
           reference_type: "order",
           description: `LoqCoins redeemed on Order #${orderNumber}`,
         })
-      }
-    }
-
-    // Create Razorpay order for online payment
-    let razorpayOrderId: string | null = null
-    if (payment_method === "razorpay" && process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
-      try {
-        const razorpay = new Razorpay({
-          key_id: process.env.RAZORPAY_KEY_ID,
-          key_secret: process.env.RAZORPAY_KEY_SECRET,
-        })
-        const rzpOrder = await razorpay.orders.create({
-          amount: total * 100, // paise
-          currency: "INR",
-          receipt: orderNumber,
-          notes: { order_id: order.id, user_id: user.id },
-        })
-        razorpayOrderId = rzpOrder.id
-        await supabase.from("orders").update({ razorpay_order_id: razorpayOrderId }).eq("id", order.id)
-      } catch (rzpErr) {
-        console.error("Razorpay order creation failed:", rzpErr)
-        // Non-fatal: frontend will handle missing razorpay_order_id
       }
     }
 

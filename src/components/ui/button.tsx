@@ -5,30 +5,24 @@ import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
-// Amazon/Flipkart-style flat buttons: thin border, small radius, subtle
-// gradient on the primary action rather than a flat fill — LoqMart's own
-// yellow/black palette, Amazon's shape language (per the confirmed "full
-// Amazon/Flipkart functional style" direction).
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[4px] border text-sm font-medium leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50 active:brightness-95",
+  "inline-flex min-w-0 items-center justify-center gap-2 whitespace-nowrap rounded-md border text-sm font-medium leading-none transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EAB308] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:brightness-95",
   {
     variants: {
       variant: {
-        // Primary CTA — "Add to Cart" style: gold gradient, thin border
-        default: "border-[#a88734]/50 bg-gradient-to-b from-[#f8db6b] to-[#fcd020] text-[#1a1c1c] shadow-[0_1px_0_rgba(255,255,255,0.5)_inset] hover:from-[#f6d34e] hover:to-[#f0c700]",
-        // "Buy Now" style: solid dark, flat
-        secondary: "border-transparent bg-[#1a1c1c] text-white hover:bg-[#1a1c1c]/88",
-        outline: "border-outline-variant bg-white text-on-surface hover:bg-surface-container-low",
-        ghost: "border-transparent text-on-surface hover:bg-surface-container-low",
-        link: "border-transparent h-auto p-0 text-[#0a6ac9] underline-offset-2 hover:underline",
+        default: "border-[#EAB308] bg-[#FACC15] text-[#111827] hover:border-[#CA8A04] hover:bg-[#CA8A04]",
+        secondary: "border-[#111827] bg-[#111827] text-white hover:bg-[#374151]",
+        outline: "border-[#E5E7EB] bg-white text-[#111827] shadow-sm hover:bg-[#FBF9F5]",
+        ghost: "border-transparent text-[#4B5563] hover:bg-[#FBF9F5]",
+        link: "border-transparent h-auto p-0 text-primary underline-offset-2 hover:underline",
         destructive: "border-transparent bg-error text-on-error hover:brightness-95",
       },
       size: {
         default: "h-9 px-4",
-        sm: "h-8 px-3 text-xs",
-        lg: "h-10 px-6",
+        sm: "h-9 px-3 text-xs",
+        lg: "h-11 px-6",
         xl: "h-12 px-8 text-base",
-        icon: "h-9 w-9",
+        icon: "h-10 w-10 shrink-0",
       },
     },
     defaultVariants: {

@@ -1,8 +1,12 @@
 import { createServiceClient } from "@/lib/supabase/admin"
+import { CRAFT_CLUSTERS } from "@/lib/craft-taxonomy"
 import type { Product } from "@/types/database"
 
 export interface ProductListParams {
   mode?: string | null
+  giCertified?: boolean
+  handloom?: boolean
+  cluster?: string | null
   /** Comma-separated category ids */
   category?: string | null
   /** Comma-separated state codes */
@@ -28,9 +32,11 @@ export interface ProductListResult {
   page: number
   limit: number
   totalPages: number
+  /** Non-null when the catalogue could not be read; empty inventory is distinct. */
+  error: string | null
 }
 
-const SELLER_FIELDS = "id, business_name, swadeshi_rank, state_code"
+const SELLER_FIELDS = "id, business_name, swadeshi_rank, state_code, city"
 
 /**
  * Builds ProductListParams from a Next.js server-component `searchParams`
@@ -40,8 +46,12 @@ const SELLER_FIELDS = "id, business_name, swadeshi_rank, state_code"
  * shared link that already has filters applied).
  */
 export function parseProductListSearchParams(sp: Record<string, string | undefined>): ProductListParams {
+  const craftType = sp.craft_type
   return {
-    mode: sp.mode || null,
+    mode: craftType === "handcrafted" ? "handmade" : craftType === "contemporary" ? "machine_made" : sp.mode || null,
+    giCertified: sp.gi_certified === "1",
+    handloom: sp.handloom === "1",
+    cluster: sp.cluster || null,
     category: sp.category || null,
     state: sp.state ? sp.state.toUpperCase() : null,
     minPrice: sp.minPrice ? Number(sp.minPrice) : null,
@@ -74,7 +84,7 @@ export async function fetchProductsList(params: ProductListParams): Promise<Prod
   // A seller-name filter requires an inner join so PostgREST can filter on
   // the embedded table's column — mirrors the pattern already used for
   // admin state-scope filtering.
-  const sellerSelect = params.seller
+  const sellerSelect = params.seller || params.cluster
     ? `sellers!inner(${SELLER_FIELDS})`
     : `sellers(${SELLER_FIELDS})`
 
@@ -84,6 +94,20 @@ export async function fetchProductsList(params: ProductListParams): Promise<Prod
     .eq("approval_status", "approved")
 
   if (params.mode) query = query.eq("mode", params.mode)
+  if (params.giCertified) query = query.contains("tags", ["gi-certified"])
+  if (params.handloom) query = query.contains("tags", ["handloom-certified"])
+  if (params.cluster) {
+    const selected = params.cluster.split(",").flatMap(slug => {
+      const match = CRAFT_CLUSTERS.find(cluster => cluster.slug === slug)
+      return match ? [match] : []
+    })
+    const stateCodes = selected.filter(cluster => cluster.kind === "state").flatMap(cluster =>
+      cluster.state === "OD" ? ["OD", "OR"] : [cluster.state]
+    )
+    const cities = selected.filter(cluster => cluster.kind === "town").map(cluster => cluster.label)
+    if (stateCodes.length) query = query.in("state_code", stateCodes)
+    if (cities.length) query = query.in("sellers.city", cities)
+  }
   if (params.category) query = query.in("category_id", params.category.split(",").filter(Boolean))
   if (params.state) query = query.in("state_code", params.state.split(",").filter(Boolean))
   if (params.minPrice != null) query = query.gte("price", params.minPrice)
@@ -113,7 +137,7 @@ export async function fetchProductsList(params: ProductListParams): Promise<Prod
 
   if (error) {
     console.error("fetchProductsList error:", error)
-    return { products: [], total: 0, page, limit, totalPages: 0 }
+    return { products: [], total: 0, page, limit, totalPages: 0, error: "Product catalogue is temporarily unavailable." }
   }
 
   return {
@@ -122,5 +146,6 @@ export async function fetchProductsList(params: ProductListParams): Promise<Prod
     page,
     limit,
     totalPages: Math.max(1, Math.ceil((count || 0) / limit)),
+    error: null,
   }
 }

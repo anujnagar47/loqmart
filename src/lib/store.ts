@@ -120,3 +120,65 @@ export const useUserStore = create<UserStore>()(
     }
   )
 )
+
+export interface InquiryItem {
+  product_id: string
+  name: string
+  slug: string
+  images: string[]
+  state_code: string | null
+  mode: Product['mode']
+  seller_name: string | null
+  requested_option: string | null
+}
+
+interface InquiryStore {
+  items: InquiryItem[]
+  drawerOpen: boolean
+  toast: string | null
+  addItem: (product: Product, requestedOption?: string | null) => void
+  removeItem: (productId: string) => void
+  clear: () => void
+  openDrawer: () => void
+  closeDrawer: () => void
+  dismissToast: () => void
+}
+
+export const useInquiryStore = create<InquiryStore>()(persist((set, get) => ({
+  items: [],
+  drawerOpen: false,
+  toast: null,
+  addItem: (product, requestedOption = null) => {
+    const existing = get().items.some(item => item.product_id === product.id)
+    if (existing) {
+      set(state => ({
+        items: state.items.map(item => item.product_id === product.id && requestedOption
+          ? { ...item, requested_option: requestedOption }
+          : item),
+        toast: 'This piece is already on your inquiry list',
+      }))
+      return
+    }
+    set(state => ({
+      items: [...state.items, {
+        product_id: product.id,
+        name: product.name,
+        slug: product.slug,
+        images: product.images || [],
+        state_code: product.state_code || null,
+        mode: product.mode,
+        seller_name: product.sellers?.business_name || null,
+        requested_option: requestedOption,
+      }],
+      toast: 'Added to your inquiry list',
+    }))
+  },
+  removeItem: (productId) => set(state => ({ items: state.items.filter(item => item.product_id !== productId) })),
+  clear: () => set({ items: [] }),
+  openDrawer: () => set({ drawerOpen: true }),
+  closeDrawer: () => set({ drawerOpen: false }),
+  dismissToast: () => set({ toast: null }),
+}), {
+  name: 'loqmart-inquiry-list',
+  partialize: state => ({ items: state.items }),
+}))

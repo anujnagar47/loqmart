@@ -32,15 +32,15 @@ VALUES (
   allowed_mime_types = ARRAY['image/jpeg','image/png','image/webp'];
 
 -- ── 3. seller-documents ───────────────────────────────────────────
--- Bucket name: seller-documents | Public: NO | 5MB max (ID proofs)
+-- Bucket name: seller-documents | Public: NO | 15MB max (KYC documents)
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
   'seller-documents', 'seller-documents', false,
-  5242880,
+  15728640,
   ARRAY['image/jpeg','image/png','application/pdf']
 ) ON CONFLICT (id) DO UPDATE SET
   public = false,
-  file_size_limit = 5242880,
+  file_size_limit = 15728640,
   allowed_mime_types = ARRAY['image/jpeg','image/png','application/pdf'];
 
 -- ── 4. blog-images ────────────────────────────────────────────────
@@ -82,7 +82,12 @@ CREATE POLICY "sellers can upload product images"
   WITH CHECK (
     bucket_id = 'product-images'
     AND auth.role() = 'authenticated'
-    AND EXISTS (SELECT 1 FROM public.sellers WHERE user_id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM public.sellers s
+      WHERE s.user_id = auth.uid()
+        AND s.approval_status = 'approved'
+        AND (storage.foldername(name))[1] = s.id::text
+    )
   );
 
 DROP POLICY IF EXISTS "sellers can update own product images" ON storage.objects;
@@ -91,7 +96,22 @@ CREATE POLICY "sellers can update own product images"
   USING (
     bucket_id = 'product-images'
     AND auth.role() = 'authenticated'
-    AND EXISTS (SELECT 1 FROM public.sellers WHERE user_id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM public.sellers s
+      WHERE s.user_id = auth.uid()
+        AND s.approval_status = 'approved'
+        AND (storage.foldername(name))[1] = s.id::text
+    )
+  )
+  WITH CHECK (
+    bucket_id = 'product-images'
+    AND auth.role() = 'authenticated'
+    AND EXISTS (
+      SELECT 1 FROM public.sellers s
+      WHERE s.user_id = auth.uid()
+        AND s.approval_status = 'approved'
+        AND (storage.foldername(name))[1] = s.id::text
+    )
   );
 
 DROP POLICY IF EXISTS "sellers can delete own product images" ON storage.objects;
@@ -100,7 +120,12 @@ CREATE POLICY "sellers can delete own product images"
   USING (
     bucket_id = 'product-images'
     AND auth.role() = 'authenticated'
-    AND EXISTS (SELECT 1 FROM public.sellers WHERE user_id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM public.sellers s
+      WHERE s.user_id = auth.uid()
+        AND s.approval_status = 'approved'
+        AND (storage.foldername(name))[1] = s.id::text
+    )
   );
 
 -- seller-assets: anyone can read, sellers can upload
@@ -115,7 +140,12 @@ CREATE POLICY "sellers can upload seller assets"
   WITH CHECK (
     bucket_id = 'seller-assets'
     AND auth.role() = 'authenticated'
-    AND EXISTS (SELECT 1 FROM public.sellers WHERE user_id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM public.sellers s
+      WHERE s.user_id = auth.uid()
+        AND s.approval_status = 'approved'
+        AND (storage.foldername(name))[1] = s.id::text
+    )
   );
 
 DROP POLICY IF EXISTS "sellers can update own assets" ON storage.objects;
@@ -124,7 +154,22 @@ CREATE POLICY "sellers can update own assets"
   USING (
     bucket_id = 'seller-assets'
     AND auth.role() = 'authenticated'
-    AND EXISTS (SELECT 1 FROM public.sellers WHERE user_id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM public.sellers s
+      WHERE s.user_id = auth.uid()
+        AND s.approval_status = 'approved'
+        AND (storage.foldername(name))[1] = s.id::text
+    )
+  )
+  WITH CHECK (
+    bucket_id = 'seller-assets'
+    AND auth.role() = 'authenticated'
+    AND EXISTS (
+      SELECT 1 FROM public.sellers s
+      WHERE s.user_id = auth.uid()
+        AND s.approval_status = 'approved'
+        AND (storage.foldername(name))[1] = s.id::text
+    )
   );
 
 -- seller-documents: admins read all, sellers can upload their own

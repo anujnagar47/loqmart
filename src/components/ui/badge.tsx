@@ -12,9 +12,9 @@ const badgeVariants = cva(
         success: "bg-green-100 text-green-800",
         warning: "bg-yellow-100 text-yellow-800",
         error: "bg-red-100 text-red-800",
-        handmade: "bg-amber-100 text-amber-800",
-        machine: "bg-blue-100 text-blue-800",
-        premium: "bg-gradient-to-r from-yellow-400 to-orange-500 text-white",
+        handmade: "bg-primary-container text-on-primary-fixed",
+        machine: "bg-on-surface text-white",
+        premium: "bg-primary-container text-on-primary-fixed",
       },
       size: {
         default: "text-xs px-2.5 py-0.5",

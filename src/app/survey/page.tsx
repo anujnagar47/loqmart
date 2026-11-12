@@ -102,7 +102,7 @@ const TOTAL = QUESTIONS.length
 const MILESTONES = [
   { threshold: 10, key: "10_referrals",  label: "50% off first order",         color: "#22c55e" },
   { threshold: 20, key: "20_referrals",  label: "50% off + free delivery",     color: "#3b82f6" },
-  { threshold: 40, key: "40_referrals",  label: "First order completely free",  color: "#fcd020" },
+  { threshold: 40, key: "40_referrals",  label: "First order completely free",  color: "#FACC15" },
 ]
 
 // ─── Inner page (uses useSearchParams) ────────────────────────
@@ -223,8 +223,8 @@ function SurveyInner() {
     return (
       <div style={{ background: "#0f1010", minHeight: "100vh" }}>
         {refCode && (
-          <div className="fixed top-0 left-0 right-0 z-50 py-2.5 px-4 text-center text-[11.5px] font-black tracking-wide text-[#1a1c1c]"
-            style={{ background: "#fcd020" }}>
+          <div className="fixed top-0 left-0 right-0 z-50 py-2.5 px-4 text-center text-[11.5px] font-black tracking-wide text-[#111827]"
+            style={{ background: "#FACC15" }}>
             You were referred by {refCode} — complete the survey to claim your reward
           </div>
         )}
@@ -255,7 +255,7 @@ function SurveyInner() {
             initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.7 }}>
             India makes.<br />
             The world buys.<br />
-            <span style={{ color: "#fcd020" }}>We&rsquo;re&nbsp;changing&nbsp;that.</span>
+            <span style={{ color: "#FACC15" }}>We&rsquo;re&nbsp;changing&nbsp;that.</span>
           </motion.h1>
 
           {/* Body copy */}
@@ -285,7 +285,7 @@ function SurveyInner() {
             <button
               onClick={() => { setDirection(1); setPhase("survey") }}
               className="group flex items-center gap-3 px-8 py-4 rounded-xl font-black text-[14px]"
-              style={{ background: "#fcd020", color: "#1a1c1c" }}
+              style={{ background: "#FACC15", color: "#111827" }}
               onMouseEnter={e => (e.currentTarget as HTMLElement).style.filter = "brightness(0.92)"}
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.filter = ""}>
               Begin Survey
@@ -307,52 +307,52 @@ function SurveyInner() {
     const refUrl  = `${origin}/survey?ref=${result.referral_code}`
 
     return (
-      <div className="min-h-screen" style={{ background: "#eeece8" }}>
+      <div className="min-h-screen" style={{ background: "#FBF9F5" }}>
         <div className="max-w-xl mx-auto px-6 py-14">
           <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
 
             <div className="mb-10">
               <p className="text-[9.5px] font-black uppercase tracking-widest mb-3"
-                style={{ color: "rgba(26,28,28,0.3)" }}>Survey complete</p>
-              <h1 className="text-[34px] font-black text-[#1a1c1c] tracking-tight leading-tight">
+                style={{ color: "rgba(17,24,39,0.3)" }}>Survey complete</p>
+              <h1 className="text-[34px] font-black text-[#111827] tracking-tight leading-tight">
                 Your voice is on record.
               </h1>
-              <p className="text-[14px] mt-3 leading-relaxed" style={{ color: "rgba(26,28,28,0.5)" }}>
+              <p className="text-[14px] mt-3 leading-relaxed" style={{ color: "rgba(17,24,39,0.5)" }}>
                 Thank you for shaping the future of Indian commerce.
               </p>
             </div>
 
             {/* Discount reward */}
             <div className="bg-white rounded-2xl p-6 mb-3"
-              style={{ border: "1px solid rgba(26,28,28,0.07)", boxShadow: "0 2px 12px rgba(26,28,28,0.04)" }}>
+              style={{ border: "1px solid rgba(17,24,39,0.07)", boxShadow: "0 2px 12px rgba(17,24,39,0.04)" }}>
               <p className="text-[9.5px] font-black uppercase tracking-widest mb-1"
-                style={{ color: "rgba(26,28,28,0.3)" }}>Your reward</p>
-              <p className="text-[15px] font-bold text-[#1a1c1c] mb-4">5% off your first LoqMart order</p>
-              <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl" style={{ background: "#eeece8" }}>
-                <code className="flex-1 text-[18px] font-black tracking-wider text-[#1a1c1c]">
+                style={{ color: "rgba(17,24,39,0.3)" }}>Your reward</p>
+              <p className="text-[15px] font-bold text-[#111827] mb-4">5% off your first LoqMart order</p>
+              <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl" style={{ background: "#FBF9F5" }}>
+                <code className="flex-1 text-[18px] font-black tracking-wider text-[#111827]">
                   {result.discount_code}
                 </code>
                 <button onClick={() => copy(result!.discount_code, "disc")}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10.5px] font-black transition-colors shrink-0"
                   style={{
-                    background: copied === "disc" ? "#fcd020" : "rgba(26,28,28,0.07)",
-                    color: "#1a1c1c",
+                    background: copied === "disc" ? "#FACC15" : "rgba(17,24,39,0.07)",
+                    color: "#111827",
                   }}>
                   {copied === "disc" ? <Check size={11} /> : <Copy size={11} />}
                   {copied === "disc" ? "Copied" : "Copy"}
                 </button>
               </div>
-              <p className="text-[10px] mt-2" style={{ color: "rgba(26,28,28,0.3)" }}>
+              <p className="text-[10px] mt-2" style={{ color: "rgba(17,24,39,0.3)" }}>
                 Use at checkout · Valid for 1 year · First order only
               </p>
             </div>
 
             {/* Referral section */}
             <div className="bg-white rounded-2xl p-6 mb-4"
-              style={{ border: "1px solid rgba(26,28,28,0.07)", boxShadow: "0 2px 12px rgba(26,28,28,0.04)" }}>
+              style={{ border: "1px solid rgba(17,24,39,0.07)", boxShadow: "0 2px 12px rgba(17,24,39,0.04)" }}>
               <p className="text-[9.5px] font-black uppercase tracking-widest mb-1"
-                style={{ color: "rgba(26,28,28,0.3)" }}>Refer others. Unlock bigger rewards.</p>
-              <p className="text-[14px] font-semibold text-[#1a1c1c] mb-5">
+                style={{ color: "rgba(17,24,39,0.3)" }}>Refer others. Unlock bigger rewards.</p>
+              <p className="text-[14px] font-semibold text-[#111827] mb-5">
                 Share your link. Every person who fills the survey counts towards your next milestone.
               </p>
 
@@ -360,41 +360,41 @@ function SurveyInner() {
               <div className="space-y-2 mb-5">
                 {MILESTONES.map((m, i) => (
                   <div key={m.key} className="flex items-center gap-3 px-4 py-3 rounded-xl"
-                    style={{ background: "rgba(26,28,28,0.035)" }}>
+                    style={{ background: "rgba(17,24,39,0.035)" }}>
                     <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-[11px] font-black"
-                      style={{ background: m.color === "#fcd020" ? "#fcd020" : `${m.color}18`, color: m.color === "#fcd020" ? "#1a1c1c" : m.color }}>
+                      style={{ background: m.color === "#FACC15" ? "#FACC15" : `${m.color}18`, color: m.color === "#FACC15" ? "#111827" : m.color }}>
                       {m.threshold}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[12px] font-black text-[#1a1c1c]">{m.threshold} referrals</p>
-                      <p className="text-[11px]" style={{ color: "rgba(26,28,28,0.45)" }}>{m.label}</p>
+                      <p className="text-[12px] font-black text-[#111827]">{m.threshold} referrals</p>
+                      <p className="text-[11px]" style={{ color: "rgba(17,24,39,0.45)" }}>{m.label}</p>
                     </div>
                   </div>
                 ))}
               </div>
 
               {/* Link copy */}
-              <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl" style={{ background: "#eeece8" }}>
-                <code className="flex-1 text-[11px] font-semibold text-[#1a1c1c] break-all">{refUrl}</code>
+              <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl" style={{ background: "#FBF9F5" }}>
+                <code className="flex-1 text-[11px] font-semibold text-[#111827] break-all">{refUrl}</code>
                 <button onClick={() => copy(refUrl, "ref")}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10.5px] font-black shrink-0 transition-colors"
                   style={{
-                    background: copied === "ref" ? "#fcd020" : "rgba(26,28,28,0.07)",
-                    color: "#1a1c1c",
+                    background: copied === "ref" ? "#FACC15" : "rgba(17,24,39,0.07)",
+                    color: "#111827",
                   }}>
                   {copied === "ref" ? <Check size={11} /> : <Copy size={11} />}
                   {copied === "ref" ? "Copied" : "Copy"}
                 </button>
               </div>
-              <p className="text-[10px] mt-2" style={{ color: "rgba(26,28,28,0.28)" }}>
-                Your code: <strong className="text-[#1a1c1c]">{result.referral_code}</strong>
+              <p className="text-[10px] mt-2" style={{ color: "rgba(17,24,39,0.28)" }}>
+                Your code: <strong className="text-[#111827]">{result.referral_code}</strong>
                 {" "}· Milestone codes are delivered to your email automatically
               </p>
             </div>
 
             <Link href="/"
               className="inline-flex items-center gap-2 text-[13px] font-black"
-              style={{ color: "#725c00" }}>
+              style={{ color: "#111827" }}>
               Continue to LoqMart
               <ExternalLink size={12} />
             </Link>
@@ -413,7 +413,7 @@ function SurveyInner() {
       <div className="fixed top-0 left-0 right-0 z-50 h-0.5" style={{ background: "rgba(255,255,255,0.08)" }}>
         <motion.div
           className="h-full"
-          style={{ background: "#fcd020" }}
+          style={{ background: "#FACC15" }}
           animate={{ width: `${progressPct}%` }}
           transition={{ duration: 0.4, ease: "easeOut" }}
         />
@@ -467,14 +467,14 @@ function SurveyInner() {
                         <button key={opt} onClick={() => handleSingle(opt)}
                           className="w-full text-left px-5 py-4 rounded-xl text-[14px] font-semibold transition-all"
                           style={{
-                            background: selected ? "#fcd020" : "rgba(255,255,255,0.06)",
-                            color:      selected ? "#1a1c1c" : "rgba(255,255,255,0.72)",
-                            borderLeft: `3px solid ${selected ? "#fcd020" : "transparent"}`,
+                            background: selected ? "#FACC15" : "rgba(255,255,255,0.06)",
+                            color:      selected ? "#111827" : "rgba(255,255,255,0.72)",
+                            borderLeft: `3px solid ${selected ? "#FACC15" : "transparent"}`,
                           }}
                           onMouseEnter={e => {
                             if (!selected) {
                               ;(e.currentTarget as HTMLElement).style.background  = "rgba(255,255,255,0.1)"
-                              ;(e.currentTarget as HTMLElement).style.borderLeft  = "3px solid rgba(252,208,32,0.5)"
+                              ;(e.currentTarget as HTMLElement).style.borderLeft  = "3px solid rgba(250,204,21,0.5)"
                             }
                           }}
                           onMouseLeave={e => {
@@ -499,9 +499,9 @@ function SurveyInner() {
                           <button key={opt} onClick={() => handleMultiToggle(opt)}
                             className="text-left px-4 py-3.5 rounded-xl text-[13px] font-semibold transition-all"
                             style={{
-                              background:  selected ? "#fcd020" : "rgba(255,255,255,0.06)",
-                              color:       selected ? "#1a1c1c" : "rgba(255,255,255,0.68)",
-                              borderLeft: `3px solid ${selected ? "#fcd020" : "transparent"}`,
+                              background:  selected ? "#FACC15" : "rgba(255,255,255,0.06)",
+                              color:       selected ? "#111827" : "rgba(255,255,255,0.68)",
+                              borderLeft: `3px solid ${selected ? "#FACC15" : "transparent"}`,
                             }}
                             onMouseEnter={e => {
                               if (!selected) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.1)"
@@ -516,7 +516,7 @@ function SurveyInner() {
                     </div>
                     <button onClick={() => advance(qIndex)}
                       className="flex items-center gap-2 px-6 py-3.5 rounded-xl font-black text-[13px]"
-                      style={{ background: "#fcd020", color: "#1a1c1c" }}
+                      style={{ background: "#FACC15", color: "#111827" }}
                       onMouseEnter={e => (e.currentTarget as HTMLElement).style.filter = "brightness(0.92)"}
                       onMouseLeave={e => (e.currentTarget as HTMLElement).style.filter = ""}>
                       Continue
@@ -576,7 +576,7 @@ function SurveyInner() {
                           color:       "white",
                         }}
                         onFocus={e => {
-                          e.currentTarget.style.borderColor = "#fcd020"
+                          e.currentTarget.style.borderColor = "#FACC15"
                           e.currentTarget.style.background  = "rgba(255,255,255,0.1)"
                         }}
                         onBlur={e => {
@@ -598,7 +598,7 @@ function SurveyInner() {
                   onClick={phase === "contact" ? handleSubmit : undefined}
                   disabled={phase === "submitting"}
                   className="flex items-center gap-2 px-7 py-4 rounded-xl font-black text-[14px] disabled:opacity-50 transition-all"
-                  style={{ background: "#fcd020", color: "#1a1c1c" }}
+                  style={{ background: "#FACC15", color: "#111827" }}
                   onMouseEnter={e => { if (phase !== "submitting") (e.currentTarget as HTMLElement).style.filter = "brightness(0.92)" }}
                   onMouseLeave={e => (e.currentTarget as HTMLElement).style.filter = ""}>
                   {phase === "submitting" ? "Submitting..." : "Submit Survey"}
@@ -624,7 +624,7 @@ export default function SurveyPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center" style={{ background: "#0f1010" }}>
-        <div className="w-8 h-8 rounded-full border-2 border-[#fcd020] border-t-transparent animate-spin" />
+        <div className="w-8 h-8 rounded-full border-2 border-[#FACC15] border-t-transparent animate-spin" />
       </div>
     }>
       <SurveyInner />
