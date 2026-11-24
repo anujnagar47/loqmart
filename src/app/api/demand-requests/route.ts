@@ -2,9 +2,15 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createServiceClient } from "@/lib/supabase/admin"
 import { INDIA_STATE_DATA } from "@/lib/indiaStateData"
+import { Redis } from "@upstash/redis"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
+
+const demandRedis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+  ? new Redis({ url: process.env.UPSTASH_REDIS_REST_URL, token: process.env.UPSTASH_REDIS_REST_TOKEN })
+  : null
+const DEMAND_REQUESTS_KEY = "loqmart:customer-demand-requests:v1"
 
 function categoryFor(query: string) {
   const text = query.toLowerCase()
@@ -22,9 +28,12 @@ export async function POST(request: NextRequest) {
     const query = typeof body.query === "string" ? body.query.trim().replace(/\s+/g, " ").slice(0, 140) : ""
     const stateCode = typeof body.stateCode === "string" && INDIA_STATE_DATA.some(state => state.id === body.stateCode) ? body.stateCode : null
     const contact = typeof body.contact === "string" ? body.contact.trim().slice(0, 180) : null
+    const contactConsent = body.contactConsent === true
     const source = ["welcome", "search", "footer"].includes(body.source) ? body.source : "homepage"
     if (query.length < 2) return NextResponse.json({ error: "Tell us what item or category you want." }, { status: 400 })
-    if (contact && contact.length < 5) return NextResponse.json({ error: "Enter a valid email address or phone number." }, { status: 400 })
+    if (contact && (!contactConsent || !/^(?:[^\s@]+@[^\s@]+\.[^\s@]+|\+?[0-9\s().-]{7,20})$/.test(contact))) {
+      return NextResponse.json({ error: "Enter a valid email or phone number and agree to the launch update." }, { status: 400 })
+    }
 
     const auth = await createClient()
     const { data: { user } } = await auth.auth.getUser()
@@ -39,7 +48,16 @@ export async function POST(request: NextRequest) {
     })
     if (error) {
       if (error.code === "42P01" || /schema cache/i.test(error.message)) {
-        return NextResponse.json({ error: "Customer demand storage is not installed yet. Apply supabase/customer-demand-requests.sql to enable requests." }, { status: 503 })
+        if (!demandRedis) {
+          return NextResponse.json({ error: "Request service is temporarily unavailable. Please try again later." }, { status: 503 })
+        }
+        const requestRecord = {
+          id: crypto.randomUUID(), requested_item: query, category: categoryFor(query), state_code: stateCode,
+          user_id: user?.id || null, contact: contactConsent ? contact : null, source, created_at: new Date().toISOString(),
+        }
+        await demandRedis.lpush(DEMAND_REQUESTS_KEY, JSON.stringify(requestRecord))
+        await demandRedis.ltrim(DEMAND_REQUESTS_KEY, 0, 4999)
+        return NextResponse.json({ ok: true, storedIn: "temporary-store" }, { status: 201 })
       }
       throw error
     }
