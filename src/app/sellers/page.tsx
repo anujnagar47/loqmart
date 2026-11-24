@@ -1,8 +1,10 @@
 import Link from "next/link"
 import Image from "next/image"
 import type { Metadata } from "next"
-import { Award, MapPin, Package, ShoppingBag, Store } from "lucide-react"
+import { Package } from "lucide-react"
+import { LoqIcon } from "@/components/loq-icon"
 import { createServiceClient } from "@/lib/supabase/admin"
+import jbsCatalog from "../../../public/jbs-catalog-import.json"
 
 export const metadata: Metadata = {
   title: "All Sellers | LoqMart",
@@ -30,6 +32,23 @@ interface SellerRow {
   swadeshi_score: number
   total_products: number
   total_orders: number
+  catalogListing?: boolean
+}
+
+const jbsDirectoryListing: SellerRow = {
+  id: jbsCatalog.seller.id,
+  business_name: jbsCatalog.seller.business_name,
+  owner_name: jbsCatalog.seller.owner_name,
+  state_code: jbsCatalog.seller.state_code,
+  city: jbsCatalog.seller.city,
+  address: jbsCatalog.seller.address,
+  logo_url: null,
+  banner_url: null,
+  swadeshi_rank: 0,
+  swadeshi_score: 0,
+  total_products: jbsCatalog.products.length,
+  total_orders: 0,
+  catalogListing: true,
 }
 
 async function fetchSellers(): Promise<SellerRow[]> {
@@ -42,11 +61,11 @@ async function fetchSellers(): Promise<SellerRow[]> {
       .order("swadeshi_score", { ascending: false })
       .order("total_orders", { ascending: false })
       .limit(60)
-    if (error) { console.error("Sellers fetch error:", error); return [] }
-    return (data || []) as SellerRow[]
+    if (error) { console.error("Sellers fetch error:", error); return [jbsDirectoryListing] }
+    return [...(data || []).map((row) => ({ ...row, catalogListing: false } as SellerRow)), jbsDirectoryListing]
   } catch (err) {
     console.error("Sellers fetch failed:", err)
-    return []
+    return [jbsDirectoryListing]
   }
 }
 
@@ -59,14 +78,14 @@ export default async function SellersPage() {
         <div className="mx-auto max-w-7xl">
           <span className="mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-[#111827]">Meet the sellers</span>
           <h1 className="text-2xl font-bold tracking-tight text-[#111827] md:text-3xl">Shops from across India</h1>
-          <p className="mt-1 max-w-xl text-sm leading-5 text-[#4B5563]">Explore approved sellers, their products and where they are based.</p>
+          <p className="mt-1 max-w-xl text-sm leading-5 text-[#4B5563]">Explore seller profiles and catalog listings. Each listing shows its current verification status.</p>
         </div>
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-7 sm:px-6 md:py-10">
         {sellers.length === 0 ? (
           <div className="flex flex-col items-start gap-3 border-y border-[#e8e4da] py-6 text-sm text-[#4B5563] sm:flex-row sm:items-center">
-            <Store className="h-5 w-5 text-[#111827]" />
+            <LoqIcon name="seller-studio" className="h-7 w-7" />
             <p>Seller profiles are temporarily unavailable.</p>
           </div>
         ) : (
@@ -78,7 +97,7 @@ export default async function SellersPage() {
               return (
                 <Link
                   key={seller.id}
-                  href={`/seller/${seller.id}`}
+                  href={seller.catalogListing ? "/catalog?seller=Jaipur%20Billiards" : `/seller/${seller.id}`}
                   className="group flex min-h-[290px] flex-col border border-[#E5E7EB] bg-white transition-colors hover:border-[#EAB308] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#EAB308]"
                 >
                   <div className="relative h-32 shrink-0 overflow-hidden border-b border-[#e8e4da] bg-white">
@@ -90,16 +109,16 @@ export default async function SellersPage() {
                       <div className="flex h-full items-center justify-center text-3xl font-semibold text-[#111827]" aria-hidden="true">{initials}</div>
                     )}
                     <span className="absolute left-2 top-2 inline-flex items-center gap-1 border border-[#E5E7EB] bg-white px-2 py-1 text-[10px] font-semibold text-[#4B5563]">
-                      <Award className="h-3 w-3 text-[#111827]" /> Top seller {index + 1}
+                      <LoqIcon name={seller.catalogListing ? "artisan-seal" : "gi-seal"} className="h-4 w-4" />{seller.catalogListing ? "Catalog seller · verification pending" : `Top seller ${index + 1}`}
                     </span>
                   </div>
                   <div className="flex flex-1 flex-col p-4">
                     <h2 className="line-clamp-2 text-sm font-bold leading-5 text-[#111827] group-hover:text-[#111827]">{seller.business_name}</h2>
                     {seller.owner_name && <p className="mt-1 truncate text-xs text-[#4B5563]">{seller.owner_name}</p>}
-                    {location && <p className="mt-3 line-clamp-2 flex items-start gap-1.5 text-xs leading-4 text-[#4B5563]"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#111827]" />{location}</p>}
+                    {location && <p className="mt-3 line-clamp-2 flex items-start gap-1.5 text-xs leading-4 text-[#4B5563]"><LoqIcon name={stateName === "Bihar" ? "madhubani-lotus" : stateName === "Uttar Pradesh" ? "wood-carving" : "origin-pin"} className="mt-0.5 h-4 w-4 shrink-0" />{location}</p>}
                     <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[#e8e4da] pt-3 text-xs text-[#4B5563]">
                       <span className="inline-flex items-center gap-1"><Package className="h-3.5 w-3.5" />{seller.total_products ?? 0} products</span>
-                      <span className="inline-flex items-center gap-1"><ShoppingBag className="h-3.5 w-3.5" />{seller.total_orders ?? 0} orders</span>
+                      <span className="inline-flex items-center gap-1"><LoqIcon name="buyer-basket" className="h-4 w-4" />{seller.total_orders ?? 0} orders</span>
                     </div>
                   </div>
                 </Link>

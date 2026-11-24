@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createServiceClient } from "@/lib/supabase/admin"
+import { rankRecommendations, type RecommendationItem } from "@/lib/recommendationEngine"
 
 export async function GET(
   request: Request,
@@ -52,14 +53,16 @@ export async function GET(
       .order("created_at", { ascending: false })
       .limit(50)
 
-    // Fetch related products (same category, same state, approved)
-    const { data: related } = await supabase
+    // Rank a bounded pool across categories using product type, price,
+    // review quality, and regional craft signals.
+    const { data: relatedPool } = await supabase
       .from("products")
-      .select("id, name, slug, price, mrp, stock, images, mode, state_code, rating, review_count, sold_count, tags, sellers(id, business_name, swadeshi_rank, state_code)")
+      .select("id, name, slug, price, mrp, stock, images, mode, state_code, rating, review_count, sold_count, tags, category_id, specifications, categories(id, name, slug), sellers(id, business_name, swadeshi_rank, state_code)")
       .eq("approval_status", "approved")
-      .eq("category_id", product.category_id)
       .neq("id", product.id)
-      .limit(8)
+      .order("rating", { ascending: false })
+      .limit(120)
+    const related = rankRecommendations(product as RecommendationItem, (relatedPool || []) as RecommendationItem[], 8).map(row => row.item)
 
     // Fetch more from same state (only if state_code is set)
     const sameStateQuery = product.state_code

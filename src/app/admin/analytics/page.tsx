@@ -148,7 +148,7 @@ export default function AnalyticsPage() {
           {loading ? [...Array(4)].map((_, i) => <div key={i} className="mb-4"><div className="h-2.5 ag-shimmer rounded mb-1" /><div className="h-2 ag-shimmer rounded" /></div>) :
           data && (() => {
             const total = Object.values(data.orderStatusMap).reduce((a, b) => a + b, 0)
-            if (total === 0) return <p className="text-[12px] text-[#111827]/30 text-center py-6">No orders yet</p>
+            if (total === 0) return <p className="text-[12px] text-[#111827]/30 text-center py-6">No order activity is available yet</p>
             return Object.entries(data.orderStatusMap).map(([status, count], i) => {
               const pct = Math.round((count / total) * 100)
               return (

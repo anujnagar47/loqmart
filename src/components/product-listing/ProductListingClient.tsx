@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { useProductFilters } from "@/hooks/useProductFilters"
 import type { Product } from "@/types/database"
 import { CRAFT_CLUSTERS, displayCategoryName } from "@/lib/craft-taxonomy"
+import { SponsoredSlot } from "@/components/sponsored-slot"
 
 const RATING_OPTIONS = [4, 3, 2]
 
@@ -50,10 +51,8 @@ export function ProductListingClient({
 
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [mobileSortOpen,    setMobileSortOpen]    = useState(false)
-  const [sellerInput,       setSellerInput]       = useState(filters.seller)
 
   const isFirstRun = useRef(true)
-  const sellerDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Fetch categories (for the sidebar filter) and states (real, only ones with products) once.
   useEffect(() => {
@@ -114,12 +113,6 @@ export function ProductListingClient({
 
     return () => controller.abort()
   }, [filters, anchorCategory, initialProducts, initialError, retryCount])
-
-  const handleSellerChange = (value: string) => {
-    setSellerInput(value)
-    if (sellerDebounce.current) clearTimeout(sellerDebounce.current)
-    sellerDebounce.current = setTimeout(() => update({ seller: value }), 400)
-  }
 
   return (
     <div className="min-h-screen bg-[#ffffff]">
@@ -207,7 +200,6 @@ export function ProductListingClient({
               <FilterPanel
                 filters={filters} update={update} resetFilters={resetFilters} hasActiveFilters={hasActiveFilters}
                 categories={anchorCategory ? [] : categories} states={states}
-                sellerInput={sellerInput} onSellerChange={handleSellerChange}
               />
             </div>
           </aside>
@@ -262,6 +254,7 @@ export function ProductListingClient({
               </div>
             ) : (
               <>
+                <SponsoredSlot placement="search_top" />
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-4">
                   {products.map((product, i) => (
                     <motion.div key={product.id}
@@ -285,7 +278,6 @@ export function ProductListingClient({
             <FilterPanel
               filters={filters} update={update} resetFilters={resetFilters} hasActiveFilters={hasActiveFilters}
               categories={anchorCategory ? [] : categories} states={states}
-              sellerInput={sellerInput} onSellerChange={handleSellerChange}
             />
             <Button type="button" onClick={() => setMobileFiltersOpen(false)} className="w-full mt-4">
               Show {total} Results
@@ -330,7 +322,7 @@ function MobileSheet({ title, onClose, children }: { title: string; onClose: () 
 }
 
 function FilterPanel({
-  filters, update, resetFilters, hasActiveFilters, categories, states, sellerInput, onSellerChange,
+  filters, update, resetFilters, hasActiveFilters, categories, states,
 }: {
   filters: ReturnType<typeof useProductFilters>["filters"]
   update: ReturnType<typeof useProductFilters>["update"]
@@ -338,8 +330,6 @@ function FilterPanel({
   hasActiveFilters: boolean
   categories: CategoryOption[]
   states: StateOption[]
-  sellerInput: string
-  onSellerChange: (v: string) => void
 }) {
   const toggleState = (code: string) =>
     update({ state: filters.state.includes(code) ? filters.state.filter(s => s !== code) : [...filters.state, code] })
@@ -384,16 +374,6 @@ function FilterPanel({
         </div>
       </FilterCard>
 
-
-      <FilterCard label="Seller">
-        <input
-          value={sellerInput}
-          onChange={e => onSellerChange(e.target.value)}
-          placeholder="Search seller name…"
-          className="w-full h-9 px-3 rounded-[4px] text-sm outline-none"
-          style={{ border: "1px solid rgba(17,24,39,0.14)", background: "#ffffff" }}
-        />
-      </FilterCard>
 
       <FilterCard label="Availability">
         <CheckRow checked={filters.inStock} onChange={() => update({ inStock: !filters.inStock })} label="In Stock Only" />

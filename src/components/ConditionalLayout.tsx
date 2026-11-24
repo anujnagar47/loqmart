@@ -2,21 +2,23 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Search, ClipboardList, User } from "lucide-react"
+import { Home, Search, ShoppingCart, User } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { CartSync } from "@/components/cart-sync"
-import { useInquiryStore } from "@/lib/store"
+import { CartSync, CartSyncStatusBanner } from "@/components/cart-sync"
+import { useCartStore } from "@/lib/store"
 import { InquiryOverlay } from "@/components/inquiry/InquiryOverlay"
+import { AnalyticsConsent } from "@/components/analytics-consent"
+import { DemandCapture, DemandCaptureStrip } from "@/components/demand/DemandCapture"
 
 function MobileBottomNav() {
   const pathname = usePathname()
-  const itemCount = useInquiryStore((s) => s.items.length)
+  const itemCount = useCartStore((s) => s.getItemCount())
 
   const tabs = [
     { href: "/",        icon: Home,         label: "Home"    },
     { href: "/category", icon: Search,       label: "Browse"  },
-    { href: "/cart",    icon: ClipboardList,  label: "Inquiry"    },
+    { href: "/cart",    icon: ShoppingCart,  label: "Cart"    },
     { href: "/account", icon: User,          label: "Account" },
   ]
 
@@ -54,22 +56,27 @@ function MobileBottomNav() {
 
 export function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const isPublicSellerStore = /^\/seller\/[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(pathname || "")
   const noLayout =
     pathname?.startsWith("/admin") ||
-    pathname?.startsWith("/seller/dashboard")
+    (pathname?.startsWith("/seller") && !isPublicSellerStore)
 
   if (noLayout) {
-    return <><CartSync />{children}</>
+    return <>{children}</>
   }
 
   return (
     <>
       <CartSync />
+      <CartSyncStatusBanner />
       <InquiryOverlay />
       <Header />
       <main className="flex-1 pt-14 lg:pt-24 pb-16 lg:pb-0">{children}</main>
+      <DemandCaptureStrip />
       <Footer />
       <MobileBottomNav />
+      <AnalyticsConsent />
+      <DemandCapture showWelcome={pathname === "/"} />
     </>
   )
 }

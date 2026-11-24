@@ -7,6 +7,7 @@ import { ArrowRight, Clock, MapPin, BookOpen, Loader2 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useLanguage } from "@/lib/i18n/LanguageContext"
+import { STATE_STORIES } from "@/lib/state-stories"
 
 interface BlogPreviewPost {
   id: string
@@ -21,8 +22,12 @@ interface BlogPreviewPost {
 
 export function BlogPreview() {
   const { t } = useLanguage()
-  const [posts,   setPosts]   = useState<BlogPreviewPost[]>([])
-  const [loading, setLoading] = useState(true)
+  const [posts, setPosts] = useState<BlogPreviewPost[]>(() => STATE_STORIES.slice(0, 3).map((story) => ({
+    id: story.slug, slug: `states/${story.slug}`, title: `${story.state}: ${story.focus}`,
+    excerpt: story.intro, featured_image: story.image || null, state_code: story.stateCode,
+    reading_time: "8 min", published_at: null,
+  })))
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     async function fetchPosts() {
@@ -33,8 +38,14 @@ export function BlogPreview() {
         .not("published_at", "is", null)
         .order("published_at", { ascending: false })
         .limit(3)
-      if (!error) setPosts(data || [])
-      setLoading(false)
+      if (!error && data?.length) {
+        const localStories = STATE_STORIES.slice(0, 3).map((story) => ({
+          id: story.slug, slug: `states/${story.slug}`, title: `${story.state}: ${story.focus}`,
+          excerpt: story.intro, featured_image: story.image || null, state_code: story.stateCode,
+          reading_time: "8 min", published_at: null,
+        }))
+        setPosts([...localStories, ...data].slice(0, 3))
+      }
     }
     fetchPosts()
   }, [])

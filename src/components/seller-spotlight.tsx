@@ -4,7 +4,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { ArrowRight, Award, MapPin, Package } from "lucide-react"
+import { ArrowRight, Package } from "lucide-react"
+import { LoqIcon } from "@/components/loq-icon"
 import { useLanguage } from "@/lib/i18n/LanguageContext"
 import type { Seller } from "@/types/database"
 
@@ -117,7 +118,7 @@ export function SellerSpotlight() {
                         </div>
                       )}
                       <span className="absolute left-2 top-2 inline-flex items-center gap-1 border border-[#E5E7EB] bg-white px-2 py-1 text-[10px] font-semibold text-[#4B5563]">
-                        <Award className="h-3 w-3 text-[#111827]" /> Top seller {index + 1}
+                        <LoqIcon name="artisan-seal" className="h-4 w-4" /> Top seller {index + 1}
                       </span>
                     </div>
                     <div className="flex flex-1 flex-col p-3 sm:p-4">
@@ -127,7 +128,7 @@ export function SellerSpotlight() {
                       {seller.owner_name && <p className="mt-1 truncate text-xs text-[#4B5563]">{seller.owner_name}</p>}
                       {(seller.address || location) && (
                         <p className="mt-3 flex items-start gap-1.5 text-xs leading-4 text-[#4B5563]">
-                          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#111827]" />
+                          <LoqIcon name="origin-pin" className="mt-0.5 h-4 w-4 shrink-0" />
                           <span className="line-clamp-2">{[seller.address, location].filter(Boolean).join(", ")}</span>
                         </p>
                       )}

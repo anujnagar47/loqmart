@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from "react"
 import { Users, Package, ShoppingCart, IndianRupee, Check, X, AlertCircle, TrendingUp, Zap, Clock, Bell, Shield, ClipboardList } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 import Link from "next/link"
+import { MarketplaceIntelligence } from "@/components/admin/MarketplaceIntelligence"
+import { RequestedDemandRadar } from "@/components/admin/RequestedDemandRadar"
 
 interface Stats {
   totalSellers: number; pendingSellersCount: number
@@ -206,6 +208,7 @@ export default function AdminOverview() {
             { label: "Analytics",       href: "/admin/analytics",  icon: Zap },
             { label: "Audit Logs",      href: "/admin/logs",       icon: Clock       },
             { label: "Survey",          href: "/admin/survey",     icon: ClipboardList },
+            { label: "Demand Radar",    href: "/admin#demand-radar", icon: Bell },
           ].map(({ label, href, icon: Icon }) => (
             <Link key={href} href={href}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold ag-btn transition-all"
@@ -360,7 +363,7 @@ export default function AdminOverview() {
                     <td className="px-5 py-3 text-[11px] text-[#111827]/35">{new Date(o.created_at).toLocaleDateString("en-IN")}</td>
                   </tr>
                 )) : (
-                  <tr><td colSpan={5} className="px-5 py-10 text-center text-[11px] text-[#111827]/30">No orders yet</td></tr>
+                  <tr><td colSpan={5} className="px-5 py-10 text-center text-[11px] text-[#111827]/30">No order activity is available yet</td></tr>
                 )}
               </tbody>
             </table>
@@ -408,6 +411,8 @@ export default function AdminOverview() {
           )}
         </div>
       </div>
+      <MarketplaceIntelligence />
+      <RequestedDemandRadar />
     </div>
   )
 }

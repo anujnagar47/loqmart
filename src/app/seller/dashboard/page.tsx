@@ -171,6 +171,20 @@ export default function SellerDashboard() {
     fetch("/api/categories").then(r => r.json()).then(d => setCategories(d.categories || []))
   }, [load])
 
+  useEffect(() => {
+    const syncSection = () => {
+      const section = window.location.hash.slice(1)
+      const tabBySection: Record<string, "overview" | "orders" | "products" | "analytics" | "earnings" | "settings"> = {
+        overview: "overview", products: "products", orders: "orders", customization: "orders",
+        analytics: "analytics", advertise: "earnings", profile: "settings",
+      }
+      if (tabBySection[section]) setTab(tabBySection[section])
+    }
+    syncSection()
+    window.addEventListener("hashchange", syncSection)
+    return () => window.removeEventListener("hashchange", syncSection)
+  }, [])
+
   const handleLogout = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
@@ -631,7 +645,7 @@ export default function SellerDashboard() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-                        {["Order","Amount","Status","Payment","Date",""].map(h => (
+                        {["Order","Amount","Status","Reservation","Date",""].map(h => (
                           <th key={h} className="text-left px-5 py-3 text-[9.5px] font-black uppercase tracking-widest text-[#111827]/28 whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
@@ -644,7 +658,7 @@ export default function SellerDashboard() {
                             <td className="px-5 py-3 font-bold text-[#111827] text-[12px]">{o.order_number}</td>
                             <td className="px-5 py-3 font-black text-[13px] text-[#111827]">{formatCurrency(o.total)}</td>
                             <td className="px-5 py-3"><Pill status={o.order_status} /></td>
-                            <td className="px-5 py-3"><Pill status={o.payment_status} /></td>
+                            <td className="px-5 py-3"><Pill status={o.reservation_status || "pending_confirmation"} /></td>
                             <td className="px-5 py-3 text-[11px] text-[#111827]/35">{new Date(o.created_at).toLocaleDateString("en-IN")}</td>
                             <td className="px-5 py-3">
                               <ChevronDown size={13} className="text-[#111827]/25 transition-transform"
@@ -655,6 +669,7 @@ export default function SellerDashboard() {
                             <tr key={`${o.id}-detail`}>
                               <td colSpan={6} className="px-5 pb-4 pt-0" style={{ borderBottom: "1px solid rgba(0,0,0,0.04)", background: "rgba(255,255,255,0.5)" }}>
                                 <div className="pt-3">
+                                  {o.shipping_address && <div className="mb-4 rounded-lg bg-[#f3f3f3] p-3 text-[11px] leading-5 text-[#1a1c1c]"><p className="font-bold">Delivery details</p><p>{o.shipping_address.name} · {o.shipping_address.phone}</p><p>{o.shipping_address.address_line1}{o.shipping_address.address_line2 ? `, ${o.shipping_address.address_line2}` : ""}, {o.shipping_address.city}, {o.shipping_address.state} {o.shipping_address.pincode}</p></div>}
                                   <p className="text-[10px] font-black uppercase tracking-widest text-[#111827]/30 mb-2">Order Items</p>
                                   {o.order_items && o.order_items.length > 0 ? (
                                     <div className="space-y-2">
@@ -665,7 +680,7 @@ export default function SellerDashboard() {
                                           )}
                                           <div className="flex-1 min-w-0">
                                             <p className="text-[12px] font-bold text-[#111827] truncate">{item.products?.name || "Product"}</p>
-                                            <p className="text-[10px] text-[#111827]/40 mt-0.5">{item.quantity} × {formatCurrency(item.price)}</p>
+                                            <p className="text-[10px] text-[#111827]/40 mt-0.5">{item.variant_name ? `${item.variant_name} · ` : ""}{item.quantity} × {formatCurrency(item.price)}</p>
                                           </div>
                                           <p className="text-[12px] font-black text-[#111827]">{formatCurrency(item.total)}</p>
                                         </div>

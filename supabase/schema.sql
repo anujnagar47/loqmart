@@ -168,6 +168,11 @@ CREATE TABLE orders (
     payment_status payment_status DEFAULT 'pending',
     payment_id VARCHAR(255),
     razorpay_order_id VARCHAR(255),
+    shipping_address JSONB,
+    reservation_status TEXT NOT NULL DEFAULT 'pending_confirmation'
+        CHECK (reservation_status IN ('pending_confirmation', 'confirmed', 'cancelled')),
+    inventory_reserved_at TIMESTAMPTZ,
+    inventory_released_at TIMESTAMPTZ,
     notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -188,6 +193,15 @@ CREATE TABLE order_items (
     coins_earned INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+CREATE TABLE checkout_idempotency_keys (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    idempotency_key TEXT NOT NULL,
+    order_ids UUID[] NOT NULL DEFAULT '{}',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, idempotency_key)
+);
+ALTER TABLE checkout_idempotency_keys ENABLE ROW LEVEL SECURITY;
 
 -- Payments table
 CREATE TABLE payments (
@@ -334,6 +348,7 @@ CREATE TABLE seller_payouts (
 );
 
 -- Indexes for performance
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE INDEX idx_products_seller_id ON products(seller_id);
 CREATE INDEX idx_products_category_id ON products(category_id);
 CREATE INDEX idx_products_approval_status ON products(approval_status);
@@ -351,6 +366,7 @@ CREATE INDEX idx_reviews_user_id ON reviews(user_id);
 CREATE INDEX idx_wishlists_user_id ON wishlists(user_id);
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_addresses_user_id ON addresses(user_id);
+CREATE INDEX IF NOT EXISTS idx_products_name_trgm ON products USING GIN (name gin_trgm_ops);
 
 -- Row Level Security (RLS) Policies
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;

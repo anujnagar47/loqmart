@@ -2,11 +2,16 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { ArrowRight, Users, Package, Award, ChevronLeft, Loader2 } from "lucide-react"
+import { ArrowRight, Users, Package, ChevronLeft, Loader2 } from "lucide-react"
 import { ProductCard } from "@/components/product-card"
+import { LoqIcon } from "@/components/loq-icon"
 import type { Product, Seller } from "@/types/database"
+import { SponsoredSlot } from "@/components/sponsored-slot"
+import { trackMarketplaceEvent } from "@/lib/analyticsTracker"
+import { STATE_HERITAGE_IMAGES, stateStoryByCode } from "@/lib/state-stories"
 
 interface StateInfo {
   name: string
@@ -105,21 +110,6 @@ export const STATE_NAMES: Record<string, string> = {
   WB: "West Bengal",
 }
 
-const STATE_BG_IMAGES: Record<string, string> = {
-  RJ: "https://images.unsplash.com/photo-1599661559684-6ea0c5e7b5f9?w=1200&h=600&fit=crop",
-  UP: "https://images.unsplash.com/photo-1561361513-2d000a50f0dc?w=1200&h=600&fit=crop",
-  KA: "https://images.unsplash.com/photo-1600100397608-f010f41cb8ed?w=1200&h=600&fit=crop",
-  MH: "https://images.unsplash.com/photo-1566552881560-0be862a7c445?w=1200&h=600&fit=crop",
-  TN: "https://images.unsplash.com/photo-1582510003544-4d00b7f7415e?w=1200&h=600&fit=crop",
-  WB: "https://images.unsplash.com/photo-1558431382-27e303142255?w=1200&h=600&fit=crop",
-  GJ: "https://images.unsplash.com/photo-1603228254119-e6a4d0f5f403?w=1200&h=600&fit=crop",
-  KL: "https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=1200&h=600&fit=crop",
-  AS: "https://images.unsplash.com/photo-1589136777351-fdc9c9cb15c4?w=1200&h=600&fit=crop",
-  OR: "https://images.unsplash.com/photo-1629215034606-9ab50c5344d5?w=1200&h=600&fit=crop",
-  JK: "https://images.unsplash.com/photo-1595815771614-ade9d652a65d?w=1200&h=600&fit=crop",
-  DEFAULT: "https://images.unsplash.com/photo-1594040226829-7f251ab46d80?w=1200&h=600&fit=crop",
-}
-
 function slugToStateCode(slug: string): string {
   return STATE_CODE_MAP[slug] || slug.toUpperCase().slice(0, 2)
 }
@@ -134,6 +124,10 @@ export function StatePageClient() {
     state: null, products: [], featured_artisans: [], isLoading: true, error: null,
   })
   const [selectedMode, setSelectedMode] = useState<"handmade" | "machine_made">("handmade")
+  const [heroImageFailed, setHeroImageFailed] = useState(false)
+
+  useEffect(() => setHeroImageFailed(false), [stateCode])
+  useEffect(() => { trackMarketplaceEvent("state_view", { source: stateCode }) }, [stateCode])
 
   useEffect(() => {
     async function fetchStateData() {
@@ -179,17 +173,21 @@ export function StatePageClient() {
   }
 
   const state = data.state!
+  const stateStory = stateStoryByCode(stateCode)
   const filteredProducts = data.products.filter(p =>
     selectedMode === "handmade" ? p.mode === "handmade" : p.mode === "machine_made"
   )
-  const bgImage = STATE_BG_IMAGES[stateCode] || STATE_BG_IMAGES.DEFAULT
+  const stateSlug = stateName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+  const heroImage = stateStory?.image || STATE_HERITAGE_IMAGES[stateCode]?.src || `/images/states/${stateSlug}-hero.jpg`
+  const heroAlt = stateStory?.imageAlt || STATE_HERITAGE_IMAGES[stateCode]?.alt || `${state.name} regional craft heritage illustration`
 
   return (
     <div className="min-h-screen" style={{ background: "#FBF9F5" }}>
       {/* Hero */}
       <div className="relative h-[50vh] min-h-[400px]">
-        <div className="absolute inset-0 bg-cover bg-center opacity-35"
-          style={{ backgroundImage: `url('${bgImage}')` }} />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#4d4632] via-[#725c00] to-[#1a1c1c]" />
+        {!heroImageFailed && <Image src={heroImage} alt={heroAlt} fill priority sizes="100vw" unoptimized className="object-cover" onError={() => setHeroImageFailed(true)} />}
+        {heroImageFailed && <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-white/70"><span className="rounded border border-white/30 bg-black/20 px-4 py-2 text-xs font-semibold uppercase tracking-widest">State hero image pending · see IMAGE_UPLOAD_LIST.md</span></div>}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
         <div className="absolute inset-0 flex items-end">
           <div className="max-w-7xl mx-auto px-6 pb-12 w-full">
@@ -197,6 +195,7 @@ export function StatePageClient() {
               className="inline-flex items-center gap-2 text-white/70 hover:text-white mb-4 transition-colors text-[13px]">
               <ChevronLeft className="w-4 h-4" /> Back to India Map
             </Link>
+            {STATE_HERITAGE_IMAGES[stateCode] && <span className="mb-3 block text-[10px] font-medium text-white/70">Illustrative artwork</span>}
             <div className="mb-4">
               <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-black text-[#111827]"
                 style={{ background: "#FACC15" }}>
@@ -219,11 +218,32 @@ export function StatePageClient() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-12">
+        <SponsoredSlot placement="state_spotlight" stateCode={stateCode} />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-12">
+            {stateStory && <section className="overflow-hidden rounded-md border border-[#d0c6ac] bg-white">
+              <div className="grid md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                {stateStory.image && <Link href={`/blog/states/${stateStory.slug}`} className="relative block min-h-52 bg-[#eee8d8] md:min-h-full">
+                  <Image src={stateStory.image} alt={stateStory.imageAlt} fill sizes="(max-width: 768px) 100vw, 40vw" className="object-cover" />
+                </Link>}
+                <div className="p-6 md:p-8">
+                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#725c00]">{stateStory.greeting} · LoqMart State Story</p>
+                  <h2 className="mt-3 text-2xl font-bold tracking-tight text-[#1a1c1c]">The story behind {state.name}</h2>
+                  <p className="mt-3 text-sm leading-6 text-[#4d4632]">{stateStory.intro}</p>
+                  <Link href={`/blog/states/${stateStory.slug}`} className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-sm bg-[#fcd020] px-4 text-sm font-semibold text-[#231b00] hover:bg-[#eac21d]">Read the {state.name} story <ArrowRight size={15} /></Link>
+                </div>
+              </div>
+            </section>}
             <section>
               <h2 className="text-[22px] font-extrabold text-[#111827] mb-4">About {state.name}</h2>
               <p className="text-[#111827]/55 leading-relaxed">{state.description}</p>
+              {(["AS", "AR", "MN", "ML", "MZ", "NL", "SK", "TR"].includes(stateCode)) && (
+                <div className="mt-5 rounded-md border border-[#d0c6ac] bg-white p-5">
+                  <p className="text-sm font-semibold text-[#1a1c1c]">North East India regional catalog</p>
+                  <p className="mt-1 text-sm leading-6 text-[#4d4632]">The NEHHDC source covers the North East region and does not assign every listed item to an individual state.</p>
+                  <Link href="/catalog?region=North%20East%20India" className="mt-3 inline-flex text-sm font-bold text-[#725c00] hover:underline">Browse NEHHDC catalog</Link>
+                </div>
+              )}
             </section>
 
             <section>
@@ -316,7 +336,7 @@ export function StatePageClient() {
 
               <div className="rounded-2xl p-6" style={{ background: "#111827" }}>
                 <div className="flex items-center gap-2 mb-3">
-                  <Award className="w-6 h-6" style={{ color: "#FACC15" }} />
+                  <LoqIcon name={stateCode === "BR" ? "madhubani-lotus" : stateCode === "UP" ? "wood-carving" : "regional-arch"} className="h-8 w-8 text-white" />
                   <h3 className="font-bold text-white text-[13px]">Swadeshi Rank</h3>
                 </div>
                 <p className="text-[12px] text-white/60 mb-4 leading-relaxed">

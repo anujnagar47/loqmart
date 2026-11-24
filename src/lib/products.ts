@@ -90,7 +90,8 @@ export async function fetchProductsList(params: ProductListParams): Promise<Prod
 
   let query = supabase
     .from("products")
-    .select(`*, ${sellerSelect}, categories(id, name, slug)`, { count: "exact" })
+    // Planned counts avoid an exact full-result count on each filtered search request.
+    .select(`*, ${sellerSelect}, categories(id, name, slug)`, { count: "planned" })
     .eq("approval_status", "approved")
 
   if (params.mode) query = query.eq("mode", params.mode)

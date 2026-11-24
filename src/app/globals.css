@@ -435,3 +435,40 @@ table :is(th, td) {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* LoqMart craft marks: fine-line charcoal with a warm, offset ochre layer. */
+.loq-icon {
+  width: 1em;
+  height: 1em;
+  flex: none;
+  overflow: visible;
+  color: #0f172a;
+  stroke-width: 1.75px;
+}
+.loq-icon .loq-icon__accent {
+  fill: #facc15;
+  fill-opacity: .74;
+  stroke: #0f172a;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.loq-icon .loq-icon__handle,
+.loq-icon .loq-icon__door,
+.loq-icon .loq-icon__shuttle {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.loq-icon--interactive .loq-icon__accent { transition: fill-opacity 180ms ease, transform 220ms ease; }
+.loq-icon--interactive:hover .loq-icon__accent { fill-opacity: 1; }
+.loq-icon--interactive:hover .loq-icon__handle { transform: rotate(-5deg); }
+.loq-icon--interactive:hover .loq-icon__shuttle { animation: loq-shuttle 540ms ease-in-out; }
+.loq-icon--interactive:hover .loq-icon__door { transform: perspective(50px) rotateY(-18deg); }
+.loq-icon--interactive[data-icon="artisan-seal"]:hover .loq-icon__accent,
+.loq-icon--interactive[data-icon="gi-seal"]:hover .loq-icon__accent { transform: scale(.95); }
+.loq-icon--interactive[data-icon="origin-pin"]:hover .loq-icon__accent { animation: loq-pin-drop 420ms ease-out; }
+.loq-icon--interactive[data-icon="precision-compass"]:hover .loq-icon__accent { transform: rotate(18deg); }
+@keyframes loq-shuttle { 0%,100% { translate: 0 0; } 45% { translate: 4px 0; } }
+@keyframes loq-pin-drop { 0% { translate: 0 -3px; } 70% { translate: 0 1px; } 100% { translate: 0 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .loq-icon--interactive *, .loq-icon--interactive:hover * { animation: none !important; transition: none !important; }
+}

@@ -1,7 +1,5 @@
-import { InquiryPanel } from "@/components/inquiry/InquiryPanel"
+import { CartPage } from "@/components/cart-page"
 
-export const metadata = { title: "My Inquiry List | LoqMart" }
+export const metadata = { title: "Your Cart | LoqMart" }
 
-export default function InquiryPage() {
-  return <main className="min-h-[calc(100vh-10rem)] bg-[#FBF9F5] px-4 py-4 sm:px-6"><InquiryPanel page /></main>
-}
+export default function CartRoute() { return <CartPage /> }

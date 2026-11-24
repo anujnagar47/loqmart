@@ -41,8 +41,8 @@ export async function GET() {
     const { data: recentOrders } = await supabase
       .from("orders")
       .select(`
-        id, order_number, total, subtotal, shipping_cost, order_status, payment_status, created_at,
-        order_items(quantity, price, total, product_id, products(name, images))
+        id, order_number, total, subtotal, shipping_cost, order_status, payment_status, reservation_status, shipping_address, created_at,
+        order_items(quantity, price, total, product_id, variant_name, products(name, images))
       `)
       .eq("seller_id", seller.id)
       .order("created_at", { ascending: false })
@@ -71,7 +71,9 @@ export async function GET() {
     const effectiveRate = sellerRate || globalRate
 
     const totalOrders = orders?.length || 0
-    const totalRevenue = orders?.reduce((sum, o) => sum + (o.total || 0), 0) || 0
+    // Reservations in intent-capture mode are demand signals, not seller earnings.
+    const paidOrders = orders?.filter(order => order.payment_status === "paid") || []
+    const totalRevenue = paidOrders.reduce((sum, order) => sum + (order.total || 0), 0)
     const platformFeeRate = effectiveRate ? Number(effectiveRate.rate) / 100 : 0.10
     const paymentGatewayRate = effectiveRate ? Number(effectiveRate.gateway_rate) / 100 : 0.02
     const grossCommission = totalRevenue * platformFeeRate
@@ -79,7 +81,7 @@ export async function GET() {
     const netPayable = totalRevenue - grossCommission - gatewayFee
 
     // Monthly breakdown
-    const last30DaysOrders = orders?.filter(o => o.created_at >= thirtyDaysAgo) || []
+    const last30DaysOrders = paidOrders.filter(o => o.created_at >= thirtyDaysAgo)
     const monthlyRevenue = last30DaysOrders.reduce((sum, o) => sum + (o.total || 0), 0)
 
     // Active vs pending products
@@ -96,10 +98,10 @@ export async function GET() {
         totalRevenue,
         totalOrders,
         monthlyRevenue,
-        monthlyOrders: last30DaysOrders.length,
+        monthlyOrders: (orders || []).filter(o => o.created_at >= thirtyDaysAgo).length,
         activeProducts: activeProducts.length,
         pendingProducts: pendingProducts.length,
-        averageOrderValue: totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0,
+        averageOrderValue: paidOrders.length > 0 ? Math.round(totalRevenue / paidOrders.length) : 0,
         swadeshiRank: seller.swadeshi_rank,
       },
       earnings: {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createServiceClient } from "@/lib/supabase/admin"
+import { checkRateLimit, getClientIp, isDistributedRateLimitConfigured } from "@/lib/rate-limit"
 
 const STATE_CODES: Record<string, string> = {
   "rajasthan": "RJ", "uttar pradesh": "UP", "maharashtra": "MH", "west bengal": "WB",
@@ -20,6 +21,7 @@ export async function GET() {
   if (authError || !user) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 })
   }
+  if (process.env.NODE_ENV === "production" && !isDistributedRateLimitConfigured()) return NextResponse.json({ error: "Address service requires shared rate-limit configuration." }, { status: 503 })
 
   const { data, error } = await sessionClient
     .from("addresses")
@@ -42,12 +44,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 })
   }
 
-  const body = await req.json()
+  const ip = getClientIp(req)
+  const withinLimit = await Promise.all([
+    checkRateLimit(`address:user:${user.id}`, 10, 60 * 60 * 1000),
+    checkRateLimit(`address:network:${ip}`, 40, 60 * 60 * 1000),
+  ])
+  if (withinLimit.some(allowed => !allowed)) return NextResponse.json({ error: "Too many address attempts. Please try again later." }, { status: 429 })
+
+  let body: Record<string, any>
+  try { body = await req.json() } catch { return NextResponse.json({ error: "Invalid address request." }, { status: 400 }) }
   const { name, phone, address_line1, address_line2, city, state, state_code, pincode, is_default } = body
 
   if (!name || !phone || !address_line1 || !city || !state || !pincode) {
     return NextResponse.json({ error: "Missing required address fields" }, { status: 400 })
   }
+  let normalizedPhone = String(phone).trim().replace(/\D/g, "")
+  if (normalizedPhone.length === 12 && normalizedPhone.startsWith("91")) normalizedPhone = normalizedPhone.slice(2)
+  if (!/^[6-9]\d{9}$/.test(normalizedPhone)) return NextResponse.json({ error: "phone: Enter a valid 10-digit Indian mobile number." }, { status: 400 })
+  const normalizedPincode = String(pincode).trim()
+  if (!/^\d{6}$/.test(normalizedPincode)) return NextResponse.json({ error: "pincode: Enter a valid 6-digit Indian pincode." }, { status: 400 })
 
   let db
   try {
@@ -87,10 +102,10 @@ export async function POST(req: NextRequest) {
     .from("addresses")
     .insert({
       user_id: user.id,
-      name, phone: phone.replace(/\D/g, ""),
+      name: String(name).trim(), phone: normalizedPhone,
       address_line1, address_line2: address_line2 || null,
       city, state, state_code: resolvedStateCode,
-      pincode,
+      pincode: normalizedPincode,
       is_default: is_default || false,
     })
     .select()

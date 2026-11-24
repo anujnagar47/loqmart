@@ -35,8 +35,8 @@ export async function proxy(request: NextRequest) {
   const isAdmin = ADMIN_ROUTES.some(route => pathname.startsWith(route))
 
   if ((isProtected || isAdmin) && !user) {
-    const loginUrl = new URL("/auth", request.url)
-    loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`)
+    const loginUrl = new URL(isAdmin ? "/seller/login" : "/auth", request.url)
+    loginUrl.searchParams.set(isAdmin ? "redirect" : "next", `${pathname}${request.nextUrl.search}`)
     return NextResponse.redirect(loginUrl)
   }
 

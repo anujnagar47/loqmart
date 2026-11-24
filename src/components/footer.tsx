@@ -16,13 +16,6 @@ export function Footer() {
       { label: "footer.trackOrder", href: "/account" },
       { label: "footer.loqCoinsProgram", href: "/loqcoins" },
     ],
-    [t("footer.colSellers")]: [
-      { label: "footer.sellOnLoqmart", href: "/seller/register" },
-      { label: "footer.sellerDashboard", href: "/seller/dashboard" },
-      { label: "footer.sellerAgreement", href: "/seller/terms" },
-      { label: "footer.commissionStructure", href: "/seller/commission" },
-      { label: "footer.swadeshiRank", href: "/seller/swadeshi-rank" },
-    ],
     [t("footer.colDiscover")]: [
       { label: "footer.indiaMap", href: "/india-map" },
       { label: "footer.bestSellers", href: "/best-sellers" },
@@ -42,7 +35,6 @@ export function Footer() {
   const legalLinks: { label: TranslationKey; href: string }[] = [
     { label: "footer.termsOfService", href: "/terms" },
     { label: "footer.privacyPolicy", href: "/privacy" },
-    { label: "footer.sellerAgreement", href: "/seller/terms" },
     { label: "footer.shippingPolicy", href: "/shipping" },
     { label: "footer.returnRefundPolicy", href: "/returns" },
     { label: "footer.grievanceRedressal", href: "/grievance" },
@@ -59,7 +51,7 @@ export function Footer() {
     <footer className="w-full bg-[#111827] text-white">
       {/* Main footer */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 pt-10 pb-24 md:pt-14 lg:pb-14">
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-5 gap-y-9 mb-10 md:mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-5 gap-y-9 mb-10 md:mb-12">
           {/* Brand */}
           <div className="col-span-2 lg:col-span-2">
             <Link href="/" className="text-2xl font-black tracking-wide uppercase text-white block mb-4">
@@ -75,7 +67,7 @@ export function Footer() {
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 shrink-0" />
-                <span>support@loqmart.in</span>
+                <a href="mailto:support@loqmart.in" className="hover:text-white hover:underline">support@loqmart.in</a>
               </div>
             </div>
           </div>

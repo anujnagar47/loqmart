@@ -29,3 +29,13 @@ export async function requireAdmin(): Promise<AdminAuth> {
 
   return { authorized: true, db, userId: user.id, role: userRecord.role, stateScope: userRecord.state_scope ?? null }
 }
+
+/** Restrict platform-wide data and controls to full administrators. */
+export async function requireFullAdmin(): Promise<AdminAuth> {
+  const auth = await requireAdmin()
+  if (!auth.authorized || auth.role === "admin") return auth
+  return {
+    authorized: false,
+    response: NextResponse.json({ error: "Full administrator access required" }, { status: 403 }),
+  }
+}

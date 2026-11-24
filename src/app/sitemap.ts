@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next"
 import { createServiceClient } from "@/lib/supabase/admin"
+import { STATE_STORIES } from "@/lib/state-stories"
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 
@@ -52,5 +53,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }))
 
-  return [...staticEntries, ...productEntries, ...categoryEntries, ...blogEntries, ...sellerEntries]
+  const stateStoryEntries: MetadataRoute.Sitemap = STATE_STORIES.map((story) => ({
+    url: `${BASE_URL}/blog/states/${story.slug}`,
+    changeFrequency: "monthly",
+    priority: 0.65,
+  }))
+
+  return [...staticEntries, ...productEntries, ...categoryEntries, ...blogEntries, ...sellerEntries, ...stateStoryEntries]
 }

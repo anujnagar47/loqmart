@@ -4,20 +4,11 @@ import { CategoryGrid } from "@/components/category-grid"
 import { HomeProductRow } from "@/components/home-product-row"
 import { RecentlyViewedRow } from "@/components/recently-viewed-row"
 import { StateFeed } from "@/components/state-feed"
-import { SellerSpotlight } from "@/components/seller-spotlight"
 import { BlogPreview } from "@/components/blog-preview"
 import { fetchProductsList } from "@/lib/products"
 import { CraftShowcase } from "@/components/craft-showcase"
-
-const STATE_NAMES: Record<string, string> = {
-  RJ: "Rajasthan", UP: "Uttar Pradesh", MH: "Maharashtra", WB: "West Bengal",
-  KA: "Karnataka", TN: "Tamil Nadu", OR: "Odisha", OD: "Odisha", AP: "Andhra Pradesh",
-  GJ: "Gujarat", KL: "Kerala", DL: "Delhi", PB: "Punjab", HR: "Haryana",
-  MP: "Madhya Pradesh", BR: "Bihar", JK: "Jammu & Kashmir", AS: "Assam", JH: "Jharkhand",
-  CT: "Chhattisgarh", HP: "Himachal Pradesh", UK: "Uttarakhand", TG: "Telangana",
-  GA: "Goa", MN: "Manipur", TR: "Tripura", ML: "Meghalaya", MZ: "Mizoram",
-  NL: "Nagaland", SK: "Sikkim", AR: "Arunachal Pradesh", LA: "Ladakh",
-}
+import { IndiaMap } from "@/components/map/IndiaMap"
+import { SponsoredSlot } from "@/components/sponsored-slot"
 
 // Without this, Next.js bakes getHeroStats()'s result into the static HTML
 // at build time and never refreshes it — real numbers that go stale the
@@ -30,21 +21,12 @@ export default async function HomePage() {
     fetchProductsList({ sort: "rating_desc", limit: 8 }),
     fetchProductsList({ sort: "created_at_desc", limit: 8 }),
   ])
-  const heroStateSlides = Array.from(
-    new Map(
-      [...bestSellers.products, ...highlights.products, ...newArrivals.products]
-        .filter((product) => product.state_code && product.images?.[0])
-        .map((product) => [product.state_code!, {
-          stateCode: product.state_code!,
-          stateName: STATE_NAMES[product.state_code!] || product.state_code!,
-          image: product.images[0],
-        }])
-    ).values()
-  ).slice(0, 7)
+
 
   return (
     <>
-      <Hero stateSlides={heroStateSlides} />
+      <SponsoredSlot placement="home_hero" />
+      <Hero />
       <TrustBar />
       <CategoryGrid />
       <CraftShowcase />
@@ -57,7 +39,7 @@ export default async function HomePage() {
       <HomeProductRow
         eyebrow="Selected Pieces"
         title="A closer look at regional craft"
-        subtitle="Explore pieces selected from seller communities across India"
+        subtitle="Explore selected products from across India"
         href="/deals"
         hrefLabel="Explore highlights"
         products={highlights.products}
@@ -71,8 +53,8 @@ export default async function HomePage() {
         badge="new"
       />
       <RecentlyViewedRow />
-      <SellerSpotlight />
       <StateFeed />
+      <IndiaMap />
       <BlogPreview />
     </>
   )

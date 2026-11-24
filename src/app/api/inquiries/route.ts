@@ -21,14 +21,21 @@ export async function POST(request: Request) {
     const phone = clean(body.phone, 20)
     const cityState = clean(body.cityState, 120)
     const note = clean(body.note, 1000)
-    const productIds = Array.isArray(body.productIds) ? [...new Set(body.productIds)] : []
+    let productIds = Array.isArray(body.productIds) ? [...new Set(body.productIds)] : []
+    const productSlugs = Array.isArray(body.productSlugs) ? [...new Set(body.productSlugs.map((slug: unknown) => clean(slug, 160)).filter(Boolean))] : []
     const rawOptions = body.productOptions && typeof body.productOptions === "object" && !Array.isArray(body.productOptions) ? body.productOptions : {}
-    const productOptions = Object.fromEntries(Object.entries(rawOptions)
+    let productOptions = Object.fromEntries(Object.entries(rawOptions)
       .filter(([id, option]) => typeof id === "string" && UUID.test(id) && productIds.includes(id) && typeof option === "string")
       .map(([id, option]) => [id, clean(option, 120)]))
 
     if (fullName.length < 2 || !EMAIL.test(email) || !PHONE.test(phone) || cityState.length < 2) {
       return NextResponse.json({ error: "Please provide a valid name, email, phone number, and city or state." }, { status: 400 })
+    }
+    if (productIds.length === 0 && productSlugs.length > 0 && productSlugs.length <= 20) {
+      const { data: matching } = await createServiceClient().from("products").select("id, slug").in("slug", productSlugs).eq("approval_status", "approved")
+      if (matching?.length === productSlugs.length) productIds = matching.map(item => item.id)
+      const customization = Object.values(rawOptions).find(value => typeof value === "string")
+      if (typeof customization === "string") productOptions = Object.fromEntries(productIds.map(id => [id, clean(customization, 120)]))
     }
     if (productIds.length < 1 || productIds.length > 20 || productIds.some((id: unknown) => typeof id !== "string" || !UUID.test(id))) {
       return NextResponse.json({ error: "Select between 1 and 20 valid products." }, { status: 400 })

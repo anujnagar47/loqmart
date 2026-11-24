@@ -10,6 +10,8 @@ import { ProductCard } from "@/components/product-card"
 import type { Seller, Product } from "@/types/database"
 import { ChatWindow } from "@/components/chat-window"
 import { createClient } from "@/lib/supabase/client"
+import { LoqIcon } from "@/components/loq-icon"
+import { trackMarketplaceEvent } from "@/lib/analyticsTracker"
 
 export function PublicSellerStoreClient() {
   const params   = useParams()
@@ -31,6 +33,7 @@ export function PublicSellerStoreClient() {
       ])
 
       setSeller(sellerRow)
+      if (sellerRow) trackMarketplaceEvent("seller_view", { sellerId })
       setProducts(prods || [])
       if (session?.user) setCurrentUserId(session.user.id)
       setLoading(false)
@@ -47,7 +50,7 @@ export function PublicSellerStoreClient() {
   if (!seller) return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: "#FBF9F5" }}>
       <div className="text-center">
-        <Store className="w-12 h-12 text-[#111827]/15 mx-auto mb-4" />
+        <LoqIcon name="seller-studio" className="mx-auto mb-4 h-14 w-14" />
         <h1 className="text-[22px] font-bold text-[#111827] mb-2">Seller not found</h1>
         <Link href="/" className="font-bold text-[#111827] hover:underline">Back to home</Link>
       </div>
@@ -89,7 +92,7 @@ export function PublicSellerStoreClient() {
                 {seller.gstin && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black text-white"
                     style={{ background: "#16a34a" }}>
-                    <ShieldCheck className="w-3 h-3" /> GST Verified
+                    <LoqIcon name="gi-seal" className="h-4 w-4" /> GST Verified
                   </span>
                 )}
                 {seller.approval_status === "approved" && (
@@ -99,7 +102,7 @@ export function PublicSellerStoreClient() {
                 {seller.city && seller.state_code && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold text-[#111827]"
                     style={{ border: "1px solid rgba(17,24,39,0.2)" }}>
-                    <MapPin className="w-3 h-3" />{seller.city}, {seller.state_code}
+                    <LoqIcon name="origin-pin" className="h-4 w-4" />{seller.city}, {seller.state_code}
                   </span>
                 )}
               </div>
@@ -137,7 +140,7 @@ export function PublicSellerStoreClient() {
               <div className="bg-white p-6" style={{ border: "1px solid rgba(17,24,39,0.07)" }}>
                 <h2 className="font-bold text-[#111827] mb-3 text-[13px] uppercase tracking-wider">Store location</h2>
                 <div className="flex items-start gap-2 text-[13px] leading-relaxed text-[#4B5563]">
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#111827]" />
+                    <LoqIcon name="origin-pin" className="mt-0.5 h-5 w-5 shrink-0" />
                   <span>{[seller.address, seller.city, seller.state_code].filter(Boolean).join(", ")}</span>
                 </div>
               </div>

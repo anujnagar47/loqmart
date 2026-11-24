@@ -10,7 +10,7 @@ export default function PrivacyPage() {
       content: [
         "Account information: name, mobile number, email address when you register or log in via OTP.",
         "Order information: delivery address, payment method (we store only transaction references, not card numbers), order history.",
-        "Usage data: pages visited, searches, products viewed, device type, browser, IP address.",
+        "Optional marketplace analytics: with your choice enabled, a first-party session identifier records product views, search interactions, cart or wishlist intent, customization inquiries, and an optional saved delivery state or pincode. We do not collect device fingerprints or IP addresses in this analytics stream.",
         "Seller information: GST number, PAN, bank account IFSC and number (encrypted at rest), business address.",
         "Reviews and content you submit on the platform.",
       ],
@@ -23,7 +23,7 @@ export default function PrivacyPage() {
         "To send you order updates, LoqCoin credits, and platform notifications via SMS and email.",
         "To verify seller identity, compliance, and prevent fraud.",
         "To improve our platform, resolve disputes, and enforce our seller and buyer agreements.",
-        "For analytics to understand platform performance and user behaviour (in anonymised form).",
+        "To understand marketplace demand and improve search, recommendations, and seller tools. Authorized marketplace administrators can review product trends and visitor sessions; account carts and wishlists are linked to your account for marketplace operations.",
       ],
     },
     {
@@ -60,7 +60,7 @@ export default function PrivacyPage() {
       title: "Cookies",
       content: [
         "We use functional cookies to maintain your login session.",
-        "We use analytics cookies (Posthog/Plausible) to understand platform usage - no cross-site tracking.",
+        "Optional first-party analytics is controlled by the preference prompt. You can decline it; this does not disable shopping features. We do not use cross-site tracking for this analytics stream.",
         "You may disable cookies via your browser settings, though this may affect platform functionality.",
         "We do not use advertising cookies or sell cookie data to ad networks.",
       ],

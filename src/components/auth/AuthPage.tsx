@@ -82,9 +82,10 @@ function AuthPageContent({ role }: { role: "buyer" | "seller" }) {
 
   const destinationFor = (userRole?: string) => {
     if (userRole === "admin" || userRole === "sub_admin") return "/admin"
+    if (userRole === "seller" || role === "seller") return "/seller"
     if (role === "buyer" && (userRole ?? "buyer") === "buyer") return "/priority-invite"
     if (next) return next
-    return role === "seller" || userRole === "seller" ? "/seller/dashboard" : "/account"
+    return "/account"
   }
 
   async function ensurePublicUser(userId: string, userEmail: string, name: string, role: "buyer" | "seller") {
@@ -295,12 +296,10 @@ function AuthPageContent({ role }: { role: "buyer" | "seller" }) {
               </p>
             </motion.div>
           )}
-          <p className="mt-6 text-center text-[12px] text-[#111827]/50">
-            {role === "seller" ? "Shopping on LoqMart?" : "Looking to sell?"}{" "}
-            <Link href={role === "seller" ? "/login" : "/seller/login"} className="font-bold text-[#111827] hover:underline">
-              {role === "seller" ? "Go to Buyer Login" : "Go to Seller Login"}
-            </Link>
-          </p>
+          {role === "seller" && <p className="mt-6 text-center text-[12px] text-[#111827]/50">
+            Shopping on LoqMart?{" "}
+            <Link href="/login" className="font-bold text-[#111827] hover:underline">Go to Buyer Login</Link>
+          </p>}
         </div>
       </motion.div>
     </div>

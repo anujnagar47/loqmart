@@ -2,9 +2,10 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { trackMarketplaceEvent } from "@/lib/analyticsTracker"
 import Link from "next/link"
 import Image from "next/image"
-import { Search, X, Clock, Loader2, PackageSearch } from "lucide-react"
+import { Search, X, Clock, Loader2, PackageSearch, MapPinned, Shapes } from "lucide-react"
 import { useLanguage } from "@/lib/i18n/LanguageContext"
 
 const RECENT_KEY = "loqmart-recent-searches"
@@ -12,11 +13,13 @@ const MAX_RECENT = 5
 
 interface Suggestion {
   id: string
-  name: string
-  slug: string
-  price: number
-  images: string[]
+  label: string
+  detail?: string
+  href: string
+  image?: string | null
 }
+
+type SuggestionGroups = { products: Suggestion[]; sellers: Suggestion[]; states: Suggestion[]; categories: Suggestion[] }
 
 export function SearchBar({ variant = "desktop", autoFocus = false, onNavigate }: {
   variant?: "desktop" | "mobile"
@@ -27,7 +30,7 @@ export function SearchBar({ variant = "desktop", autoFocus = false, onNavigate }
   const { t } = useLanguage()
   const [query,       setQuery]       = useState("")
   const [open,        setOpen]        = useState(false)
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [groups, setGroups] = useState<SuggestionGroups>({ products: [], sellers: [], states: [], categories: [] })
   const [resultCount, setResultCount] = useState<number | null>(null)
   const [loading,     setLoading]     = useState(false)
   const [recent,      setRecent]      = useState<string[]>(() => {
@@ -53,7 +56,7 @@ export function SearchBar({ variant = "desktop", autoFocus = false, onNavigate }
     const trimmed = query.trim()
 
     if (!trimmed) {
-      queueMicrotask(() => { setSuggestions([]); setResultCount(null); setLoading(false) })
+      queueMicrotask(() => { setGroups({ products: [], sellers: [], states: [], categories: [] }); setResultCount(null); setLoading(false) })
       return
     }
 
@@ -61,10 +64,10 @@ export function SearchBar({ variant = "desktop", autoFocus = false, onNavigate }
     queueMicrotask(() => { if (!controller.signal.aborted) setLoading(true) })
 
     debounceRef.current = setTimeout(() => {
-      fetch(`/api/products?q=${encodeURIComponent(trimmed)}&limit=6`, { signal: controller.signal })
+      fetch(`/api/catalog-search?q=${encodeURIComponent(trimmed)}&limit=6`, { signal: controller.signal })
         .then(r => r.ok ? r.json() : null)
-        .then(d => { setSuggestions(d?.products || []); setResultCount(d?.total ?? 0) })
-        .catch(() => { if (!controller.signal.aborted) { setSuggestions([]); setResultCount(null) } })
+        .then(d => { setGroups(d?.groups || { products: [], sellers: [], states: [], categories: [] }); setResultCount(d?.total ?? 0) })
+        .catch(() => { if (!controller.signal.aborted) { setGroups({ products: [], sellers: [], states: [], categories: [] }); setResultCount(null) } })
         .finally(() => { if (!controller.signal.aborted) setLoading(false) })
     }, 300)
 
@@ -89,11 +92,12 @@ export function SearchBar({ variant = "desktop", autoFocus = false, onNavigate }
   function submitSearch(q: string) {
     const trimmed = q.trim()
     if (!trimmed) return
+    trackMarketplaceEvent("search_submit", { query: trimmed, ...(resultCount !== null && resultCount !== undefined ? { resultCount } : {}) })
     saveRecent(trimmed)
     setOpen(false)
     setQuery("")
     onNavigate?.()
-    router.push(`/category?search=${encodeURIComponent(trimmed)}`)
+    router.push(`/catalog?q=${encodeURIComponent(trimmed)}`)
   }
 
   const trimmedQuery = query.trim()
@@ -158,27 +162,26 @@ export function SearchBar({ variant = "desktop", autoFocus = false, onNavigate }
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="w-5 h-5 animate-spin text-[#111827]/30" />
                 </div>
-              ) : suggestions.length === 0 ? (
+              ) : Object.values(groups).every(group => group.length === 0) ? (
                 <div className="flex flex-col items-center gap-2 py-8 px-4 text-center">
                   <PackageSearch className="w-7 h-7 text-[#111827]/20" />
                   <p className="text-sm font-semibold text-[#111827]/50">No products found for &quot;{trimmedQuery}&quot;</p>
-                  <p className="text-xs text-[#111827]/35">Try a different word or browse categories instead.</p>
+                  <p className="text-xs text-[#111827]/35">Try another search or tell us what you would like us to onboard.</p>
+                  <button type="button" onClick={() => { window.dispatchEvent(new CustomEvent("loqmart:request-demand", { detail: { query: trimmedQuery, source: "search" } })); setOpen(false) }} className="mt-1 rounded-md bg-[#fcd020] px-3 py-2 text-xs font-bold text-[#231b00]">Request this item</button>
                 </div>
               ) : (
                 <>
                   <div className="py-1.5">
-                    {suggestions.map(p => (
-                      <Link key={p.id} href={`/product/${p.slug}`} onClick={() => { saveRecent(trimmedQuery); onNavigate?.(); setOpen(false); setQuery("") }}
-                        className="flex items-center gap-3 px-3 py-2 hover:bg-[#ffffff] transition-colors">
-                        <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-[#f0ede8]">
-                          {p.images?.[0] && <Image src={p.images[0]} alt="" fill sizes="40px" className="object-cover" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-semibold text-[#111827] truncate">{p.name}</p>
-                          <p className="text-xs text-[#4d4632]">View craft details and seller information</p>
-                        </div>
-                      </Link>
-                    ))}
+                    {([
+                      ["Products", groups.products, PackageSearch],
+                      ["States", groups.states, MapPinned], ["Categories", groups.categories, Shapes],
+                    ] as const).map(([title, items, Icon]) => items.length > 0 && <section key={title} className="py-1">
+                      <p className="px-3 py-1 text-[10px] font-black uppercase tracking-widest text-[#4d4632]/60">{title}</p>
+                      {items.map(item => <Link key={item.id} href={item.href} onClick={() => { trackMarketplaceEvent("search_click", { query: trimmedQuery, source: title }); saveRecent(trimmedQuery); onNavigate?.(); setOpen(false); setQuery("") }} className="flex items-center gap-3 px-3 py-2 hover:bg-[#f3f3f3]">
+                        {item.image ? <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded border border-[#d0c6ac] bg-white"><Image src={item.image} alt="" fill sizes="36px" className="object-contain" /></span> : <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-[#f3f3f3] text-[#725c00]"><Icon className="h-4 w-4" /></span>}
+                        <span className="min-w-0"><span className="block truncate text-[13px] font-semibold text-[#1a1c1c]">{item.label}</span>{item.detail && <span className="block truncate text-xs text-[#4d4632]">{item.detail}</span>}</span>
+                      </Link>)}
+                    </section>)}
                   </div>
                   <button type="button" onClick={() => submitSearch(trimmedQuery)}
                     className="w-full text-center py-3 text-xs font-black uppercase tracking-wider text-[#111827] border-t border-[#111827]/8 hover:bg-[#ffffff] transition-colors">

@@ -10,6 +10,8 @@ const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_RE
 
 const buckets = new Map<string, { count: number; resetAt: number }>()
 
+export function isDistributedRateLimitConfigured() { return redis !== null }
+
 /**
  * Returns true if the call under `key` is allowed, false if it should be
  * rejected (limit exceeded). Each call that returns true counts toward

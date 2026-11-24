@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { createServiceClient } from "@/lib/supabase/admin"
 import { mapBlogPostRow } from "@/lib/blog"
+import { STATE_STORIES } from "@/lib/state-stories"
 import { BlogClient, type BlogPost } from "./BlogClient"
 
 export const metadata: Metadata = {
@@ -22,7 +23,13 @@ async function fetchInitialPosts(): Promise<BlogPost[]> {
       .limit(20)
 
     if (error) { console.error("Blog initial fetch error:", error); return [] }
-    return (data || []).map(mapBlogPostRow)
+    const cmsPosts = (data || []).map(mapBlogPostRow)
+    const editorialPosts = STATE_STORIES.map((story) => ({
+      id: `state-story-${story.slug}`, slug: `states/${story.slug}`, title: `${story.state}: ${story.focus}`,
+      excerpt: story.intro, image: story.image, state: story.state, stateCode: story.stateCode,
+      category: "Heritage", readTime: "8 min", date: "State story", author: "LoqMart Editorial",
+    }))
+    return [...editorialPosts, ...cmsPosts.filter((post) => !STATE_STORIES.some((story) => post.slug === story.slug))]
   } catch (err) {
     console.error("Blog initial fetch failed:", err)
     return []

@@ -1,60 +1,37 @@
 import { NextResponse } from "next/server"
 import { createServiceClient } from "@/lib/supabase/admin"
+import { INDIA_STATE_DATA } from "@/lib/indiaStateData"
+
+const STATE_ALIASES: Record<string, string> = { OR: "OD", CG: "CT", UK: "UA", TS: "TG", DN: "DN", DD: "DN" }
+const canonicalCode = (code: string) => STATE_ALIASES[code.toUpperCase()] || code.toUpperCase()
 
 export async function GET() {
   try {
     const supabase = createServiceClient()
+    const [{ data: sellers, error: sellerError }, { data: products, error: productError }] = await Promise.all([
+      supabase.from("sellers").select("state_code").eq("approval_status", "approved"),
+      supabase.from("products").select("state_code").eq("approval_status", "approved").not("state_code", "is", null),
+    ])
+    if (sellerError || productError) return NextResponse.json({ states: [] })
 
-    const { data: sellers, error } = await supabase
-      .from("sellers")
-      .select(`
-        state_code,
-        state,
-        total_products,
-        total_orders,
-        swadeshi_rank,
-        approval_status
-      `)
-      .eq("approval_status", "approved")
-
-    if (error) {
-      console.error("Error fetching sellers:", error)
-      return NextResponse.json({ states: [] })
+    const counts = new Map<string, { artisanCount: number; productCount: number }>()
+    const ensure = (rawCode: string) => {
+      const code = canonicalCode(rawCode)
+      const current = counts.get(code) || { artisanCount: 0, productCount: 0 }
+      counts.set(code, current)
+      return current
     }
+    for (const seller of sellers || []) if (seller.state_code) ensure(seller.state_code).artisanCount++
+    for (const product of products || []) if (product.state_code) ensure(product.state_code).productCount++
 
-    const stateStatsMap = new Map()
-
-    sellers?.forEach((seller) => {
-      const code = seller.state_code
-      if (!code) return
-
-      const existing = stateStatsMap.get(code) || {
-        stateCode: code,
-        stateName: seller.state || code,
-        artisanCount: 0,
-        productCount: 0,
-      }
-
-      stateStatsMap.set(code, {
-        stateCode: code,
-        stateName: seller.state || code,
-        artisanCount: existing.artisanCount + 1,
-        productCount: existing.productCount + (seller.total_products || 0),
-      })
-    })
-
-    const states = Array.from(stateStatsMap.values()).map((stat: any) => ({
-      stateCode: stat.stateCode,
-      stateName: stat.stateName,
-      artisanCount: stat.artisanCount,
-      productCount: stat.productCount,
-    }))
-
-    states.sort((a, b) => b.productCount - a.productCount)
-
+    const states = [...counts.entries()].map(([stateCode, count]) => ({
+      stateCode,
+      stateName: INDIA_STATE_DATA.find(state => state.filterCodes.some(code => canonicalCode(code) === stateCode))?.name || stateCode,
+      ...count,
+    })).sort((a, b) => b.productCount - a.productCount)
     return NextResponse.json({ states })
   } catch (error) {
-    console.error("API error:", error)
+    console.error("State stats error:", error)
     return NextResponse.json({ states: [] })
   }
 }

@@ -27,8 +27,9 @@ export function mapServerCartItem(row: ServerCartRow): CartItem {
 }
 
 async function parseCartResponse(res: Response): Promise<CartItem[]> {
-  if (!res.ok) return []
+  if (!res.ok) throw new Error(`Cart sync failed (${res.status}).`)
   const data = await res.json()
+  if (!Array.isArray(data.items)) throw new Error("Cart sync returned an invalid response.")
   return ((data.items || []) as ServerCartRow[]).map(mapServerCartItem)
 }
 

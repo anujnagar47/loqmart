@@ -3,29 +3,29 @@ import { Heart, Shield, MapPin, Target, Users, TrendingUp } from "lucide-react"
 
 export const metadata = {
   title: "About LoqMart – India's Swadeshi Marketplace",
-  description: "Learn how LoqMart helps shoppers discover handmade and machine-made products from sellers across India.",
+  description: "Learn how LoqMart helps shoppers discover handmade and machine-made products from across India.",
 }
 
 const values = [
   {
     icon: Heart,
     title: "Made across India",
-    desc: "Find handmade work and machine-made goods from sellers in different parts of the country.",
+    desc: "Find handmade work and machine-made goods from different parts of the country.",
   },
   {
     icon: Shield,
-    title: "Seller details in view",
-    desc: "Open a seller profile to learn about the shop and see the products it offers.",
+    title: "Product details in view",
+    desc: "Review useful product information before you add an item to your cart.",
   },
   {
     icon: MapPin,
     title: "Browse by location",
-    desc: "Explore sellers and products by state, and see where a shop is based before you choose.",
+    desc: "Explore products by state and discover goods from across the country.",
   },
   {
     icon: TrendingUp,
-    title: "A place for independent sellers",
-    desc: "LoqMart gives artisans, small businesses, and manufacturers a dedicated place to present their products online.",
+    title: "Made across India",
+    desc: "Discover handmade crafts and machine-made essentials in one convenient place.",
   },
 ]
 
@@ -40,7 +40,7 @@ export default function AboutPage() {
             A marketplace for goods made across India
           </h1>
           <p className="text-white/60 text-lg max-w-2xl mx-auto leading-relaxed">
-            LoqMart brings handmade goods and machine-made products together, with seller profiles and state-wise discovery to help you choose with context.
+            LoqMart brings handmade goods and machine-made products together, with simple shopping and state-wise discovery.
           </p>
         </div>
       </div>
@@ -51,7 +51,7 @@ export default function AboutPage() {
           <Target className="w-12 h-12 text-primary mx-auto mb-4" />
           <h2 className="text-3xl font-extrabold text-on-surface mb-4">Why we built LoqMart</h2>
           <p className="text-on-surface-variant max-w-2xl mx-auto text-lg leading-relaxed">
-            Finding a product is only part of the decision. We want shoppers to see what is being sold, who is selling it, and where that seller is based, all before they reach checkout.
+            Finding the right product should feel straightforward. Browse by category or region, compare clear details, and reserve your order at checkout.
           </p>
         </section>
 
@@ -76,8 +76,8 @@ export default function AboutPage() {
         <section className="bg-surface-container-lowest rounded-2xl p-8 md:p-10">
           <h2 className="text-3xl font-extrabold text-on-surface text-center mb-8">How to use LoqMart</h2>
           <div className="grid gap-8 md:grid-cols-3">
-            <div><p className="text-xs font-bold uppercase tracking-widest text-primary mb-2">01 · Discover</p><h3 className="font-bold text-on-surface mb-2">Start with what you need</h3><p className="text-sm text-on-surface-variant leading-relaxed">Browse by category, compare handmade and machine-made options, or explore by seller location.</p></div>
-            <div><p className="text-xs font-bold uppercase tracking-widest text-primary mb-2">02 · Learn</p><h3 className="font-bold text-on-surface mb-2">Check the product and seller</h3><p className="text-sm text-on-surface-variant leading-relaxed">Review product details, ratings, price, and the seller profile before adding an item to your cart.</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-widest text-primary mb-2">01 · Discover</p><h3 className="font-bold text-on-surface mb-2">Start with what you need</h3><p className="text-sm text-on-surface-variant leading-relaxed">Browse by category, compare handmade and machine-made options, or explore by region.</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-widest text-primary mb-2">02 · Learn</p><h3 className="font-bold text-on-surface mb-2">Check the product details</h3><p className="text-sm text-on-surface-variant leading-relaxed">Review product information, ratings, price, and availability before adding an item to your cart.</p></div>
             <div><p className="text-xs font-bold uppercase tracking-widest text-primary mb-2">03 · Decide</p><h3 className="font-bold text-on-surface mb-2">Sign in when you are ready</h3><p className="text-sm text-on-surface-variant leading-relaxed">You can browse and build a cart as a guest. Sign in is required when you proceed to checkout.</p></div>
           </div>
         </section>
@@ -88,9 +88,6 @@ export default function AboutPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/" className="inline-flex items-center justify-center bg-primary-container text-on-primary-fixed font-bold px-8 py-3 rounded-lg hover:brightness-95 transition-all">
               Start Shopping
-            </Link>
-            <Link href="/seller/register" className="inline-flex items-center justify-center border border-outline-variant text-on-surface font-bold px-8 py-3 rounded-lg hover:bg-surface-container transition-all">
-              Sell on LoqMart
             </Link>
           </div>
         </section>

@@ -11,6 +11,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url)
   const orderId = searchParams.get("id")
+  const orderIds = (searchParams.get("ids") || "").split(",").filter(Boolean).slice(0, 10)
 
   const db = createServiceClient()
   let query = db
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
     .select(`
       id, order_number, total, subtotal, shipping_cost, tax, discount_amount,
       coins_used, coins_discount,
-      payment_status, order_status, created_at, tracking_number, shipping_address,
+      payment_status, order_status, reservation_status, created_at, tracking_number, shipping_address,
       confirmed_at, shipped_at, delivered_at,
       razorpay_order_id,
       order_items(
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
 
   // A caller can only ever fetch their own order — the id is just narrowing
   // the already user_id-scoped query, never a substitute for ownership.
-  query = orderId ? query.eq("id", orderId) : query.order("created_at", { ascending: false })
+  query = orderId ? query.eq("id", orderId) : orderIds.length ? query.in("id", orderIds) : query.order("created_at", { ascending: false })
 
   const { data, error } = await query
 
@@ -42,5 +43,6 @@ export async function GET(request: Request) {
   if (orderId) {
     return NextResponse.json({ order: data?.[0] || null })
   }
+  if (orderIds.length) return NextResponse.json({ orders: data || [] })
   return NextResponse.json({ orders: data || [] })
 }

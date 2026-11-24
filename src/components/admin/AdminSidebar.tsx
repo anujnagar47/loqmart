@@ -3,14 +3,15 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
-  LayoutDashboard, Users, Package, ShoppingCart, BarChart3, Tag, FileText, LogOut,
+  LayoutDashboard, Users, Package, ShoppingCart, BarChart3, Tag, FileText,
   Shield, MapPin, IndianRupee, Percent, RotateCcw, AlertTriangle, Star, ClipboardList,
-  MessageSquare, ChevronRight, Settings, Bell,
+  MessageSquare, ChevronRight, Settings, Bell, Eye, Heart, Activity,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import React, { useState, useEffect } from "react"
+import { LoqIcon, type LoqIconName } from "@/components/loq-icon"
 
-interface NavItem { href: string; icon: React.ElementType; label: string; exact?: boolean }
+interface NavItem { href: string; icon: React.ElementType; label: string; exact?: boolean; craft?: LoqIconName }
 interface NavGroup { label: string | null; items: NavItem[] }
 
 const NAV_GROUPS: NavGroup[] = [
@@ -18,12 +19,18 @@ const NAV_GROUPS: NavGroup[] = [
     label: null,
     items: [
       { href: "/admin",            icon: LayoutDashboard, label: "Overview", exact: true },
+      { href: "/admin#telemetry", icon: Activity, label: "Live Telemetry" },
+      { href: "/admin#product-traffic", icon: Eye, label: "Product Traffic" },
+      { href: "/admin#customer-carts", icon: Heart, label: "Carts & Wishlists" },
+      { href: "/admin/ads", icon: Tag, label: "Ad & Sponsored Slots" },
+      { href: "/admin/sellers", icon: Shield, label: "Seller & Catalog Approvals", craft: "artisan-seal" },
+      { href: "/admin/orders", icon: ShoppingCart, label: "Orders & Requests" },
     ],
   },
   {
     label: "Operations",
     items: [
-      { href: "/admin/sellers",    icon: Shield,          label: "Sellers"   },
+      { href: "/admin/sellers",    icon: Shield,          label: "Sellers", craft: "seller-studio" },
       { href: "/admin/products",   icon: Package,         label: "Products"  },
       { href: "/admin/orders",     icon: ShoppingCart,    label: "Orders"    },
       { href: "/admin/users",      icon: Users,           label: "Users"     },
@@ -44,6 +51,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Analytics",
     items: [
       { href: "/admin/analytics",  icon: BarChart3,       label: "Analytics"   },
+      { href: "/admin/ads",        icon: Tag,             label: "Sponsored Ads" },
       { href: "/admin/trust",      icon: Star,            label: "Trust & Rank" },
       { href: "/admin/logs",       icon: ClipboardList,   label: "Audit Logs"  },
     ],
@@ -58,7 +66,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "System",
     items: [
-      { href: "/admin/settings",   icon: Settings,        label: "Settings"    },
+      { href: "/admin/settings",   icon: Settings,        label: "Settings", craft: "precision-compass" },
     ],
   },
 ]
@@ -91,7 +99,7 @@ export function AdminSidebar({ adminName, adminEmail, stateScope }: Props) {
     <aside
       className="w-56 shrink-0 h-full flex flex-col select-none relative"
       style={{
-        background: "linear-gradient(180deg, #161818 0%, #111313 60%, #0e1010 100%)",
+        background: "linear-gradient(180deg, #151515 0%, #151515 60%, #0C0C0C 100%)",
         borderRight: "1px solid rgba(255,255,255,0.06)",
       }}
     >
@@ -141,7 +149,7 @@ export function AdminSidebar({ adminName, adminEmail, stateScope }: Props) {
 
             {!collapsed[group.label!] && (
               <div className="space-y-0.5">
-                {group.items.map(({ href, icon: Icon, label, exact }, idx) => {
+                {group.items.map(({ href, icon: Icon, label, exact, craft }, idx) => {
                   const active = isActive(href, exact)
                   return (
                     <Link
@@ -152,14 +160,14 @@ export function AdminSidebar({ adminName, adminEmail, stateScope }: Props) {
                         active ? "" : "ag-slide-up",
                         active ? "" : `ag-d${Math.min(idx * 50, 300)}`,
                         active
-                          ? "ag-active-glow text-[#111827] font-black"
+                          ? "ag-active-glow text-[#151515] font-black"
                           : "hover:text-white",
                       ].join(" ")}
                       style={
                         active
                           ? {
                               background: "linear-gradient(135deg, #FACC15 0%, #CA8A04 100%)",
-                              color: "#111827",
+                              color: "#151515",
                             }
                           : {
                               color: "rgba(255,255,255,0.45)",
@@ -179,11 +187,11 @@ export function AdminSidebar({ adminName, adminEmail, stateScope }: Props) {
                         }
                       }}
                     >
-                      <Icon size={13} className="shrink-0" />
+                      {craft ? <LoqIcon name={craft} className="h-[18px] w-[18px] shrink-0 text-white" /> : <Icon size={13} className="shrink-0" />}
                       <span>{label}</span>
                       {active && (
                         <span
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-[#111827]/40"
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-[#151515]/40"
                         />
                       )}
                     </Link>
@@ -203,7 +211,7 @@ export function AdminSidebar({ adminName, adminEmail, stateScope }: Props) {
         <div className="flex items-center gap-2.5 px-1 mb-2">
           {/* Avatar with ring for admin */}
           <div className="relative shrink-0">
-            <div className="w-7 h-7 rounded-full bg-[#FACC15] flex items-center justify-center text-[#111827] text-[10px] font-black">
+            <div className="w-7 h-7 rounded-full bg-[#FACC15] flex items-center justify-center text-[#151515] text-[10px] font-black">
               {initials}
             </div>
             {!stateScope && mounted && (
@@ -241,7 +249,7 @@ export function AdminSidebar({ adminName, adminEmail, stateScope }: Props) {
             ;(e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.32)"
           }}
         >
-          <LogOut size={11} />
+          <LoqIcon name="carved-door" className="h-5 w-5 text-white" />
           Sign Out
         </button>
       </div>

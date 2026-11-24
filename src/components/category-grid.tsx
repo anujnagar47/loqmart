@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link"
-import Image from "next/image"
 import { useEffect, useState } from "react"
 import { ArrowRight } from "lucide-react"
 import { useLanguage } from "@/lib/i18n/LanguageContext"
@@ -53,7 +52,7 @@ export function CategoryGrid() {
             const match = availableCategories.find((item) => category.aliases.some((alias) =>
               item.slug.toLowerCase().includes(alias) || item.name.toLowerCase().includes(alias)
             ))
-            const image_url = match?.image_url || category.image
+            const image_url = category.image
             const href = categoryHref(category, availableCategories)
             return (
               <Link
@@ -62,13 +61,13 @@ export function CategoryGrid() {
                 className="group flex min-w-0 flex-col items-center gap-2 rounded-md text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#EAB308]"
               >
                 <span className="relative mx-auto aspect-square w-full max-w-[76px] overflow-hidden rounded-full border border-[#e8e4da] bg-white transition-all duration-200 group-hover:border-[#EAB308] group-hover:shadow-[0_0_0_3px_rgba(250,204,21,0.24)] sm:max-w-[112px]">
-                  <Image
+                  {image_url && <img
                     src={image_url}
                     alt=""
-                    fill
-                    sizes="(max-width: 640px) 28vw, 92px"
-                    className="object-cover transition-transform duration-200 group-hover:scale-105"
-                  />
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                    onError={(event) => { event.currentTarget.remove() }}
+                  />}
                 </span>
                 <span className="line-clamp-3 min-h-11 text-[11px] font-semibold leading-4 text-[#111827] transition-colors group-hover:text-[#111827]">
                   {category.name}

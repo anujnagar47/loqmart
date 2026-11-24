@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { trackMarketplaceEvent, trackGuestIntent } from "@/lib/analyticsTracker"
 
 const GUEST_WISHLIST_KEY = "loqmart_guest_wishlist"
 
@@ -33,6 +34,8 @@ export function useWishlist() {
         const ids = readGuestWishlist()
         const nextIds = isCurrentlyWishlisted ? ids.filter(id => id !== productId) : [...new Set([...ids, productId])]
         localStorage.setItem(GUEST_WISHLIST_KEY, JSON.stringify(nextIds))
+        trackMarketplaceEvent(isCurrentlyWishlisted ? "wishlist_remove" : "wishlist_add", { productId })
+        trackGuestIntent("wishlist", nextIds.map(productId => ({ productId, quantity: 1 })))
         return !isCurrentlyWishlisted
       }
 
@@ -40,10 +43,12 @@ export function useWishlist() {
         const { error } = await supabase.from("wishlists").delete()
           .eq("user_id", session.user.id).eq("product_id", productId)
         if (error) throw error
+        trackMarketplaceEvent("wishlist_remove", { productId })
         return false
       } else {
         const { error } = await supabase.from("wishlists").insert({ user_id: session.user.id, product_id: productId })
         if (error) throw error
+        trackMarketplaceEvent("wishlist_add", { productId })
         return true
       }
     } finally {

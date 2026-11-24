@@ -8,64 +8,62 @@ export interface CraftCategory {
   aliases: string[]
 }
 
-const photo = (id: string) => `https://images.unsplash.com/${id}?w=640&h=640&fit=crop`
-
 export const CRAFT_CATEGORIES: CraftCategory[] = [
   {
     slug: "heritage-textiles-handlooms", name: "Heritage Textiles & Handlooms",
     summary: "Woven traditions from India’s looms",
     subcategories: ["Banarasi Brocades", "Chanderi Silks", "Kota Doria", "Pashmina Shawls", "Jamdani", "Pochampally Ikat"],
     searchTerms: "handloom", aliases: ["textiles", "clothing", "handloom", "saree", "fabric"],
-    image: photo("photo-1483985988355-763728e1935b"),
+    image: "/images/categories/heritage-textiles-handlooms.png",
   },
   {
     slug: "artisan-pottery-ceramics", name: "Artisan Pottery & Ceramic Studio",
     summary: "Clay shaped by hand and fired with care",
     subcategories: ["Jaipur Blue Pottery", "Khurja Stoneware", "Black Clay Pottery", "Terracotta Murals"],
     searchTerms: "pottery", aliases: ["pottery", "ceramic", "home & living", "terracotta"],
-    image: photo("photo-1600210492486-724fe5c67fb0"),
+    image: "/images/categories/artisan-pottery-ceramics.png",
   },
   {
     slug: "traditional-fine-art-miniatures", name: "Traditional Fine Art & Miniatures",
     summary: "Painting traditions, from scrolls to murals",
     subcategories: ["Pichwai Paintings", "Madhubani Art", "Pattachitra Scrolls", "Tanjore Gold Leaf", "Warli Murals"],
     searchTerms: "painting", aliases: ["art", "painting", "collectibles", "madhubani"],
-    image: photo("photo-1541961017774-22349e4a1262"),
+    image: "/images/categories/traditional-fine-art-miniatures.png",
   },
   {
     slug: "master-metalwork-casting", name: "Master Metalwork & Casting",
     summary: "Lost-wax casting, inlay and forged forms",
     subcategories: ["Dokra Lost-Wax Bronze", "Bidri Silver Inlay", "Moradabad Brass", "Bell Metal Craft"],
     searchTerms: "metal", aliases: ["metal", "brass", "bronze", "decor"],
-    image: photo("photo-1452860606245-08befc0ff44b"),
+    image: "/images/categories/master-metalwork-casting.png",
   },
   {
     slug: "carved-woods-lacquerware", name: "Hand-Carved Woods & Lacquerware",
     summary: "Carved, turned and lacquered by skilled hands",
     subcategories: ["Saharanpur Carvings", "Kashmiri Walnut Wood", "Channapatna Wooden Toys", "Sankheda Furniture"],
     searchTerms: "wood", aliases: ["wood", "furniture", "toys", "carving"],
-    image: photo("photo-1616486338812-3dadae4b4ace"),
+    image: "/images/categories/carved-woods-lacquerware.png",
   },
   {
     slug: "cane-bamboo-natural-fibers", name: "Cane, Bamboo & Natural Fibers",
     summary: "Everyday forms woven from renewable materials",
     subcategories: ["Assam Golden Bamboo", "Kauna Grass Weaves", "Jute Fiber Craft", "Golden Grass Basketry"],
     searchTerms: "bamboo", aliases: ["bamboo", "cane", "basket", "jute", "natural fibers"],
-    image: photo("photo-1553062407-98eeb64c6a62"),
+    image: "/images/categories/cane-bamboo-natural-fibers.png",
   },
   {
     slug: "filigree-heritage-adornments", name: "Filigree & Heritage Adornments",
     summary: "Fine metalwork and regional jewellery",
     subcategories: ["Cuttack Tarakasi Silver Filigree", "Jaipur Meenakari", "Dokra Beads", "Terracotta Ornaments"],
     searchTerms: "jewellery", aliases: ["jewellery", "jewelry", "filigree", "accessories"],
-    image: photo("photo-1515562141207-7a88fb7ce338"),
+    image: "/images/categories/filigree-heritage-adornments.png",
   },
   {
     slug: "gourmet-spices-origin-foods", name: "Gourmet Spices & GI-Tagged Origin Foods",
     summary: "Distinctive ingredients rooted in place",
     subcategories: ["Kashmiri Saffron", "Malabar Spices", "Lakadong Turmeric", "Organic Forest Honey"],
     searchTerms: "spices", aliases: ["food", "gourmet", "spices", "honey", "organic"],
-    image: photo("photo-1606787366850-de6330128bfc"),
+    image: "/images/categories/gourmet-spices-origin-foods.png",
   },
 ]
 

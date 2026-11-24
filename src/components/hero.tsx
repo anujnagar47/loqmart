@@ -1,6 +1,5 @@
 "use client"
 
-import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
@@ -13,7 +12,7 @@ export interface HeroStateSlide {
 }
 
 const DEFAULT_SLIDE = {
-  image: "https://images.unsplash.com/photo-1594040226829-7f251ab46d80?w=1920&h=1080&fit=crop",
+  image: "/images/banners/india-craft-hero.jpg",
   stateCode: "",
   stateName: "",
 }
@@ -22,6 +21,7 @@ export function Hero({ stateSlides = [] }: { stateSlides?: HeroStateSlide[] }) {
   const { t } = useLanguage()
   const slides = [DEFAULT_SLIDE, ...stateSlides]
   const [activeIndex, setActiveIndex] = useState(0)
+  const [failedImages, setFailedImages] = useState<string[]>([])
 
   useEffect(() => {
     if (slides.length < 2) return
@@ -50,14 +50,15 @@ export function Hero({ stateSlides = [] }: { stateSlides?: HeroStateSlide[] }) {
         >
           {slides.map((slide, index) => (
             <div key={`${slide.stateCode || "india"}-${index}`} className="relative h-full min-h-[300px] min-w-full sm:min-h-[340px] lg:min-h-[390px]">
-              <Image
-                src={slide.image}
-                alt={slide.stateName ? `Products and crafts from ${slide.stateName}` : "Handwoven Indian textiles"}
-                fill
-                priority={index === 0}
-                sizes="(max-width: 768px) 100vw, 1280px"
-                className="object-cover object-center"
-              />
+              {slide.image && !failedImages.includes(slide.image) ? <img
+                  src={slide.image}
+                  alt={slide.stateName ? `Products and crafts from ${slide.stateName}` : "Handwoven Indian textiles"}
+                  loading={index === 0 ? "eager" : "lazy"}
+                  className="absolute inset-0 h-full w-full object-cover object-center"
+                  onError={() => setFailedImages((current) => current.includes(slide.image) ? current : [...current, slide.image])}
+                /> : <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_35%,rgba(252,208,32,.24),transparent_42%),linear-gradient(120deg,#231b00,#4d4632_55%,#1a1c1c)]" role="img" aria-label="Homepage banner image placeholder">
+                  <span className="absolute bottom-5 right-5 rounded border border-white/25 bg-black/20 px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-white/65">Homepage banner image pending</span>
+                </div>}
             </div>
           ))}
         </div>

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next"
 import "./globals.css"
 import { ConditionalLayout } from "@/components/ConditionalLayout"
 import { LanguageProvider } from "@/lib/i18n/LanguageContext"
+import { PageVisitTracker } from "@/components/page-visit-tracker"
 
 export const metadata: Metadata = {
   title: "LoqMart | Indian Crafts, Handlooms & Regional Goods",
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="min-h-screen flex flex-col antialiased">
         <LanguageProvider>
           <ConditionalLayout>{children}</ConditionalLayout>
+          <PageVisitTracker />
         </LanguageProvider>
       </body>
     </html>

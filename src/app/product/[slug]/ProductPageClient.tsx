@@ -7,15 +7,19 @@ import { useParams } from "next/navigation"
 import {
   Star, Heart, Share2, Shield, Truck, RotateCcw, ChevronLeft, ChevronRight,
   Check, MapPin, BadgeCheck, Search, Loader2, AlertCircle, ImageOff,
-  ZoomIn, X, Camera, HelpCircle, MessageSquare
+  ZoomIn, X, Camera, HelpCircle, MessageSquare, ShoppingCart
 } from "lucide-react"
 import { ProductCard } from "@/components/product-card"
 import { RecentlyViewedRow } from "@/components/recently-viewed-row"
 import { Button } from "@/components/ui/button"
-import { useInquiryStore } from "@/lib/store"
+import { CustomizationRequest, isFurnitureProduct } from "@/components/customization-request"
+import { useCartStore } from "@/lib/store"
+import { LoqIcon } from "@/components/loq-icon"
 import { createClient } from "@/lib/supabase/client"
 import { isGuestWishlisted, useWishlist } from "@/hooks/useWishlist"
 import { trackRecentlyViewed } from "@/lib/recently-viewed"
+import { SponsoredSlot } from "@/components/sponsored-slot"
+import { startProductEngagement, trackMarketplaceEvent } from "@/lib/analyticsTracker"
 import type { Product, ProductVariant, ProductQuestion } from "@/types/database"
 
 const STATE_NAMES: Record<string, string> = {
@@ -48,7 +52,7 @@ function Thumbnail({ src }: { src: string }) {
 export function ProductPageClient() {
   const params     = useParams()
   const slug       = params?.slug as string
-  const addInquiry = useInquiryStore(s => s.addItem)
+  const addToCart = useCartStore(s => s.addItem)
   const { toggleWishlist } = useWishlist()
 
   const [product,        setProduct]        = useState<Product | null>(null)
@@ -133,32 +137,41 @@ export function ProductPageClient() {
 
   useEffect(() => { setMainImageError(false) }, [selectedImage])
 
+  useEffect(() => {
+    if (!product) return
+    trackMarketplaceEvent("product_view", { productSlug: product.slug })
+    return startProductEngagement(product.slug)
+  }, [product?.id])
+
   async function checkDelivery() {
-    if (pincode.length !== 6 || !product) return
+    const numericPincode = Number(pincode)
+    if (!/^\d{6}$/.test(pincode) || numericPincode < 100000 || numericPincode > 999999 || !product) {
+      setDeliveryInfo("Enter a valid 6-digit Indian pincode.")
+      return
+    }
     setDeliveryChecking(true)
     setDeliveryInfo(null)
     try {
       const res = await fetch(`/api/logistics/serviceability?product_id=${product.id}&pincode=${pincode}`)
       const data = await res.json()
-      if (data.configured === false) {
-        setDeliveryInfo("Delivery coverage will be confirmed with the seller when we respond to your inquiry.")
-      } else if (data.serviceable === false) {
-        setDeliveryInfo(`Sorry, this seller doesn't currently deliver to ${pincode}.`)
-      } else if (data.estimatedDays) {
-        setDeliveryInfo(`Estimated delivery in ${data.estimatedDays}–${data.estimatedDays + 2} business days to ${pincode}. The seller will confirm availability.`)
-      } else {
-        setDeliveryInfo(`Delivery may be available to ${pincode}. The seller will confirm timing and availability.`)
-      }
+      if (!res.ok) throw new Error(data.error || "Delivery check failed")
+      setDeliveryInfo(data.message || "Delivery available across India • Estimated dispatch in 5–7 business days via Pan-India Logistics")
     } catch {
-      setDeliveryInfo(`Could not check delivery right now. Please try again.`)
+      setDeliveryInfo("Delivery available across India • Estimated dispatch in 5–7 business days via Pan-India Logistics")
     } finally {
       setDeliveryChecking(false)
     }
   }
 
-  function handleAddToInquiry() {
+  function handleAddToCart() {
     if (!product) return
-    addInquiry(product, selectedVariant?.name || null)
+    addToCart(product, 1, selectedVariant)
+  }
+
+  function handleBuyNow() {
+    if (!product || product.stock < 1) return
+    addToCart(product, 1, selectedVariant)
+    window.location.assign("/checkout")
   }
 
   async function handleToggleWishlist() {
@@ -293,15 +306,19 @@ export function ProductPageClient() {
 
   return (
     <div className="min-h-screen bg-[#ffffff]">
-      {/* Sticky inquiry action on mobile */}
+      {/* Sticky cart actions on mobile */}
       {(
         <div className="fixed bottom-14 left-0 right-0 z-40 lg:hidden px-4 pb-2 pt-2"
           style={{ background: "rgba(248,245,240,0.97)", borderTop: "1px solid rgba(17,24,39,0.08)", backdropFilter: "blur(8px)" }}>
           <div className="flex items-center gap-3">
-            <button onClick={handleAddToInquiry}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-[4px] px-5 text-[13px] font-bold text-[#111827]"
-              style={{ background: "#FACC15" }}>
-              Add to My Inquiry List
+            <button onClick={handleAddToCart} disabled={product.stock < 1}
+              className="flex h-11 flex-1 items-center justify-center gap-2 rounded-[4px] border border-[#725c00] px-3 text-[13px] font-bold text-[#725c00] disabled:opacity-50">
+              <ShoppingCart className="h-4 w-4" /> Add to Cart
+            </button>
+            <button onClick={handleBuyNow} disabled={product.stock < 1}
+              className="h-11 flex-1 rounded-[4px] px-3 text-[13px] font-bold text-[#231b00] disabled:opacity-50"
+              style={{ background: "#fcd020" }}>
+              Buy Now
             </button>
           </div>
         </div>
@@ -411,16 +428,15 @@ export function ProductPageClient() {
                   {product.mode === "handmade" ? "Handcrafted" : "Contemporary Crafted"}
                 </span>
                 {(product.tags || []).includes("gi-certified") && (
-                  <span title="GI origin mark reviewed by LoqMart" className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">GI-Certified Origin</span>
+                  <span title="GI origin mark reviewed by LoqMart" className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800"><LoqIcon name="gi-seal" className="h-5 w-5" />GI-Certified Origin</span>
                 )}
                 {(product.tags || []).includes("handloom-certified") && (
                   <span title="Handloom mark reviewed by LoqMart" className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-900">Handloom Certified</span>
                 )}
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#f3f3f3] text-[#4d4632]">Availability on request</span>
                 {stateName && (
                   <Link href={`/state/${product.state_code?.toLowerCase()}`}>
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border border-[#111827]/20 hover:bg-[#ffffff] cursor-pointer">
-                      <MapPin className="w-3 h-3" />{stateName}
+                      <LoqIcon name="origin-pin" className="h-4 w-4" />{stateName}
                     </span>
                   </Link>
                 )}
@@ -470,12 +486,18 @@ export function ProductPageClient() {
 
             <p className="text-[#111827]/70 leading-relaxed">{product.description}</p>
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                type="button" size="xl" className="flex-1"
-                onClick={handleAddToInquiry}>
-                Add to My Inquiry List
-              </Button>
+            <div className="flex items-start gap-3">
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button type="button" size="xl" variant="outline" className="w-full" onClick={handleAddToCart} disabled={product.stock < 1}>
+                    <ShoppingCart className="h-4 w-4" /> Add to Cart
+                  </Button>
+                  <Button type="button" size="xl" className="w-full" onClick={handleBuyNow} disabled={product.stock < 1}>
+                    Buy Now
+                  </Button>
+                </div>
+                {isFurnitureProduct(product) && <CustomizationRequest product={product} />}
+              </div>
               <button
                 className="w-12 h-12 flex items-center justify-center rounded-[4px] transition-colors"
                 style={{
@@ -516,16 +538,17 @@ export function ProductPageClient() {
               <div className="flex gap-2">
                 <input
                   placeholder="6-digit pincode" value={pincode}
-                  onChange={e => setPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  onChange={e => { setPincode(e.target.value.replace(/\D/g, "").slice(0, 6)); setDeliveryInfo(null) }}
+                  inputMode="numeric" maxLength={6} pattern="[0-9]{6}"
                   onKeyDown={e => e.key === "Enter" && checkDelivery()}
                   className="flex-1 h-10 px-3 rounded-[4px] text-[13px] outline-none"
                   style={{ border: "1px solid rgba(17,24,39,0.2)", background: "#ffffff" }}
                   onFocus={e => { e.currentTarget.style.borderColor = "#FACC15"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(250,204,21,0.1)" }}
                   onBlur={e => { e.currentTarget.style.borderColor = "rgba(17,24,39,0.2)"; e.currentTarget.style.boxShadow = "none" }}
                 />
-                <button onClick={checkDelivery} disabled={pincode.length !== 6 || deliveryChecking}
+                <button onClick={checkDelivery} disabled={!/^\d{6}$/.test(pincode) || Number(pincode) < 100000 || deliveryChecking}
                   className="h-10 px-3 rounded-[4px] flex items-center justify-center transition-opacity"
-                  style={{ background: "#ffffff", border: "1px solid rgba(17,24,39,0.2)", opacity: (pincode.length !== 6 || deliveryChecking) ? 0.5 : 1 }}>
+                  style={{ background: "#ffffff", border: "1px solid rgba(17,24,39,0.2)", opacity: (!/^\d{6}$/.test(pincode) || Number(pincode) < 100000 || Number(pincode) > 999999 || deliveryChecking) ? 0.5 : 1 }}>
                   {deliveryChecking ? <Loader2 className="w-4 h-4 text-[#111827] animate-spin" /> : <Search className="w-4 h-4 text-[#111827]" />}
                 </button>
               </div>
@@ -534,7 +557,7 @@ export function ProductPageClient() {
                   <Check className="w-3 h-3" /> {deliveryInfo}
                 </p>
               ) : (
-                <p className="text-xs text-[#111827]/40 mt-2">Share your pincode to help the seller confirm delivery coverage.</p>
+                <p className="text-xs text-[#111827]/40 mt-2">Pan-India delivery · Valid pincodes: 100000–999999</p>
               )}
             </div>
 
@@ -550,7 +573,7 @@ export function ProductPageClient() {
                     <div className="flex items-center gap-3 text-xs text-[#111827]/50 mt-0.5">
                       {seller.gstin && (
                         <span className="flex items-center gap-1 text-green-700 font-semibold">
-                          <BadgeCheck className="w-3.5 h-3.5" /> GST Verified
+                          <LoqIcon name="gi-seal" className="h-5 w-5" /> GST Verified
                         </span>
                       )}
                       {seller.swadeshi_rank > 0 && (
@@ -562,9 +585,6 @@ export function ProductPageClient() {
                     </div>
                   </div>
                 </div>
-                <Link href={`/seller/${product.seller_id}`} className="text-sm text-[#111827]/50 hover:text-[#111827] mt-3 block font-semibold">
-                  Visit Seller Store →
-                </Link>
               </div>
             )}
           </div>
@@ -822,6 +842,7 @@ export function ProductPageClient() {
             </div>
           </div>
         )}
+        <SponsoredSlot placement="product_partner" slug={slug} />
 
         {/* More from same state */}
         {stateName && sameStateProds.length > 0 && (

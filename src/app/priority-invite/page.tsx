@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Check, Loader2, LogOut } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { LoqIcon } from "@/components/loq-icon"
 
 const REGIONS = ["Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal", "Andaman & Nicobar Islands", "Chandigarh", "Dadra & Nagar Haveli and Daman & Diu", "Delhi", "Jammu & Kashmir", "Ladakh", "Lakshadweep", "Puducherry", "Other"]
 
@@ -58,9 +59,9 @@ export default function PriorityInvitePage() {
   return <main className="min-h-screen bg-white px-4 py-16 text-[#111827]">
     <section className="mx-auto max-w-xl border border-[#E5E7EB] bg-white p-7 shadow-sm sm:p-10">
       <div className="mb-6 flex items-center justify-between">
-        <div className="flex h-11 w-11 items-center justify-center rounded-md bg-[#fcd020] text-[#231b00]"><Check size={21} /></div>
+        <div className="flex h-11 w-11 items-center justify-center rounded-md bg-[#fcd020] text-[#0f172a]"><LoqIcon name="artisan-seal" className="h-8 w-8" /></div>
         <button type="button" onClick={signOut} disabled={signingOut} className="inline-flex h-10 items-center gap-2 border border-[#d0c6ac] px-3 text-sm font-medium text-[#111827] hover:bg-[#f3f3f3] disabled:opacity-60">
-          {signingOut ? <Loader2 size={15} className="animate-spin" /> : <LogOut size={15} />}{signingOut ? "Signing out" : "Sign out"}
+          {signingOut ? <Loader2 size={15} className="animate-spin" /> : <LoqIcon name="carved-door" className="h-5 w-5" />}{signingOut ? "Signing out" : "Sign out"}
         </button>
       </div>
       <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-[#725c00]">LoqMart early access</p>
@@ -73,7 +74,6 @@ export default function PriorityInvitePage() {
         {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
         <button disabled={saving} className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[#fcd020] px-4 text-sm font-semibold text-[#231b00] transition-colors hover:bg-[#eab308] disabled:opacity-60">{saving && <Loader2 size={16} className="animate-spin" />}{saving ? "Saving your details" : "Join the priority list"}</button>
       </form> : <div className="mt-8 border border-[#d0c6ac] bg-[#f3f3f3] p-4 text-sm"><p className="font-semibold">You’re on the priority list</p><p className="mt-1 text-[#4d4632]">We’ll send launch updates to {email}{region ? ` and keep you posted about ${region}` : ""}.</p></div>}
-      <p className="mt-8 text-sm text-[#4d4632]">Interested in selling? <Link className="font-semibold text-[#725c00] underline underline-offset-4" href="/seller/register">Start seller verification</Link></p>
     </section>
   </main>
 }

@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 import type { Product, ProductVariant, CartItem as CartItemType } from '@/types/database'
 import { cartItemPrice } from '@/lib/utils'
 import { syncAddToServer, syncSetQuantityOnServer, syncRemoveFromServer, syncClearServer } from '@/lib/cart-sync'
+import { trackMarketplaceEvent, trackGuestIntent } from '@/lib/analyticsTracker'
 
 interface CartStore {
   items: CartItemType[]
@@ -64,10 +65,13 @@ export const useCartStore = create<CartStore>()(
           })
         }
         if (get().userId) syncAddToServer(product.id, variantId, quantity)
+        trackMarketplaceEvent('add_to_cart', { productId: product.id, quantity, variantId: variantId || '' })
+        if (!get().userId) trackGuestIntent('cart', get().items.map(item => ({ productId: item.product_id, quantity: item.quantity, variantId: item.variant_id })))
       },
       removeItem: (productId, variantId = null) => {
         set({ items: get().items.filter(item => !sameLine(item, productId, variantId)) })
         if (get().userId) syncRemoveFromServer(productId, variantId)
+        else trackGuestIntent('cart', get().items.map(item => ({ productId: item.product_id, quantity: item.quantity, variantId: item.variant_id })))
       },
       updateQuantity: (productId, quantity, variantId = null) => {
         if (quantity <= 0) {
@@ -80,10 +84,12 @@ export const useCartStore = create<CartStore>()(
           )
         })
         if (get().userId) syncSetQuantityOnServer(productId, variantId, quantity)
+        else trackGuestIntent('cart', get().items.map(item => ({ productId: item.product_id, quantity: item.quantity, variantId: item.variant_id })))
       },
       clearCart: () => {
         set({ items: [] })
         if (get().userId) syncClearServer()
+        else trackGuestIntent('cart', [])
       },
       getTotal: () => {
         return get().items.reduce((sum, item) => {

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAdmin } from "@/lib/admin-auth"
+import { requireFullAdmin } from "@/lib/admin-auth"
 import { createServiceClient } from "@/lib/supabase/admin"
 
 export async function GET() {
-  const auth = await requireAdmin()
+  const auth = await requireFullAdmin()
   if (!auth.authorized) return auth.response
   const { data, error } = await auth.db
     .from("users")
@@ -14,7 +14,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requireFullAdmin()
   if (!auth.authorized) return auth.response
 
   const { email, password, full_name, role, state_scope } = await req.json()

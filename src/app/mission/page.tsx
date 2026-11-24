@@ -2,25 +2,25 @@ import Link from "next/link"
 import { Target, MapPin, Users, Landmark, Sprout, HeartHandshake } from "lucide-react"
 
 export const metadata = {
-  title: "Why LoqMart | A marketplace for Indian sellers",
-  description: "See how LoqMart helps shoppers discover products, learn about sellers, and browse by location.",
+  title: "Why LoqMart | Shop products from across India",
+  description: "See how LoqMart helps shoppers discover products and browse by region.",
 }
 
 const pillars = [
   {
     icon: MapPin,
     title: "Discover by location",
-    desc: "Browse sellers and products by state, then check each listing for its product and seller details.",
+    desc: "Browse products by state and discover goods from across the country.",
   },
   {
     icon: Users,
-    title: "A shopfront for independent sellers",
-    desc: "Artisans, small businesses, and manufacturers can present their products to shoppers looking for goods from across India.",
+    title: "Products from across India",
+    desc: "Discover handmade crafts, regional specialties, and machine-made essentials in one place.",
   },
   {
     icon: Landmark,
     title: "Useful details before checkout",
-    desc: "Product listings show key information such as price, ratings, availability, and seller details so shoppers can make an informed choice.",
+    desc: "Product listings show key information such as price, ratings, and availability so shoppers can make an informed choice.",
   },
   {
     icon: Sprout,
@@ -40,7 +40,7 @@ export default function MissionPage() {
             More ways to discover products from India
           </h1>
           <p className="text-white/60 text-lg max-w-2xl mx-auto leading-relaxed">
-            We bring shoppers and sellers together around products made and sold across India. Our focus is simple: clear product information, useful discovery, and a straightforward path from browsing to checkout.
+            We bring products from across India together in one place. Our focus is simple: clear product information, useful discovery, and a straightforward path from browsing to checkout.
           </p>
         </div>
       </div>
@@ -49,7 +49,7 @@ export default function MissionPage() {
         <section className="text-center">
           <h2 className="text-3xl font-extrabold text-on-surface mb-4">A clearer way to explore</h2>
           <p className="text-on-surface-variant max-w-3xl mx-auto text-lg leading-relaxed">
-            Shopping is easier when the details are close at hand. LoqMart lets you browse products, compare options, and open seller profiles to learn more about the shop behind a listing. You can explore freely, add items to your cart, and sign in only when you are ready to check out.
+            Shopping is easier when the details are close at hand. LoqMart lets you browse products and compare options. You can explore freely, add items to your cart, and sign in only when you are ready to check out.
           </p>
         </section>
 
@@ -74,16 +74,13 @@ export default function MissionPage() {
           <HeartHandshake className="w-10 h-10 text-primary mx-auto mb-4" />
           <h2 className="text-3xl font-extrabold text-on-surface mb-4">A marketplace that keeps improving</h2>
           <p className="text-on-surface-variant max-w-2xl mx-auto leading-relaxed">
-            We are building the tools that make discovery, seller information, and order management easier for both sides of the marketplace.
+            We are building tools that make product discovery and order management easier.
           </p>
         </section>
 
         <section className="text-center">
-          <p className="text-on-surface-variant mb-4">Browse the marketplace or set up a seller account</p>
+          <p className="text-on-surface-variant mb-4">Ready to find something useful, thoughtful, or new?</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/seller/register" className="inline-flex items-center justify-center bg-primary-container text-on-primary-fixed font-bold px-8 py-3 rounded-lg hover:brightness-95 transition-all">
-              Sell on LoqMart
-            </Link>
             <Link href="/about" className="inline-flex items-center justify-center border border-outline-variant text-on-surface font-bold px-8 py-3 rounded-lg hover:bg-surface-container transition-all">
               Read Our Story
             </Link>

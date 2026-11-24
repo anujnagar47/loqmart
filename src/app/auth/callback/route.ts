@@ -34,8 +34,8 @@ export async function GET(request: Request) {
     await supabase.from("loqcoin_balances").insert({ user_id: user.id, balance: 0, lifetime_earned: 0, lifetime_redeemed: 0 })
   }
 
-  const role = existing?.role
-  const destination = role === "admin" || role === "sub_admin" ? "/admin" : next
+  const role = existing?.role || (user.user_metadata?.role === "seller" ? "seller" : "buyer")
+  const destination = role === "admin" || role === "sub_admin" ? "/admin" : role === "seller" ? "/seller" : next
 
   return NextResponse.redirect(`${origin}${destination}`)
 }

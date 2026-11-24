@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
-import { requireAdmin } from "@/lib/admin-auth"
+import { requireFullAdmin } from "@/lib/admin-auth"
 
 export async function GET() {
-  const auth = await requireAdmin()
+  const auth = await requireFullAdmin()
   if (!auth.authorized) return auth.response
   const db = auth.db
 
@@ -19,7 +19,7 @@ export async function GET() {
     db.from("products").select("id, approval_status"),
     db.from("orders").select("id, total, order_status"),
     db.from("users").select("id"),
-    db.from("sellers").select("*").eq("approval_status", "pending").order("created_at", { ascending: false }).limit(10),
+    db.from("sellers").select("id, business_name, owner_name, state, approval_status, created_at").eq("approval_status", "pending").order("created_at", { ascending: false }).limit(10),
     db.from("products").select("id, name, price, state_code, mode, approval_status, seller_id").eq("approval_status", "pending").order("created_at", { ascending: false }).limit(10),
     db.from("orders").select("id, order_number, total, payment_status, order_status, created_at").order("created_at", { ascending: false }).limit(20),
   ])

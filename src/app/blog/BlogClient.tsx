@@ -42,7 +42,7 @@ export function BlogClient({ initialPosts }: { initialPosts: BlogPost[] }) {
               The Craft Chronicles
             </h1>
             <p className="text-[#111827]/55 text-[16px] max-w-2xl leading-relaxed">
-              Deep stories on Indian artisanship, manufacturing heritage, and the hands that make India. State by state. Craft by craft.
+              Meet India's regions through their landscapes, craft traditions and local makers. Start with the first four state stories, with more to follow.
             </p>
           </motion.div>
         </div>
@@ -74,7 +74,7 @@ export function BlogClient({ initialPosts }: { initialPosts: BlogPost[] }) {
                 className="group grid grid-cols-1 lg:grid-cols-2 gap-0 rounded-2xl overflow-hidden bg-white"
                 style={{ border: "1px solid rgba(17,24,39,0.07)" }}>
                 <div className="relative h-64 lg:h-auto overflow-hidden">
-                  <img src={featured.image} alt={featured.title}
+                  <img src={featured.image} alt={featured.title} onError={event => { event.currentTarget.style.display = "none" }}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                   <div className="absolute top-4 left-4">
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-black text-[#111827]"
@@ -133,7 +133,7 @@ export function BlogClient({ initialPosts }: { initialPosts: BlogPost[] }) {
                   className="group bg-white rounded-2xl overflow-hidden"
                   style={{ border: "1px solid rgba(17,24,39,0.07)" }}>
                   <div className="relative h-48 overflow-hidden">
-                    <img src={post.image} alt={post.title}
+                    <img src={post.image} alt={post.title} onError={event => { event.currentTarget.style.display = "none" }}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                     <div className="absolute top-3 left-3">
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/90 text-[#111827]"

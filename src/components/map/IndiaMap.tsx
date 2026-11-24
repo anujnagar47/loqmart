@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { KeyboardEvent } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { ComposableMap, Geographies, Geography } from "react-simple-maps"
 import * as topojson from "topojson-client"
-import { ArrowRight, MapPin, Package, Search, Store, X } from "lucide-react"
+import { ArrowRight, BookOpen, MapPin, Package, Search, X } from "lucide-react"
 import { INDIA_STATE_BY_NAME, INDIA_STATE_DATA, type IndiaStateData } from "@/lib/indiaStateData"
+import { STATE_MAP_IMAGES, stateStoryByCode } from "@/lib/state-stories"
+import { CATALOG_PRODUCTS } from "@/lib/catalog-search"
 import styles from "./IndiaMap.module.css"
 
 const INDIA_TOPO_JSON = "/maps/india-topo.json"
@@ -25,11 +26,13 @@ interface MapProduct {
   slug: string
   price: number
   images?: string[]
-  sellers?: { id: string; business_name: string; swadeshi_rank?: number | null } | null
+  categories?: { id: string; name: string; slug: string } | null
+  category?: { id: string; name: string; slug: string } | null
+  catalogOnly?: boolean
 }
 
 function catalogHref(state: IndiaStateData) {
-  return `/category?state=${encodeURIComponent(state.filterCodes.join(","))}`
+  return `/catalog?state=${encodeURIComponent(state.filterCodes[0] || state.id)}`
 }
 
 function StatePreview({
@@ -37,87 +40,64 @@ function StatePreview({
   stats,
   products,
   loadingProducts,
-  heroImage,
   close,
 }: {
   state: IndiaStateData
   stats?: StateStats
   products: MapProduct[]
   loadingProducts: boolean
-  heroImage?: string
-  close?: () => void
+  close: () => void
 }) {
-  const makers = Array.from(new Map(products
-    .map((product) => product.sellers)
-    .filter((seller): seller is NonNullable<MapProduct["sellers"]> => !!seller?.id && !!seller.business_name)
-    .map((seller) => [seller.id, seller])).values()).slice(0, 4)
+  const categoryCounts = new Map<string, { id: string; name: string; count: number }>()
+  for (const product of products) {
+    const category = product.categories || product.category
+    if (!category?.id || !category.name) continue
+    const current = categoryCounts.get(category.id)
+    categoryCounts.set(category.id, { id: category.id, name: category.name, count: (current?.count || 0) + 1 })
+  }
+  const topCategories = [...categoryCounts.values()].sort((a, b) => b.count - a.count).slice(0, 3)
+  const story = state.filterCodes.map((code) => stateStoryByCode(code)).find(Boolean)
+  const heritageImage = state.filterCodes.map((code) => STATE_MAP_IMAGES[code]).find(Boolean)
+  const catalogProducts = CATALOG_PRODUCTS.filter((product) => state.filterCodes.includes(product.state_code || ""))
+  const productCount = (stats?.productCount || 0) + catalogProducts.length
+  const tagline = state.crafts.slice(0, 2).join(" & ")
 
   return (
     <article className={styles.previewCard}>
-      <div className={styles.previewImage}>
-        <img
-          src={heroImage || state.image}
-          loading="lazy"
-          alt={`${state.name} craft traditions`}
-          className={styles.previewImageAsset}
-          onError={(event) => {
-            if (heroImage && event.currentTarget.src !== state.image) event.currentTarget.src = state.image
-            else event.currentTarget.style.visibility = "hidden"
-          }}
-        />
-        <span className={styles.regionBadge}>{state.region}</span>
-        {close && <button type="button" className={styles.closeSheet} onClick={close} aria-label="Close state preview"><X size={18} /></button>}
-      </div>
+      <header className={styles.previewHeader} style={heritageImage ? { backgroundImage: `linear-gradient(90deg, rgb(35 27 0 / 82%) 0%, rgb(35 27 0 / 62%) 58%, rgb(35 27 0 / 38%) 100%), url("${heritageImage.src}")` } : undefined}>
+        <button type="button" className={styles.previewClose} onClick={close} aria-label="Close state preview"><X size={17} /></button>
+        <p className={styles.previewEyebrow}>Regional collection</p>
+        <div className={styles.previewTitleRow}><h2>{state.name}</h2><span className={styles.countBadge}><Package size={13} />{productCount.toLocaleString("en-IN")} products</span></div>
+        <p className={styles.previewTagline}>{state.name} <span>•</span> {tagline}</p>
+      </header>
       <div className={styles.previewBody}>
-        <div className={styles.previewHeading}>
-          <div>
-            <p className={styles.previewEyebrow}>Explore the region</p>
-            <h2>{state.name}</h2>
-          </div>
-          <MapPin aria-hidden="true" size={18} />
+        {topCategories.length > 0 && <div className={styles.categoryPills} aria-label={`Top product categories in ${state.name}`}>
+          {topCategories.map((category, index) => <Link key={category.id} href={`/catalog?state=${encodeURIComponent(state.filterCodes[0] || state.id)}&category=${encodeURIComponent(category.id)}`} className={`${styles.categoryPill} ${styles[`categoryPill${index + 1}`]}`}>
+            {category.name}
+          </Link>)}
+        </div>}
+        <div className={styles.trendingSection}>
+          <div className={styles.trendingHeading}><span>Featured products</span><Package size={14} aria-hidden="true" /></div>
+          {loadingProducts ? <p className={styles.trendingEmpty}>Loading products from {state.name}…</p> : products.length ? (
+            <div className={styles.productMiniGrid}>
+              {products.slice(0, 3).map((product) => <Link href={product.catalogOnly ? `/catalog/${product.slug}` : `/product/${product.slug}`} key={product.id} className={styles.productMiniCard}>
+                <span className={styles.productMiniImage}>{product.images?.[0] ? <img src={product.images[0]} alt="" loading="lazy" onError={event => { event.currentTarget.style.display = "none" }} /> : null}</span>
+                <span className={styles.productMiniName}>{product.name}</span>
+                <span className={styles.productMiniPrice}>{product.price > 0 ? `₹${product.price.toLocaleString("en-IN")}` : "Price on request"}</span>
+              </Link>)}
+            </div>
+          ) : <p className={styles.trendingEmpty}>No featured products are listed for this state yet.</p>}
         </div>
-        <p className={styles.previewSummary}>
-          {stats?.productCount
-            ? `${stats.productCount.toLocaleString("en-IN")} listed products from ${stats.artisanCount.toLocaleString("en-IN")} approved sellers`
-            : "Browse local makers, materials and regional craft traditions."}
-        </p>
         <div className={styles.craftList} aria-label={`Craft traditions in ${state.name}`}>
           {state.crafts.slice(0, 3).map((craft) => <span key={craft} className={styles.craftTag}>{craft}</span>)}
         </div>
-
-        {state.giTagsCount > 0 && <p className={styles.giCount}>{state.giTagsCount} products with reviewed GI marks</p>}
-
-        <div className={styles.trendingSection}>
-          <div className={styles.trendingHeading}><span>Popular in {state.name}</span><Package size={14} /></div>
-          {loadingProducts ? (
-            <p className={styles.trendingEmpty}>Loading regional products…</p>
-          ) : products.length ? (
-            <div className={styles.trendingList}>
-              {products.slice(0, 4).map((product) => (
-                <Link href={`/product/${product.slug}`} key={product.id} className={styles.trendingProduct}>
-                  <span>{product.name}</span><ArrowRight size={14} aria-hidden="true" />
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className={styles.trendingEmpty}>Explore the collection to see available products.</p>
-          )}
-        </div>
-
-        {makers.length > 0 && (
-          <div className={styles.makersSection}>
-            <p>Makers to discover</p>
-            <div>{makers.map((maker) => (
-              <span key={maker.id} title={maker.swadeshi_rank ? `Swadeshi rank ${maker.swadeshi_rank}` : undefined}>
-                {maker.business_name}
-                {maker.swadeshi_rank ? <small>Rank {maker.swadeshi_rank}</small> : null}
-              </span>
-            ))}</div>
-          </div>
-        )}
-
-        <Link href={catalogHref(state)} className={styles.exploreButton} onClick={close}>
-          View products from {state.name}<ArrowRight size={16} aria-hidden="true" />
+        {(story || heritageImage) && <Link href={story ? `/blog/states/${story.slug}` : `/state/${state.filterCodes[0]?.toLowerCase()}`} className={styles.storyPreview}>
+          <BookOpen size={17} aria-hidden="true" />
+          <span className={styles.storyPreviewText}><strong>{story ? `Read the ${state.name} story` : `Explore ${state.name} heritage`}</strong><small>{story?.focus || heritageImage?.alt}</small></span>
+          <ArrowRight size={16} aria-hidden="true" />
+        </Link>}
+        <Link href={catalogHref(state)} className={styles.exploreButton}>
+          Explore All {state.name} Products <ArrowRight size={16} aria-hidden="true" />
         </Link>
       </div>
     </article>
@@ -125,7 +105,6 @@ function StatePreview({
 }
 
 export function IndiaMap() {
-  const router = useRouter()
   const [geoData, setGeoData] = useState<any>(null)
   const [hoveredState, setHoveredState] = useState<IndiaStateData | null>(null)
   const [selectedState, setSelectedState] = useState<IndiaStateData | null>(null)
@@ -135,9 +114,18 @@ export function IndiaMap() {
   const [productsByState, setProductsByState] = useState<Record<string, MapProduct[]>>({})
   const [productCountsByState, setProductCountsByState] = useState<Record<string, number>>({})
   const [loadingState, setLoadingState] = useState<string | null>(null)
-  const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
+  const mapCardRef = useRef<HTMLDivElement>(null)
+  const previewRef = useRef<HTMLDivElement>(null)
+  const hoverClearRef = useRef<number | null>(null)
+  const pointerAnchorRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  const [popoverAnchor, setPopoverAnchor] = useState<{ x: number; y: number } | null>(null)
+  const [popoverPosition, setPopoverPosition] = useState<{ x: number; y: number } | null>(null)
   const productsCache = useRef(new Map<string, MapProduct[]>())
   const activeState = hoveredState || selectedState
+
+  useEffect(() => {
+    mapCardRef.current?.querySelector("svg")?.setAttribute("preserveAspectRatio", "xMidYMid meet")
+  }, [geoData])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -165,19 +153,24 @@ export function IndiaMap() {
     return () => controller.abort()
   }, [])
 
-  // Wait for a brief pause on a region before requesting its top products.
-  // This keeps pointer movement cheap and avoids a request for every state crossed.
+  // Wait briefly before loading regional product previews so pointer movement does not trigger excess requests.
   useEffect(() => {
     if (!activeState || productsCache.current.has(activeState.id)) return
     const controller = new AbortController()
     const timer = window.setTimeout(() => {
       setLoadingState(activeState.id)
-      const params = new URLSearchParams({ state: activeState.filterCodes.join(","), inStock: "1", sort: "sold_desc", limit: "4", page: "1" })
+      const params = new URLSearchParams({ state: activeState.filterCodes.join(","), sort: "sold_desc", limit: "12", page: "1" })
       fetch(`/api/products?${params}`, { signal: controller.signal })
         .then((response) => response.ok ? response.json() : null)
         .then((data) => {
           if (controller.signal.aborted) return
-          const products = (data?.products || []).slice(0, 4) as MapProduct[]
+          const liveProducts = (data?.products || []) as MapProduct[]
+          const catalogProducts = CATALOG_PRODUCTS.filter((product) => activeState.filterCodes.includes(product.state_code || "")).map((product) => ({
+            id: product.slug, slug: product.slug, name: product.name, price: product.price, images: product.images,
+            catalogOnly: true,
+            category: { id: product.specifications.craft_family, name: product.specifications.craft_family, slug: product.specifications.craft_family.toLowerCase().replaceAll(" ", "-") },
+          }))
+          const products = [...liveProducts, ...catalogProducts]
           productsCache.current.set(activeState.id, products)
           setProductsByState((current) => ({ ...current, [activeState.id]: products }))
           setProductCountsByState((current) => ({ ...current, [activeState.id]: Number(data?.total) || 0 }))
@@ -210,13 +203,23 @@ export function IndiaMap() {
   const previewStats = (state: IndiaStateData) => {
     const stats = getStateStats(state)
     const liveProductCount = productCountsByState[state.id]
-    if (!stats && liveProductCount == null) return undefined
+    const catalogProductCount = CATALOG_PRODUCTS.filter((product) => state.filterCodes.includes(product.state_code || "")).length
+    if (!stats && liveProductCount == null && catalogProductCount === 0) return undefined
     return {
       stateName: state.name,
       stateCode: state.id,
       artisanCount: stats?.artisanCount || 0,
-      productCount: liveProductCount ?? stats?.productCount ?? 0,
+      productCount: (liveProductCount ?? stats?.productCount ?? 0) + catalogProductCount,
     }
+  }
+
+  const setAnchorFromPointer = () => {
+    if (pointerAnchorRef.current.x && pointerAnchorRef.current.y) {
+      setPopoverAnchor(pointerAnchorRef.current)
+      return
+    }
+    const rect = mapCardRef.current?.getBoundingClientRect()
+    if (rect) setPopoverAnchor({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 })
   }
 
   const previewState = (state: IndiaStateData) => {
@@ -224,31 +227,51 @@ export function IndiaMap() {
     setHoveredState(null)
     setSearchQuery(state.name)
     setSearchOpen(false)
+    setAnchorFromPointer()
   }
 
   const selectState = (state: IndiaStateData) => {
     setSelectedState(state)
     setHoveredState(null)
-    if (window.matchMedia("(max-width: 767px)").matches) {
-      setMobileSheetOpen(true)
-    } else {
-      router.push(catalogHref(state))
-    }
+    setAnchorFromPointer()
   }
 
-  const resetMap = () => {
-    setHoveredState(null)
-    setSelectedState(null)
-    setSearchQuery("")
-    setSearchOpen(false)
-    setMobileSheetOpen(false)
-    router.replace("/india-map", { scroll: false })
+  const clearHoveredSoon = () => {
+    if (selectedState) return
+    if (hoverClearRef.current) window.clearTimeout(hoverClearRef.current)
+    hoverClearRef.current = window.setTimeout(() => setHoveredState(null), 180)
   }
 
   const visibleState = activeState
   const visibleProducts = visibleState ? productsByState[visibleState.id] || [] : []
   const productLoading = !!visibleState && loadingState === visibleState.id
-  const heroImage = visibleProducts.find((product) => product.images?.[0])?.images?.[0]
+
+  useEffect(() => {
+    if (!activeState || !popoverAnchor) return
+    const place = () => {
+      const bounds = previewRef.current?.getBoundingClientRect()
+      const width = bounds?.width || 380
+      const height = bounds?.height || 480
+      const gap = 14
+      let x = popoverAnchor.x + gap
+      if (x + width > window.innerWidth - 12) x = popoverAnchor.x - width - gap
+      x = Math.max(12, Math.min(x, window.innerWidth - width - 12))
+      const y = Math.max(12, Math.min(popoverAnchor.y - height * 0.45, window.innerHeight - height - 12))
+      setPopoverPosition({ x, y })
+    }
+    place()
+    window.addEventListener("resize", place)
+    return () => window.removeEventListener("resize", place)
+  }, [activeState, popoverAnchor, visibleProducts.length])
+
+  const resetMap = () => {
+    setHoveredState(null)
+    setSelectedState(null)
+    setSearchQuery("")
+    setPopoverAnchor(null)
+    setPopoverPosition(null)
+    setSearchOpen(false)
+  }
 
   return (
     <main className={styles.page}>
@@ -305,13 +328,16 @@ export function IndiaMap() {
               <div><h2>Explore the map</h2><p>Hover to preview, select a state to browse its collection.</p></div>
               <span className={styles.coverage}><MapPin size={14} /> 28 states · 8 union territories</span>
             </div>
-            <div className={styles.mapCard} onMouseLeave={() => setHoveredState(null)}>
+            <div ref={mapCardRef} className={styles.mapCard} onMouseLeave={clearHoveredSoon} onPointerMove={(event) => { pointerAnchorRef.current = { x: event.clientX, y: event.clientY } }}>
               {geoData ? (
+                <div className={styles.mapCanvas}>
                 <ComposableMap
+                  width={900}
+                  height={760}
                   projection="geoMercator"
-                  projectionConfig={{ scale: 1050, center: [82.3, 22.3] }}
+                  projectionConfig={{ scale: 850, center: [82.3, 22.3] }}
                   className={styles.mapSvg}
-                  viewBox="0 0 800 680"
+                  viewBox="0 0 900 760"
                   aria-label="Interactive map of India"
                 >
                   <Geographies geography={geoData}>
@@ -319,7 +345,7 @@ export function IndiaMap() {
                       const state = INDIA_STATE_BY_NAME.get(String(geography.properties?.st_nm || "").toLocaleLowerCase())
                       if (!state) return null
                       const inventory = getStateStats(state)
-                      const hasLiveProducts = (productCountsByState[state.id] ?? inventory?.productCount ?? 0) > 0
+                      const hasLiveProducts = (productCountsByState[state.id] ?? inventory?.productCount ?? 0) + CATALOG_PRODUCTS.filter((product) => state.filterCodes.includes(product.state_code || "")).length > 0
                       const isActive = visibleState?.id === state.id
                       return (
                         <Geography
@@ -329,9 +355,13 @@ export function IndiaMap() {
                           tabIndex={0}
                           aria-label={`${state.name}${inventory?.productCount ? `, ${inventory.productCount} listed products` : ""}`}
                           aria-pressed={selectedState?.id === state.id}
-                          onMouseEnter={() => setHoveredState(state)}
-                          onFocus={() => setHoveredState(state)}
-                          onBlur={() => setHoveredState(null)}
+                          onMouseEnter={() => {
+                            if (hoverClearRef.current) window.clearTimeout(hoverClearRef.current)
+                            setHoveredState(state)
+                            setAnchorFromPointer()
+                          }}
+                          onFocus={() => { setHoveredState(state); setAnchorFromPointer() }}
+                          onBlur={() => { if (!selectedState) clearHoveredSoon() }}
                           onClick={() => selectState(state)}
                           onKeyDown={(event: KeyboardEvent<SVGPathElement>) => {
                             if (event.key === "Enter" || event.key === " ") { event.preventDefault(); selectState(state) }
@@ -347,6 +377,7 @@ export function IndiaMap() {
                     })}
                   </Geographies>
                 </ComposableMap>
+                </div>
               ) : (
                 <div className={styles.mapLoading} aria-live="polite">Loading India map…</div>
               )}
@@ -357,29 +388,19 @@ export function IndiaMap() {
             </div>
           </div>
 
-          <aside className={styles.detailPanel} aria-live="polite">
-            {visibleState ? (
-              <StatePreview state={visibleState} stats={previewStats(visibleState)} products={visibleProducts} loadingProducts={productLoading} heroImage={heroImage} />
-            ) : (
-              <div className={styles.emptyPreview}>
-                <div className={styles.emptyIcon}><Store size={22} /></div>
-                <h2>Find a regional collection</h2>
-                <p>Choose a state on the map or search by place and craft to see its traditions and available products.</p>
-                <span>Every state and union territory is included</span>
-              </div>
-            )}
-          </aside>
+
         </div>
       </section>
 
-      {mobileSheetOpen && visibleState && (
-        <div className={styles.sheetBackdrop} onMouseDown={(event) => { if (event.target === event.currentTarget) setMobileSheetOpen(false) }}>
-          <div className={styles.mobileSheet} role="dialog" aria-modal="true" aria-label={`${visibleState.name} collection`}>
-            <div className={styles.sheetHandle} />
-            <StatePreview state={visibleState} stats={previewStats(visibleState)} products={visibleProducts} loadingProducts={productLoading} heroImage={heroImage} close={() => setMobileSheetOpen(false)} />
-          </div>
-        </div>
-      )}
+      {visibleState && <div
+        ref={previewRef}
+        className={styles.floatingPreview}
+        style={{ left: `${popoverPosition?.x ?? 12}px`, top: `${popoverPosition?.y ?? 12}px` }}
+        onMouseEnter={() => { if (hoverClearRef.current) window.clearTimeout(hoverClearRef.current) }}
+        onMouseLeave={() => { if (!selectedState) setHoveredState(null) }}
+      >
+        <StatePreview state={visibleState} stats={previewStats(visibleState)} products={visibleProducts} loadingProducts={productLoading} close={() => { setSelectedState(null); setHoveredState(null) }} />
+      </div>}
     </main>
   )
 }

@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import { CheckCircle, Package, MapPin, ArrowRight, Loader2 } from "lucide-react"
@@ -22,6 +23,7 @@ interface Order {
   discount_amount: number
   payment_status: string
   order_status: string
+  reservation_status?: string
   order_items: OrderItem[]
 }
 
@@ -40,10 +42,12 @@ export default function CheckoutSuccessPage() {
 function CheckoutSuccessContent() {
   const searchParams = useSearchParams()
   const orderId = searchParams.get("order")
+  const orderIds = (searchParams.get("orders") || "").split(",").filter(Boolean).slice(0, 10)
   const { clearCart } = useCartStore()
 
   const [order, setOrder] = useState<Order | null>(null)
-  const [loading, setLoading] = useState(!!orderId)
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(!!orderId || orderIds.length > 0)
 
   useEffect(() => {
     const timer = setTimeout(() => clearCart(), 1000)
@@ -51,12 +55,18 @@ function CheckoutSuccessContent() {
   }, [clearCart])
 
   useEffect(() => {
-    if (!orderId) return
-    fetch(`/api/user/orders?id=${orderId}`)
-      .then(res => res.ok ? res.json() : null)
-      .then(data => setOrder(data?.order || null))
+    if (!orderId && orderIds.length === 0) return
+    const url = orderIds.length ? `/api/user/orders?ids=${encodeURIComponent(orderIds.join(","))}` : `/api/user/orders?id=${encodeURIComponent(orderId!)}`
+    fetch(url)
+      .then(async response => { if (!response.ok) throw new Error("Could not load reservation details."); return response.json() })
+      .then(data => {
+        const found: Order[] = orderIds.length ? data.orders || [] : data.order ? [data.order] : []
+        setOrders(found)
+        setOrder(found[0] || null)
+      })
+      .catch(() => { setOrders([]); setOrder(null) })
       .finally(() => setLoading(false))
-  }, [orderId])
+  }, [orderId, searchParams])
 
   const coinsEarned = order ? Math.max(0, Math.floor((order.subtotal - (order.discount_amount || 0)) / 100)) : 0
 
@@ -84,20 +94,22 @@ function CheckoutSuccessContent() {
             transition={{ repeat: 2, duration: 1.2, delay: 0.4 }}>
             <CheckCircle className="w-14 h-14 text-green-600" />
           </motion.div>
-          <h1 className="text-[32px] font-extrabold text-[#111827] tracking-tight mb-2">Order Placed!</h1>
+          <h1 className="text-[32px] font-extrabold text-[#111827] tracking-tight mb-2">Reservation received</h1>
           <p className="text-[14px] text-[#111827]/50">
             {order ? (
               <>
-                Your order <span className="font-bold text-[#111827]">#{order.order_number}</span>{" "}
+                Your reservation <span className="font-bold text-[#111827]">#{order.order_number}</span>{" "}
                 {order.payment_status === "paid" || order.order_status === "confirmed"
                   ? "is confirmed."
                   : order.payment_status === "failed"
                     ? "has a failed payment. Please check your account for next steps."
-                    : "has been received. Track its status from your account."}
+                    : "has been received. No payment is required today; our team will confirm dispatch availability for your pincode."}
               </>
             ) : "Your order details could not be loaded. Check your account for the latest status."}
           </p>
         </motion.div>
+
+        {orders.length > 1 && <div className="mb-5 rounded-2xl border border-[#d0c6ac] bg-white p-4 text-sm"><p className="mb-2 font-bold">Seller reservations</p><ul className="space-y-1 text-[#4d4632]">{orders.map(row => <li key={row.id}>#{row.order_number}</li>)}</ul></div>}
 
         {/* LoqCoins earned */}
         {order?.payment_status === "paid" && coinsEarned > 0 && (
@@ -128,7 +140,7 @@ function CheckoutSuccessContent() {
                 <div key={item.id} className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0" style={{ background: "#FBF9F5" }}>
                     {item.product?.images?.[0] && (
-                      <img src={item.product.images[0]} alt={item.product?.name || ""} className="w-full h-full object-cover" />
+                      <Image src={item.product.images[0]} alt={item.product?.name || ""} width={44} height={44} sizes="44px" className="h-full w-full object-cover" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
