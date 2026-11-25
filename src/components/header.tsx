@@ -219,7 +219,7 @@ export function Header() {
               <span className={cn("px-2 py-1 rounded-[3px] transition-colors", locale === "hi" ? "bg-white text-[#111827]" : "text-[#111827]/50")}>हिं</span>
             </button>
 
-            <Link href="/account?tab=wishlist" className="hidden sm:flex p-2 rounded-[4px] hover:bg-[#111827]/10 transition-colors" aria-label={t("header.wishlist")}>
+            <Link href="/wishlist" className="hidden sm:flex p-2 rounded-[4px] hover:bg-[#111827]/10 transition-colors" aria-label={t("header.wishlist")}>
               <Heart className="w-5 h-5" />
             </Link>
 
@@ -262,7 +262,7 @@ export function Header() {
                     ] : [
                       { href: "/account", icon: User, label: t("header.myAccount") },
                       { href: "/account?tab=orders", icon: Package, label: t("header.myOrders") },
-                      { href: "/account?tab=wishlist", icon: Heart, label: t("header.wishlist") },
+                      { href: "/wishlist", icon: Heart, label: t("header.wishlist") },
                       { href: "/account?tab=coins", icon: Wallet, label: t("header.loqCoins") },
                     ]).map(({ href, icon: Icon, label }) => (
                       <Link
@@ -421,7 +421,7 @@ export function Header() {
                   </Link>
                   {roleLabel && <Link href={roleHome} onClick={() => setMobileOpen(false)} className="my-1 flex items-center gap-2 rounded-md bg-[#0F172A] px-3 py-3 text-sm font-bold text-white"><RoleIcon size={16} />{roleLabel}</Link>}
                   {accountRole !== "admin" && accountRole !== "sub_admin" && accountRole !== "seller" && <>
-                    <Link href="/account?tab=wishlist" onClick={() => setMobileOpen(false)} className="py-2.5 text-sm font-semibold text-[#111827]/70">{t("header.wishlist")}</Link>
+                    <Link href="/wishlist" onClick={() => setMobileOpen(false)} className="py-2.5 text-sm font-semibold text-[#111827]/70">{t("header.wishlist")}</Link>
                     <Link href="/account?tab=orders" onClick={() => setMobileOpen(false)} className="py-2.5 text-sm font-semibold text-[#111827]/70">{t("header.myOrders")}</Link>
                   </>}
                   <button onClick={() => { handleSignOut(); setMobileOpen(false) }}

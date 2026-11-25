@@ -48,6 +48,10 @@ function StatePreview({
   loadingProducts: boolean
   close: () => void
 }) {
+  const story = state.filterCodes.map((code) => stateStoryByCode(code)).find((item) => item?.image)
+  const heritageImage = state.filterCodes.map((code) => STATE_MAP_IMAGES[code]).find(Boolean)
+  const [heroIndex, setHeroIndex] = useState(0)
+  const heroCandidates = [...new Set([state.image, story?.image, heritageImage?.src].filter((src): src is string => Boolean(src)))]
   const categoryCounts = new Map<string, { id: string; name: string; count: number }>()
   for (const product of products) {
     const category = product.categories || product.category
@@ -56,15 +60,15 @@ function StatePreview({
     categoryCounts.set(category.id, { id: category.id, name: category.name, count: (current?.count || 0) + 1 })
   }
   const topCategories = [...categoryCounts.values()].sort((a, b) => b.count - a.count).slice(0, 3)
-  const story = state.filterCodes.map((code) => stateStoryByCode(code)).find(Boolean)
-  const heritageImage = state.filterCodes.map((code) => STATE_MAP_IMAGES[code]).find(Boolean)
   const catalogProducts = CATALOG_PRODUCTS.filter((product) => state.filterCodes.includes(product.state_code || ""))
   const productCount = (stats?.productCount || 0) + catalogProducts.length
   const tagline = state.crafts.slice(0, 2).join(" & ")
 
   return (
     <article className={styles.previewCard}>
-      <header className={styles.previewHeader} style={heritageImage ? { backgroundImage: `linear-gradient(90deg, rgb(35 27 0 / 82%) 0%, rgb(35 27 0 / 62%) 58%, rgb(35 27 0 / 38%) 100%), url("${heritageImage.src}")` } : undefined}>
+      <header className={styles.previewHeader}>
+        {heroCandidates[heroIndex] ? <img className={styles.previewHeroImage} src={heroCandidates[heroIndex]} alt={`${state.name} regional craft heritage`} onError={() => setHeroIndex((index) => index + 1)} /> : <div className={styles.previewHeroFallback} aria-label={`${state.name} image pending`}><span>{state.name}</span><small>{tagline}</small></div>}
+        <div className={styles.previewHeroScrim} />
         <button type="button" className={styles.previewClose} onClick={close} aria-label="Close state preview"><X size={17} /></button>
         <p className={styles.previewEyebrow}>Regional collection</p>
         <div className={styles.previewTitleRow}><h2>{state.name}</h2><span className={styles.countBadge}><Package size={13} />{productCount.toLocaleString("en-IN")} products</span></div>

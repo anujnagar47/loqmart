@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server"
 import { createClient as createSessionClient } from "@/lib/supabase/server"
 import { createServiceClient } from "@/lib/supabase/admin"
+import { Redis } from "@upstash/redis"
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PHONE = /^\+?[\d\s().-]{8,20}$/
 const clean = (value: unknown, max: number) => typeof value === "string" ? value.trim().slice(0, max) : ""
+const inquiryRedis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+  ? new Redis({ url: process.env.UPSTASH_REDIS_REST_URL, token: process.env.UPSTASH_REDIS_REST_TOKEN })
+  : null
+const INQUIRIES_KEY = "loqmart:purchase-inquiries:v1"
 
 export async function POST(request: Request) {
   try {
@@ -75,6 +80,14 @@ export async function POST(request: Request) {
       status: "new",
     })
     if (error) {
+      if ((error.code === "42P01" || /schema cache/i.test(error.message)) && inquiryRedis) {
+        await inquiryRedis.lpush(INQUIRIES_KEY, JSON.stringify({
+          id: crypto.randomUUID(), full_name: fullName, email, phone, city_state: cityState, note: note || null,
+          product_ids: productIds, product_options: productOptions, user_id: userId, status: "new", created_at: new Date().toISOString(),
+        }))
+        await inquiryRedis.ltrim(INQUIRIES_KEY, 0, 4999)
+        return NextResponse.json({ success: true }, { status: 201 })
+      }
       console.error("Inquiry submission failed:", error)
       return NextResponse.json({ error: "Inquiry storage is not ready yet. Please try again shortly." }, { status: 503 })
     }

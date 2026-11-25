@@ -24,7 +24,8 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin#customer-carts", icon: Heart, label: "Carts & Wishlists" },
       { href: "/admin/ads", icon: Tag, label: "Ad & Sponsored Slots" },
       { href: "/admin/sellers", icon: Shield, label: "Seller & Catalog Approvals", craft: "artisan-seal" },
-      { href: "/admin/orders", icon: ShoppingCart, label: "Orders & Requests" },
+      { href: "/admin/requests", icon: ClipboardList, label: "Purchase Requests" },
+      { href: "/admin/orders", icon: ShoppingCart, label: "Orders" },
     ],
   },
   {

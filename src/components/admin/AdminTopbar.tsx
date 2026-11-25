@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation"
 import { Shield } from "lucide-react"
 
 const labels: Record<string, string> = {
-  admin: "Overview", sellers: "Sellers", products: "Products", orders: "Orders", users: "Users",
+  admin: "Overview", sellers: "Sellers", products: "Products", orders: "Orders", requests: "Purchase Requests", users: "Users",
   analytics: "Analytics", ads: "Sponsored Ads", finance: "Settlements", commission: "Commission",
   returns: "Returns", penalties: "Penalties", reviews: "Reviews", notifications: "Notifications",
   trust: "Trust & Rank", logs: "Audit Logs", categories: "Categories", blog: "Blog", settings: "Settings",

@@ -2,152 +2,87 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useRef, useState } from "react"
-import { Check, Loader2, MapPin, Package, Plus, Trash2 } from "lucide-react"
+import { useState } from "react"
+import { ArrowRight, Check, Loader2, ShieldCheck } from "lucide-react"
 import { useCartStore } from "@/lib/store"
 import { cartItemPrice, formatCurrency } from "@/lib/utils"
-import { createClient } from "@/lib/supabase/client"
-import { Toast, useToast } from "@/components/ui/toast"
-import { Button } from "@/components/ui/button"
 
-type Address = { id: string; name: string; phone: string; address_line1: string; address_line2?: string | null; city: string; state: string; state_code?: string | null; pincode: string; is_default?: boolean }
+type Contact = { fullName: string; email: string; phone: string; cityState: string; note: string }
+const emptyContact: Contact = { fullName: "", email: "", phone: "", cityState: "", note: "" }
 
 export default function CheckoutPage() {
-  const router = useRouter()
-  const items = useCartStore(s => s.items)
-  const { toastProps, showError } = useToast()
-  const [addresses, setAddresses] = useState<Address[]>([])
-  const [selectedAddress, setSelectedAddress] = useState("")
-  const [newAddress, setNewAddress] = useState({ name: "", phone: "", address_line1: "", address_line2: "", city: "", state: "", state_code: "", pincode: "" })
-  const [showForm, setShowForm] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState("")
-  const [savingAddress, setSavingAddress] = useState(false)
-  const [placingOrder, setPlacingOrder] = useState(false)
-  const idempotencyKey = useRef<string | null>(null)
-
-  const loadCheckout = useCallback(async () => {
-    setLoading(true)
-    setLoadError("")
-    try {
-      const supabase = createClient()
-      const { data: { session }, error: authError } = await supabase.auth.getSession()
-      if (authError) throw authError
-      if (!session?.user) { router.push("/login?next=/checkout"); return }
-      const { data: profile, error: profileError } = await supabase.from("users").select("role").eq("id", session.user.id).maybeSingle()
-      if (profileError) throw profileError
-      if (!profile || !["buyer", "seller"].includes(profile.role)) {
-        setLoadError("This account cannot reserve customer orders.")
-        return
-      }
-      const response = await fetch("/api/user/addresses")
-      const payload = await response.json()
-      if (!response.ok) throw new Error(payload.error || "Could not load saved addresses.")
-      const rows: Address[] = payload.addresses || []
-      setAddresses(rows)
-      setSelectedAddress(current => current || rows.find(address => address.is_default)?.id || rows[0]?.id || "")
-    } catch (error) {
-      setLoadError(error instanceof Error ? error.message : "Could not load checkout. Please retry.")
-    } finally {
-      setLoading(false)
-    }
-  }, [router])
-
-  useEffect(() => { void loadCheckout() }, [loadCheckout])
-
-  function normalizePhone(value: string) {
-    let digits = value.trim().replace(/\D/g, "")
-    if (digits.length === 12 && digits.startsWith("91")) digits = digits.slice(2)
-    return digits
-  }
-
-  async function saveAddress() {
-    const phone = normalizePhone(newAddress.phone)
-    const pincode = newAddress.pincode.trim()
-    if (!newAddress.name.trim() || !newAddress.address_line1.trim() || !newAddress.city.trim() || !newAddress.state.trim()) {
-      showError("Complete the name and address fields."); return
-    }
-    if (!/^[6-9]\d{9}$/.test(phone)) { showError("Enter a valid 10-digit Indian mobile number."); return }
-    if (!/^\d{6}$/.test(pincode)) { showError("Enter a valid 6-digit Indian pincode."); return }
-    setSavingAddress(true)
-    try {
-      const response = await fetch("/api/user/addresses", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...newAddress, phone, pincode, is_default: addresses.length === 0 }),
-      })
-      const payload = await response.json()
-      if (!response.ok) throw new Error(payload.error || "Could not save address.")
-      setAddresses(previous => [...previous, payload.address])
-      setSelectedAddress(payload.address.id)
-      setShowForm(false)
-      setNewAddress({ name: "", phone: "", address_line1: "", address_line2: "", city: "", state: "", state_code: "", pincode: "" })
-    } catch (error) {
-      showError(error instanceof Error ? error.message : "Could not save address. Please retry.")
-    } finally {
-      setSavingAddress(false)
-    }
-  }
-
-  async function reserveOrder() {
-    if (!selectedAddress) { showError("Select or add a delivery address."); return }
-    const address = addresses.find(row => row.id === selectedAddress)
-    if (!address || !/^[6-9]\d{9}$/.test(normalizePhone(address.phone))) { showError("The selected address needs a valid 10-digit Indian mobile number."); return }
-    if (!/^\d{6}$/.test(address.pincode.trim())) { showError("The selected address needs a valid 6-digit Indian pincode."); return }
-    if (!items.length) { showError("Your cart is empty."); return }
-    setPlacingOrder(true)
-    try {
-      const fingerprint = JSON.stringify({ address: selectedAddress, items: items.map(item => [item.product_id, item.variant_id || null, item.quantity]).sort() })
-      const storageKey = `loqmart-intent-idempotency:${fingerprint}`
-      if (!idempotencyKey.current) {
-        try { idempotencyKey.current = sessionStorage.getItem(storageKey) } catch { /* session storage can be disabled */ }
-      }
-      idempotencyKey.current ||= crypto.randomUUID()
-      try { sessionStorage.setItem(storageKey, idempotencyKey.current) } catch { /* API idempotency still covers in-page retries */ }
-      const response = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey.current },
-        body: JSON.stringify({ address_id: selectedAddress, items: items.map(item => ({ product_id: item.product_id, variant_id: item.variant_id || null, quantity: item.quantity })) }),
-      })
-      const payload = await response.json()
-      if (!response.ok) throw new Error(payload.error || "Could not reserve this order.")
-      try { sessionStorage.removeItem(storageKey) } catch { /* optional */ }
-      idempotencyKey.current = null
-      useCartStore.getState().clearCart()
-      router.push(`/checkout/success?orders=${payload.order_ids.join(",")}`)
-    } catch (error) {
-      showError(error instanceof Error ? error.message : "Could not reserve your order. Please retry.")
-    } finally {
-      setPlacingOrder(false)
-    }
-  }
-
+  const items = useCartStore(state => state.items)
+  const clearCart = useCartStore(state => state.clearCart)
+  const [contact, setContact] = useState(emptyContact)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState("")
+  const [submitted, setSubmitted] = useState(false)
   const subtotal = items.reduce((sum, item) => sum + cartItemPrice(item) * item.quantity, 0)
+  const productIds = [...new Set(items.map(item => item.product_id))]
 
-  if (loading) return <div className="flex min-h-[60vh] items-center justify-center"><Loader2 className="h-7 w-7 animate-spin text-[#725c00]" /></div>
-  if (loadError) return <section className="mx-auto my-10 max-w-xl px-4 text-center"><p role="alert" className="mb-4 text-sm text-red-700">{loadError}</p><Button onClick={() => void loadCheckout()}>Retry</Button></section>
-  if (!items.length) return <section className="mx-auto my-16 max-w-xl px-4 text-center"><Package className="mx-auto mb-4 h-8 w-8 text-[#725c00]" /><h1 className="mb-2 text-xl font-bold">Your cart is empty</h1><Link className="text-sm font-semibold text-[#725c00] underline" href="/category">Browse products</Link></section>
+  async function submitPurchaseRequest(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError("")
+    if (items.length === 0) return setError("Your cart is empty. Add a product before sending a request.")
+    if (productIds.length > 20) return setError("A request can include up to 20 different products. Remove a few products and try again.")
+    setBusy(true)
+    const productOptions = Object.fromEntries(productIds.map(id => {
+      const lines = items.filter(item => item.product_id === id)
+      return [id, lines.map(item => `${item.quantity} × ${item.variant_name || "Standard"}`).join(", ")]
+    }))
+    const cartDetails = items.map(item => `${item.product?.name || "Product"} — quantity ${item.quantity}${item.variant_name ? ` (${item.variant_name})` : ""}`).join("\n")
+    const note = ["Purchase request from checkout. No payment was collected.", cartDetails, contact.note.trim()].filter(Boolean).join("\n\n").slice(0, 1000)
+    try {
+      const response = await fetch("/api/inquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: contact.fullName.trim(), email: contact.email.trim(), phone: contact.phone.trim(),
+          cityState: contact.cityState.trim(), note, productIds, productOptions,
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || "We could not send your request. Please try again.")
+      clearCart()
+      setSubmitted(true)
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "We could not send your request. Please try again.")
+    } finally {
+      setBusy(false)
+    }
+  }
 
-  return <main className="min-h-[60vh] bg-[#FBF9F5] px-4 py-7 pb-24 sm:px-6">
-    {toastProps && <Toast {...toastProps} />}
-    <div className="mx-auto max-w-5xl">
-      <h1 className="mb-6 text-2xl font-bold tracking-tight text-[#1a1c1c]">Reserve your order</h1>
-      <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
-        <section className="rounded border border-[#d0c6ac] bg-white p-4 sm:p-6">
-          <div className="mb-5 flex items-center justify-between gap-3"><h2 className="font-bold">Delivery address</h2><button type="button" onClick={() => setShowForm(open => !open)} className="inline-flex min-h-11 items-center gap-2 rounded border border-[#d0c6ac] px-3 text-sm font-semibold"><Plus size={16} />{showForm ? "Cancel" : "Add address"}</button></div>
-          {showForm && <div className="mb-5 grid grid-cols-1 gap-3 rounded bg-[#f3f3f3] p-4 sm:grid-cols-2">
-            {([ ["name", "Full name"], ["phone", "Mobile number"], ["address_line1", "Address line 1"], ["address_line2", "Address line 2 (optional)"], ["city", "City"], ["state", "State"] ] as const).map(([key, label]) => <input key={key} aria-label={label} placeholder={label} value={newAddress[key]} onChange={event => setNewAddress(value => ({ ...value, [key]: event.target.value }))} className={`${key.startsWith("address_") ? "sm:col-span-2" : ""} min-h-11 rounded border border-[#d0c6ac] bg-white px-3 text-sm`} />)}
-            <input aria-label="6-digit pincode" inputMode="numeric" autoComplete="postal-code" maxLength={6} placeholder="6-digit pincode" value={newAddress.pincode} onChange={event => setNewAddress(value => ({ ...value, pincode: event.target.value.replace(/\D/g, "").slice(0, 6) }))} className="min-h-11 rounded border border-[#d0c6ac] bg-white px-3 text-sm" />
-            <Button type="button" disabled={savingAddress} onClick={() => void saveAddress()} className="min-h-11 sm:col-span-2">{savingAddress && <Loader2 className="h-4 w-4 animate-spin" />}{savingAddress ? "Saving address" : "Save address"}</Button>
-          </div>}
-          {addresses.length === 0 && !showForm && <p className="mb-4 rounded border border-dashed border-[#d0c6ac] p-5 text-sm text-[#4d4632]">Add a delivery address to continue.</p>}
-          <div className="space-y-3">{addresses.map(address => <button type="button" key={address.id} onClick={() => setSelectedAddress(address.id)} aria-pressed={selectedAddress === address.id} className={`flex min-h-11 w-full items-start gap-3 rounded border p-4 text-left ${selectedAddress === address.id ? "border-[#725c00] bg-[#fcd020]/10" : "border-[#d0c6ac]"}`}>
-            <span className={`mt-1 h-4 w-4 shrink-0 rounded-full border ${selectedAddress === address.id ? "border-[#725c00] bg-[#725c00]" : "border-[#d0c6ac]"}`} />
-            <span className="text-sm leading-5"><strong>{address.name}</strong><br />{address.phone}<br />{address.address_line1}{address.address_line2 ? `, ${address.address_line2}` : ""}<br />{address.city}, {address.state_code || address.state} {address.pincode}</span>
-          </button>)}</div>
-          <div className="mt-6 rounded border border-[#d0c6ac] bg-[#f3f3f3] p-4 sm:p-5"><div className="mb-2 flex items-center gap-2"><Check size={17} className="text-[#725c00]" /><h2 className="font-bold">Reserve Order (Early Access — No Payment Required Today)</h2></div><p className="text-sm leading-6 text-[#4d4632]">Submitting reserves your selected items and records your delivery pincode so we can understand demand. No payment is taken now. Our team will confirm dispatch availability for your pincode shortly.</p></div>
+  if (submitted) return <main className="min-h-[70vh] bg-[#f8f7f2] px-4 py-16"><section className="mx-auto max-w-xl rounded-lg border border-[#d0c6ac] bg-white p-8 text-center"><span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#fcd020]/35 text-[#725c00]"><Check size={24}/></span><p className="mt-5 text-xs font-bold uppercase tracking-widest text-[#725c00]">Purchase request sent</p><h1 className="mt-2 text-2xl font-black tracking-tight text-[#1a1c1c]">We’ll be in touch soon</h1><p className="mt-3 text-sm leading-6 text-[#4d4632]">Your selected products have been sent to the LoqMart team. We’ll confirm availability and next steps using the contact details you provided. No payment has been taken.</p><Link href="/category" className="mt-6 inline-flex items-center gap-2 rounded bg-[#fcd020] px-5 py-3 text-sm font-bold text-[#231b00]">Continue browsing <ArrowRight size={16}/></Link></section></main>
+
+  if (!items.length) return <main className="mx-auto my-16 max-w-xl px-4 text-center"><h1 className="text-2xl font-bold text-[#1a1c1c]">Your cart is empty</h1><p className="mt-2 text-sm text-[#4d4632]">Add products to your cart to send a purchase request.</p><Link className="mt-5 inline-flex rounded bg-[#fcd020] px-5 py-3 text-sm font-bold text-[#231b00]" href="/category">Browse products</Link></main>
+
+  return <main className="min-h-[70vh] bg-[#f8f7f2] px-4 py-8 pb-20 sm:px-6">
+    <div className="mx-auto max-w-6xl">
+      <p className="text-xs font-bold uppercase tracking-widest text-[#725c00]">Checkout is opening soon</p>
+      <h1 className="mt-2 text-3xl font-black tracking-tight text-[#1a1c1c]">Send us your purchase request</h1>
+      <p className="mt-3 max-w-3xl text-sm leading-6 text-[#4d4632]">Our secure payment gateway is not connected yet. You can still tell us which products you want; the LoqMart team will check availability and contact you. This request is not an order, does not reserve stock, and does not collect payment.</p>
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]">
+        <section className="rounded-lg border border-[#d0c6ac] bg-white p-5 sm:p-7">
+          <div className="mb-5 flex items-center gap-2"><ShieldCheck size={19} className="text-[#725c00]"/><h2 className="font-bold text-[#1a1c1c]">Your contact details</h2></div>
+          <form onSubmit={submitPurchaseRequest} className="space-y-3">
+            <input required autoComplete="name" maxLength={120} value={contact.fullName} onChange={e=>setContact({...contact,fullName:e.target.value})} placeholder="Full name" className="min-h-11 w-full rounded border border-[#d0c6ac] px-3 text-sm"/>
+            <input required type="email" autoComplete="email" maxLength={254} value={contact.email} onChange={e=>setContact({...contact,email:e.target.value})} placeholder="Email address" className="min-h-11 w-full rounded border border-[#d0c6ac] px-3 text-sm"/>
+            <input required type="tel" autoComplete="tel" maxLength={20} value={contact.phone} onChange={e=>setContact({...contact,phone:e.target.value})} placeholder="Phone or WhatsApp number" className="min-h-11 w-full rounded border border-[#d0c6ac] px-3 text-sm"/>
+            <input required autoComplete="address-level2" maxLength={120} value={contact.cityState} onChange={e=>setContact({...contact,cityState:e.target.value})} placeholder="City and state" className="min-h-11 w-full rounded border border-[#d0c6ac] px-3 text-sm"/>
+            <textarea maxLength={700} rows={3} value={contact.note} onChange={e=>setContact({...contact,note:e.target.value})} placeholder="Optional note" className="w-full rounded border border-[#d0c6ac] px-3 py-2.5 text-sm"/>
+            {error&&<p role="alert" className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+            <button disabled={busy||productIds.length>20} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded bg-[#fcd020] px-5 text-sm font-black text-[#231b00] disabled:opacity-60">{busy&&<Loader2 size={17} className="animate-spin"/>}{busy?"Sending request…":"Send purchase request"}<ArrowRight size={16}/></button>
+            <p className="text-center text-xs text-[#4d4632]">No payment is taken. Your details are used to respond to this request.</p>
+          </form>
         </section>
-        <aside className="h-fit rounded border border-[#d0c6ac] bg-white p-4 sm:p-5 lg:sticky lg:top-24"><h2 className="mb-4 font-bold">Reservation summary</h2><div className="max-h-72 space-y-3 overflow-y-auto">{items.map(item => <div key={item.id} className="flex items-center gap-3"><div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-[#f3f3f3]">{item.product?.images?.[0] && <Image src={item.product.images[0]} alt={item.product.name} width={48} height={48} sizes="48px" className="h-12 w-12 object-cover" />}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{item.product?.name}</p><p className="text-xs text-[#4d4632]">{item.variant_name ? `${item.variant_name} · ` : ""}Qty {item.quantity}</p></div><span className="shrink-0 text-sm font-semibold">{formatCurrency(cartItemPrice(item) * item.quantity)}</span></div>)}</div><div className="mt-4 flex justify-between border-t border-[#d0c6ac] pt-4 text-sm"><span>Items subtotal</span><strong>{formatCurrency(subtotal)}</strong></div><Button type="button" disabled={placingOrder || !selectedAddress} onClick={() => void reserveOrder()} className="mt-4 min-h-12 w-full">{placingOrder && <Loader2 className="h-4 w-4 animate-spin" />}{placingOrder ? "Reserving" : "Proceed to Reserve"}</Button><p className="mt-2 text-center text-xs text-[#4d4632]">No payment is required today.</p></aside>
+        <aside className="h-fit rounded-lg border border-[#d0c6ac] bg-white p-5 lg:sticky lg:top-24">
+          <h2 className="font-bold text-[#1a1c1c]">Selected catalog</h2>
+          <div className="mt-4 max-h-96 space-y-3 overflow-y-auto">{items.map(item=><div key={item.id} className="flex items-center gap-3 border-b border-[#eeeeee] pb-3 last:border-0"><div className="relative h-14 w-14 shrink-0 overflow-hidden rounded bg-[#f3f3f3]">{item.product?.images?.[0]&&<Image src={item.product.images[0]} alt={item.product.name} fill sizes="56px" className="object-contain"/>}</div><div className="min-w-0 flex-1"><p className="line-clamp-2 text-sm font-semibold text-[#1a1c1c]">{item.product?.name||"Product"}</p><p className="text-xs text-[#4d4632]">Qty {item.quantity}{item.variant_name?` · ${item.variant_name}`:""}</p></div><span className="shrink-0 text-xs font-semibold">{formatCurrency(cartItemPrice(item)*item.quantity)}</span></div>)}</div>
+          <div className="mt-3 flex justify-between border-t border-[#d0c6ac] pt-4 text-sm"><span>Catalog value estimate</span><strong>{formatCurrency(subtotal)}</strong></div>
+          <p className="mt-2 text-xs leading-5 text-[#4d4632]">Estimate only. The final price, stock and delivery details will be confirmed by our team.</p>
+          {productIds.length>20&&<p className="mt-3 text-xs font-semibold text-red-700">This request supports up to 20 different products. Remove products from the cart to continue.</p>}
+          <Link href="/wishlist" className="mt-4 inline-flex min-h-11 items-center text-xs font-bold text-[#725c00] underline">Review your wishlist</Link>
+        </aside>
       </div>
     </div>
   </main>

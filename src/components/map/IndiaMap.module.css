@@ -463,12 +463,21 @@
 .previewCard { overflow: hidden; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; }
 .previewHeader {
   position: relative;
+  isolation: isolate;
+  position: relative;
   padding: 1.15rem 1rem 1rem;
   background: linear-gradient(122deg, #725c00 0%, #a87900 52%, #d39d00 100%);
   background-position: center 46%;
   background-size: cover;
   color: white;
 }
+.previewHeroImage, .previewHeroScrim, .previewHeroFallback { position: absolute; inset: 0; width: 100%; height: 100%; }
+.previewHeroImage { z-index: 0; object-fit: cover; }
+.previewHeroScrim { z-index: 1; background: linear-gradient(90deg, rgb(35 27 0 / 84%) 0%, rgb(35 27 0 / 64%) 58%, rgb(35 27 0 / 42%) 100%); }
+.previewHeroFallback { display: flex; flex-direction: column; justify-content: flex-end; gap: .35rem; padding: 1rem; color: #fff; background: radial-gradient(ellipse at 80% 15%, #d4a20c 0%, transparent 45%), linear-gradient(135deg, #231b00, #725c00); }
+.previewHeroFallback span { font-size: 1.3rem; font-weight: 850; }
+.previewHeroFallback small { font-size: .72rem; }
+.previewHeader > :not(.previewHeroImage):not(.previewHeroScrim):not(.previewHeroFallback) { position: relative; z-index: 2; }
 .previewEyebrow { margin: 0 0 .35rem; color: #fff3bd; font-size: .62rem; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
 .previewClose { position: absolute; top: .65rem; right: .65rem; display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid rgb(255 255 255 / 45%); border-radius: 50%; background: rgb(35 27 0 / 18%); color: #fff; cursor: pointer; }
 .previewTitleRow { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding-right: 2rem; }

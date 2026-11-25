@@ -14,6 +14,10 @@ const nextConfig: NextConfig = {
     }]
   },
   images: {
+    // Product and seller image URLs are supplied by marketplace users and may
+    // live on a seller's CDN. Skip Next's host allowlist optimizer for these
+    // untrusted, dynamic URLs so valid uploads render directly in the browser.
+    unoptimized: true,
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" },

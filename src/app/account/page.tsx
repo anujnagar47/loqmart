@@ -91,7 +91,7 @@ function AccountPageContent() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) { router.push("/login"); return }
     const { data: publicProfile } = await supabase.from("users").select("role").eq("id", session.user.id).maybeSingle()
-    if (publicProfile?.role !== "admin" && publicProfile?.role !== "sub_admin") { router.replace("/priority-invite"); return }
+    if (!publicProfile || !["buyer", "seller", "admin", "sub_admin"].includes(publicProfile.role)) { router.replace("/priority-invite"); return }
     setUser(session.user)
 
     const [profileRes, ordersRes, addressRes, coinsRes, ledgerRes, wishlistRes] = await Promise.all([
