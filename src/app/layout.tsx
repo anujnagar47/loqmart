@@ -5,6 +5,7 @@ import { LanguageProvider } from "@/lib/i18n/LanguageContext"
 import { PageVisitTracker } from "@/components/page-visit-tracker"
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://loqmart.vercel.app"),
   title: "LoqMart | Indian Crafts, Handlooms & Regional Goods",
   description: "Browse handmade and machine-made products from sellers across India. Compare product details, explore by category or seller location, and shop as a guest.",
   keywords: ["marketplace", "handmade", "Indian products", "machine-made", "online shopping"],

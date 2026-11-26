@@ -74,8 +74,8 @@ export function BlogClient({ initialPosts }: { initialPosts: BlogPost[] }) {
                 className="group grid grid-cols-1 lg:grid-cols-2 gap-0 rounded-2xl overflow-hidden bg-white"
                 style={{ border: "1px solid rgba(17,24,39,0.07)" }}>
                 <div className="relative h-64 lg:h-auto overflow-hidden">
-                  <img src={featured.image} alt={featured.title} onError={event => { event.currentTarget.style.display = "none" }}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  {featured.image ? <img src={featured.image} alt={featured.title} onError={event => { event.currentTarget.style.display = "none" }}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" /> : <div className="flex h-full flex-col justify-end bg-gradient-to-br from-[#725c00] via-[#a87900] to-[#fcd020] p-6 text-white"><span className="text-xs font-bold uppercase tracking-widest">{featured.state} · Regional story</span><span className="mt-2 text-lg font-bold">Illustration coming soon</span></div>}
                   <div className="absolute top-4 left-4">
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-black text-[#111827]"
                       style={{ background: "#FACC15" }}>Featured</span>
@@ -133,8 +133,8 @@ export function BlogClient({ initialPosts }: { initialPosts: BlogPost[] }) {
                   className="group bg-white rounded-2xl overflow-hidden"
                   style={{ border: "1px solid rgba(17,24,39,0.07)" }}>
                   <div className="relative h-48 overflow-hidden">
-                    <img src={post.image} alt={post.title} onError={event => { event.currentTarget.style.display = "none" }}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    {post.image ? <img src={post.image} alt={post.title} onError={event => { event.currentTarget.style.display = "none" }}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" /> : <div className="flex h-full flex-col justify-end bg-gradient-to-br from-[#725c00] via-[#a87900] to-[#fcd020] p-5 text-white"><span className="text-xs font-bold uppercase tracking-widest">{post.state} · Regional story</span><span className="mt-2 text-base font-bold">Illustration coming soon</span></div>}
                     <div className="absolute top-3 left-3">
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/90 text-[#111827]"
                         style={{ border: "1px solid rgba(17,24,39,0.12)" }}>

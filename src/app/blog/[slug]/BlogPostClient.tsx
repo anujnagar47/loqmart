@@ -22,7 +22,7 @@ export function BlogPostClient({ post }: { post: BlogPostDetail }) {
     <div className="min-h-screen" style={{ background: "#ffffff" }}>
       {/* Hero image */}
       <div className="relative h-[50vh] min-h-[400px] w-full">
-        <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
+        {post.image ? <img src={post.image} alt={post.title} className="w-full h-full object-cover" /> : <div className="flex h-full flex-col justify-end bg-gradient-to-br from-[#725c00] via-[#a87900] to-[#fcd020] px-6 pb-28 text-white md:px-12"><span className="text-xs font-bold uppercase tracking-widest">{post.state || "India"} · Regional story</span><span className="mt-2 text-lg font-semibold">Illustration coming soon</span></div>}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 px-6 pb-12 max-w-4xl mx-auto w-full">
           <div className="flex items-center gap-3 mb-4">
